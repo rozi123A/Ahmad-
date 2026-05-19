@@ -4,9 +4,20 @@ if (!process.env.DATABASE_URL) {
   console.warn('⚠️ DATABASE_URL is not configured. Database features will not work.');
 }
 
+const cleanConnectionString = (url) => {
+  if (!url) return url;
+  return url
+    .replace(/[?&]sslmode=[^&]*/g, '')
+    .replace(/[?&]channel_binding=[^&]*/g, '')
+    .replace(/[?&]$/, '')
+    .replace(/\?$/, '');
+};
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionString: cleanConnectionString(process.env.DATABASE_URL),
+  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
 });
 
 pool.on('error', (err) => {
