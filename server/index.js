@@ -35,6 +35,29 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Diagnostic endpoint - shows config status (no sensitive values)
+app.get('/api/debug/config', (req, res) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    database: process.env.DATABASE_URL ? 'configured' : 'MISSING',
+    jwtSecret: process.env.JWT_SECRET ? 'configured' : 'MISSING',
+    telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ? `configured (${process.env.TELEGRAM_BOT_TOKEN.length} chars)` : 'MISSING',
+    adminIds: process.env.ADMIN_TELEGRAM_IDS || 'MISSING',
+    clientUrl: process.env.CLIENT_URL || 'not set',
+  });
+});
+
+// DB health check
+app.get('/api/debug/db', async (req, res) => {
+  try {
+    const pool = require('./config/db');
+    const result = await pool.query('SELECT NOW() as time, current_database() as db');
+    res.json({ status: 'connected', db: result.rows[0].db, time: result.rows[0].time });
+  } catch (err) {
+    res.status(500).json({ status: 'error', error: err.message });
+  }
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/daily', require('./routes/dailyReward'));
