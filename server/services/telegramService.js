@@ -28,21 +28,42 @@ const sendNotification = async (telegramId, title, message) => {
   return await sendMessage(telegramId, text);
 };
 
+// Send referral notification with open app button
+const sendReferralNotification = async (referrerTelegramId, newUser) => {
+  const firstName = newUser.firstName || '';
+  const lastName = newUser.lastName || '';
+  const username = newUser.username ? ` @${newUser.username}` : '';
+  const fullName = `${firstName} ${lastName}`.trim();
+  const appUrl = process.env.CLIENT_URL || '';
+  const botUsername = process.env.BOT_USERNAME || process.env.TELEGRAM_BOT || '';
+
+  const text = `🎉 <b>مبروك! انضم ${fullName}${username} عبر رابطك!</b>\n\n🎁 لديك <b>100 نقطة</b> في انتظارك\n👆 افتح التطبيق لتحصل على نقاطك!`;
+
+  const options = {};
+  if (appUrl || botUsername) {
+    const webUrl = appUrl || `https://t.me/${botUsername}`;
+    options.reply_markup = {
+      inline_keyboard: [[
+        { text: '🚀 افتح التطبيق', web_app: { url: webUrl } }
+      ]]
+    };
+  }
+
+  return await sendMessage(referrerTelegramId, text, options);
+};
+
 const broadcastMessage = async (userIds, message) => {
   const results = { sent: 0, failed: 0 };
-  
   for (const userId of userIds) {
     try {
       await sendMessage(userId, message);
       results.sent++;
-      // Rate limit: 30 messages per second
       await new Promise(resolve => setTimeout(resolve, 35));
     } catch (error) {
       results.failed++;
     }
   }
-  
   return results;
 };
 
-module.exports = { initBot, sendMessage, sendNotification, broadcastMessage };
+module.exports = { initBot, sendMessage, sendNotification, sendReferralNotification, broadcastMessage };
