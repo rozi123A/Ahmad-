@@ -6,6 +6,33 @@ import { getSpinStatus, playSpin } from '../services/api';
 const PRIZES = [50, 75, 100, 200, 500];
 const COLORS = ['#00d4ff', '#a855f7', '#00ff88', '#ffd700', '#ff006e'];
 
+const playSpinSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    const createLayer = (freq, type, volume) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.18, ctx.currentTime + 4.5);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.setValueAtTime(volume, ctx.currentTime + 3.0);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 4.5);
+    };
+
+    createLayer(220, 'sawtooth', 0.12);
+    createLayer(110, 'triangle', 0.08);
+    createLayer(440, 'square', 0.03);
+  } catch (e) {}
+};
+
 function Spin({ user, updatePoints }) {
   const [status, setStatus] = useState(null);
   const [spinning, setSpinning] = useState(false);
@@ -35,6 +62,7 @@ function Spin({ user, updatePoints }) {
 
     spinningRef.current = true;
     setSpinning(true);
+    playSpinSound();
 
     try {
       const res = await playSpin(isAdSpin);
@@ -194,7 +222,7 @@ function Spin({ user, updatePoints }) {
               ⏰ انتهت دوراتك اليومية
             </p>
             <p style={{ color: 'var(--neon-blue)', fontSize: '14px', marginTop: '8px' }}>
-              عد غداً لـ {5} دورات مجانية جديدة!
+              عد غداً لـ 5 دورات مجانية جديدة!
             </p>
           </div>
         )}
