@@ -7,7 +7,7 @@ const router = express.Router();
 router.get('/info', authMiddleware, async (req, res) => {
   try {
     const telegramId = req.user.telegramId;
-    const botUsername = process.env.BOT_USERNAME || 'YourBot';
+    const botUsername = process.env.BOT_USERNAME || process.env.TELEGRAM_BOT || 'YourBot';
 
     const refRes = await pool.query(
       'SELECT COUNT(*) as count, COALESCE(SUM(points_awarded), 0) as total_points FROM referrals WHERE referrer_telegram_id = $1',
