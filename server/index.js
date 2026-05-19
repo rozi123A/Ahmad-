@@ -43,6 +43,7 @@ app.use('/api/ads', require('./routes/ads'));
 app.use('/api/withdraw', require('./routes/withdraw'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/referral', require('./routes/referral'));
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/build')));

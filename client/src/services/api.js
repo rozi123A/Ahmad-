@@ -7,7 +7,6 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Add token to requests
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
@@ -17,7 +16,8 @@ api.interceptors.request.use((config) => {
 });
 
 // Auth
-export const authTelegram = (initData, user) => api.post('/auth/telegram', { initData, user });
+export const authTelegram = (initData, user, startParam) =>
+  api.post('/auth/telegram', { initData, user, startParam });
 
 // User
 export const getProfile = () => api.get('/user/profile');
@@ -44,6 +44,10 @@ export const getWithdrawHistory = () => api.get('/withdraw/history');
 // Notifications
 export const getNotifications = () => api.get('/notifications');
 export const markAllRead = () => api.post('/notifications/read-all');
+
+// Referral
+export const getReferralInfo = () => api.get('/referral/info');
+export const getReferralList = () => api.get('/referral/list');
 
 // Admin
 export const getAdminDashboard = () => api.get('/admin/dashboard');

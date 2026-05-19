@@ -27,6 +27,7 @@ const initSchema = async () => {
       total_withdrawn INTEGER DEFAULT 0,
       is_banned BOOLEAN DEFAULT false,
       is_admin BOOLEAN DEFAULT false,
+      referred_by VARCHAR(50) DEFAULT '',
       last_login TIMESTAMP DEFAULT NOW(),
       created_at TIMESTAMP DEFAULT NOW()
     );
@@ -82,7 +83,18 @@ const initSchema = async () => {
       read BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS referrals (
+      id SERIAL PRIMARY KEY,
+      referrer_telegram_id VARCHAR(50) NOT NULL,
+      referred_telegram_id VARCHAR(50) UNIQUE NOT NULL,
+      points_awarded INTEGER DEFAULT 100,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
   `);
+
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS referred_by VARCHAR(50) DEFAULT '';`);
+
   console.log('✅ Database schema initialized');
 };
 

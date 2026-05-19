@@ -1,13 +1,15 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const pool = require('../config/db');
 const { verifyTelegramData } = require('../middleware/auth');
+const { sendNotification } = require('../services/telegramService');
 
 const router = express.Router();
 
 router.post('/telegram', async (req, res) => {
   try {
-    const { initData, user: telegramUser } = req.body;
+    const { initData, user: telegramUser, startParam } = req.body;
 
     if (!telegramUser || !telegramUser.id) {
       return res.status(400).json({ error: 'Invalid user data' });
@@ -24,8 +26,11 @@ router.post('/telegram', async (req, res) => {
     const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',').map(s => s.trim()) || [];
 
     let user = await User.findOne({ telegramId });
+    let isNewUser = false;
 
     if (!user) {
+      isNewUser = true;
+      const referredBy = (startParam && startParam !== telegramId) ? startParam : '';
       user = await User.create({
         telegramId,
         username: telegramUser.username || '',
@@ -33,7 +38,34 @@ router.post('/telegram', async (req, res) => {
         lastName: telegramUser.last_name || '',
         photoUrl: telegramUser.photo_url || '',
         isAdmin: adminIds.includes(telegramId),
+        referredBy,
       });
+
+      if (referredBy) {
+        const referrer = await User.findOne({ telegramId: referredBy });
+        if (referrer && !referrer.isBanned) {
+          await User.findByIdAndUpdate(referrer._id, { $inc: { points: 100, totalEarned: 100 } });
+          await pool.query(
+            'INSERT INTO referrals (referrer_telegram_id, referred_telegram_id, points_awarded) VALUES ($1, $2, 100) ON CONFLICT (referred_telegram_id) DO NOTHING',
+            [referredBy, telegramId]
+          );
+          await pool.query(
+            'INSERT INTO notifications (user_id, telegram_id, type, title, message) VALUES ($1, $2, $3, $4, $5)',
+            [
+              referrer._id,
+              referrer.telegramId,
+              'referral',
+              '🎉 صديق جديد انضم!',
+              `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك! حصلت على +100 نقطة 🎁`,
+            ]
+          );
+          await sendNotification(
+            referrer.telegramId,
+            '🎉 صديق جديد انضم!',
+            `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك!\n\nحصلت على +100 نقطة مكافأة 🎁`
+          );
+        }
+      }
     } else {
       user.username = telegramUser.username || user.username;
       user.firstName = telegramUser.first_name || user.firstName;

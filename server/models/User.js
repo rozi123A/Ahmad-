@@ -15,6 +15,7 @@ const mapUser = (row) => {
     totalWithdrawn: row.total_withdrawn,
     isBanned: row.is_banned,
     isAdmin: row.is_admin,
+    referredBy: row.referred_by || '',
     lastLogin: row.last_login,
     createdAt: row.created_at,
   };
@@ -36,8 +37,8 @@ const User = {
 
   async create(data) {
     const res = await pool.query(
-      `INSERT INTO users (telegram_id, username, first_name, last_name, photo_url, is_admin)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO users (telegram_id, username, first_name, last_name, photo_url, is_admin, referred_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         data.telegramId,
@@ -46,6 +47,7 @@ const User = {
         data.lastName || '',
         data.photoUrl || '',
         data.isAdmin || false,
+        data.referredBy || '',
       ]
     );
     return mapUser(res.rows[0]);
@@ -81,6 +83,22 @@ const User = {
       if (inc.points !== undefined) { sets.push(`points = points + $${i++}`); vals.push(inc.points); }
       if (inc.totalEarned !== undefined) { sets.push(`total_earned = total_earned + $${i++}`); vals.push(inc.totalEarned); }
       if (inc.totalWithdrawn !== undefined) { sets.push(`total_withdrawn = total_withdrawn + $${i++}`); vals.push(inc.totalWithdrawn); }
+      if (sets.length === 0) return null;
+      vals.push(id);
+      const res = await pool.query(
+        `UPDATE users SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+        vals
+      );
+      return mapUser(res.rows[0]);
+    }
+    if (update.$set) {
+      const s = update.$set;
+      const sets = [];
+      const vals = [];
+      let i = 1;
+      if (s.points !== undefined) { sets.push(`points = $${i++}`); vals.push(s.points); }
+      if (s.isBanned !== undefined) { sets.push(`is_banned = $${i++}`); vals.push(s.isBanned); }
+      if (sets.length === 0) return null;
       vals.push(id);
       const res = await pool.query(
         `UPDATE users SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
