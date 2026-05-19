@@ -15,6 +15,14 @@ router.post('/telegram', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user data' });
     }
 
+    if (!process.env.DATABASE_URL) {
+      return res.status(503).json({ error: 'Database not configured. Please contact the administrator.' });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return res.status(503).json({ error: 'Server misconfiguration. Please contact the administrator.' });
+    }
+
     if (process.env.NODE_ENV === 'production' && initData) {
       const isValid = verifyTelegramData(initData);
       if (!isValid) {
@@ -26,10 +34,8 @@ router.post('/telegram', async (req, res) => {
     const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',').map(s => s.trim()) || [];
 
     let user = await User.findOne({ telegramId });
-    let isNewUser = false;
 
     if (!user) {
-      isNewUser = true;
       const referredBy = (startParam && startParam !== telegramId) ? startParam : '';
       user = await User.create({
         telegramId,
@@ -101,7 +107,7 @@ router.post('/telegram', async (req, res) => {
     });
   } catch (error) {
     console.error('Auth error:', error);
-    res.status(500).json({ error: 'Authentication failed' });
+    res.status(500).json({ error: 'Authentication failed. Please try again.' });
   }
 });
 
