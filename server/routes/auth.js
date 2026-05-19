@@ -23,16 +23,9 @@ router.post('/telegram', async (req, res) => {
       return res.status(503).json({ error: 'Server misconfiguration. Please contact the administrator.' });
     }
 
-    // Telegram data verification - only reject if bot token is configured AND data is invalid
     if (process.env.NODE_ENV === 'production' && initData && initData.length > 20) {
       if (process.env.TELEGRAM_BOT_TOKEN && process.env.TELEGRAM_BOT_TOKEN !== 'your_telegram_bot_token') {
-        const isValid = verifyTelegramData(initData);
-        if (!isValid) {
-          console.warn(`Telegram verification failed for user ${telegramUser?.id}. BotToken length: ${process.env.TELEGRAM_BOT_TOKEN?.length}`);
-          // Still allow through - security maintained by JWT
-          // If you want strict mode, uncomment below:
-          // return res.status(401).json({ error: 'Invalid Telegram data' });
-        }
+        verifyTelegramData(initData);
       }
     }
 
@@ -40,9 +33,15 @@ router.post('/telegram', async (req, res) => {
     const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',').map(s => s.trim()) || [];
 
     let user = await User.findOne({ telegramId });
+    let isNewUser = false;
 
     if (!user) {
+      isNewUser = true;
       const referredBy = (startParam && startParam !== telegramId) ? startParam : '';
+
+      // Give new user welcome bonus if joined via referral
+      const welcomeBonus = referredBy ? 50 : 0;
+
       user = await User.create({
         telegramId,
         username: telegramUser.username || '',
@@ -53,31 +52,50 @@ router.post('/telegram', async (req, res) => {
         referredBy,
       });
 
+      // Give welcome bonus points to new user if referred
+      if (referredBy && welcomeBonus > 0) {
+        user = await User.findByIdAndUpdate(user._id, { $inc: { points: welcomeBonus, totalEarned: welcomeBonus } }) || user;
+      }
+
       if (referredBy) {
         const referrer = await User.findOne({ telegramId: referredBy });
         if (referrer && !referrer.isBanned) {
+          // Give referrer 100 points
           await User.findByIdAndUpdate(referrer._id, { $inc: { points: 100, totalEarned: 100 } });
-          await pool.query(
-            'INSERT INTO referrals (referrer_telegram_id, referred_telegram_id, points_awarded) VALUES ($1, $2, 100) ON CONFLICT (referred_telegram_id) DO NOTHING',
-            [referredBy, telegramId]
-          );
-          await pool.query(
-            'INSERT INTO notifications (user_id, telegram_id, type, title, message) VALUES ($1, $2, $3, $4, $5)',
-            [
-              referrer._id,
+
+          try {
+            await pool.query(
+              'INSERT INTO referrals (referrer_telegram_id, referred_telegram_id, points_awarded) VALUES ($1, $2, 100) ON CONFLICT (referred_telegram_id) DO NOTHING',
+              [referredBy, telegramId]
+            );
+          } catch (e) {}
+
+          try {
+            await pool.query(
+              'INSERT INTO notifications (user_id, telegram_id, type, title, message) VALUES ($1, $2, $3, $4, $5)',
+              [
+                referrer._id,
+                referrer.telegramId,
+                'referral',
+                '🎉 صديق جديد انضم!',
+                `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك! حصلت على +100 نقطة 🎁`,
+              ]
+            );
+          } catch (e) {}
+
+          try {
+            await sendNotification(
               referrer.telegramId,
-              'referral',
               '🎉 صديق جديد انضم!',
-              `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك! حصلت على +100 نقطة 🎁`,
-            ]
-          );
-          await sendNotification(
-            referrer.telegramId,
-            '🎉 صديق جديد انضم!',
-            `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك!\n\nحصلت على +100 نقطة مكافأة 🎁`
-          );
+              `انضم ${telegramUser.first_name || 'مستخدم جديد'} عبر رابطك!\n\nحصلت على +100 نقطة مكافأة 🎁`
+            );
+          } catch (e) {}
         }
       }
+
+      // Reload user to get latest points
+      user = await User.findOne({ telegramId }) || user;
+
     } else {
       user.username = telegramUser.username || user.username;
       user.firstName = telegramUser.first_name || user.firstName;
@@ -85,7 +103,8 @@ router.post('/telegram', async (req, res) => {
       user.photoUrl = telegramUser.photo_url || user.photoUrl;
       user.lastLogin = new Date();
       user.isAdmin = adminIds.includes(telegramId);
-      await User.save(user);
+      // FIX: capture returned user from save
+      user = await User.save(user) || user;
     }
 
     if (user.isBanned) {
@@ -108,7 +127,9 @@ router.post('/telegram', async (req, res) => {
         lastName: user.lastName,
         photoUrl: user.photoUrl,
         points: user.points,
+        totalEarned: user.totalEarned,
         isAdmin: user.isAdmin,
+        isNewUser,
       }
     });
   } catch (error) {
