@@ -6,6 +6,7 @@ const verifyTelegramData = (initData) => {
   try {
     const params = new URLSearchParams(initData);
     const hash = params.get('hash');
+    if (!hash) return false;
     params.delete('hash');
 
     const dataCheckString = Array.from(params.entries())
@@ -15,7 +16,7 @@ const verifyTelegramData = (initData) => {
 
     const secretKey = crypto
       .createHmac('sha256', 'WebAppData')
-      .update(process.env.TELEGRAM_BOT_TOKEN)
+      .update(process.env.TELEGRAM_BOT_TOKEN || '')
       .digest();
 
     const calculatedHash = crypto
@@ -58,8 +59,9 @@ const authMiddleware = async (req, res, next) => {
 const adminMiddleware = async (req, res, next) => {
   try {
     const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',').map(s => s.trim()) || [];
+    const userTelegramId = String(req.user.telegramId).trim();
 
-    if (!adminIds.includes(req.user.telegramId)) {
+    if (!adminIds.includes(userTelegramId)) {
       return res.status(403).json({ error: 'Admin access required' });
     }
 
