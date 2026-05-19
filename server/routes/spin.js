@@ -8,12 +8,11 @@ const router = express.Router();
 const DAILY_FREE_SPINS = 5;
 const DAILY_AD_SPINS = 5;
 const PRIZES = [50, 75, 100, 200, 500];
-const PRIZE_WEIGHTS = [35, 30, 20, 10, 5]; // Probability weights
+const PRIZE_WEIGHTS = [35, 30, 20, 10, 5];
 
 const getRandomPrize = () => {
   const totalWeight = PRIZE_WEIGHTS.reduce((a, b) => a + b, 0);
   let random = Math.random() * totalWeight;
-  
   for (let i = 0; i < PRIZES.length; i++) {
     random -= PRIZE_WEIGHTS[i];
     if (random <= 0) return PRIZES[i];
@@ -23,11 +22,10 @@ const getRandomPrize = () => {
 
 const getTodayString = () => new Date().toISOString().split('T')[0];
 
-// GET /api/spin/status
 router.get('/status', authMiddleware, async (req, res) => {
   try {
     const today = getTodayString();
-    let spinRecord = await Spins.findOne({ telegramId: req.user.telegramId, lastSpinDate: today });
+    const spinRecord = await Spins.findOne({ telegramId: req.user.telegramId, lastSpinDate: today });
 
     if (!spinRecord) {
       return res.json({
@@ -49,7 +47,6 @@ router.get('/status', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/spin/play
 router.post('/play', authMiddleware, async (req, res) => {
   try {
     const { isAdSpin } = req.body;
@@ -64,11 +61,9 @@ router.post('/play', authMiddleware, async (req, res) => {
         lastSpinDate: today,
         spinsUsed: 0,
         adSpinsUsed: 0,
-        results: [],
       });
     }
 
-    // Check limits
     if (isAdSpin) {
       if (spinRecord.adSpinsUsed >= DAILY_AD_SPINS) {
         return res.status(400).json({ error: 'No ad spins left today' });
@@ -81,28 +76,21 @@ router.post('/play', authMiddleware, async (req, res) => {
 
     const prize = getRandomPrize();
 
-    // Update spin record
-    if (isAdSpin) {
-      spinRecord.adSpinsUsed += 1;
-    } else {
-      spinRecord.spinsUsed += 1;
-    }
-    spinRecord.results.push({ amount: prize, timestamp: new Date() });
-    await spinRecord.save();
+    const newSpinsUsed = isAdSpin ? spinRecord.spinsUsed : spinRecord.spinsUsed + 1;
+    const newAdSpinsUsed = isAdSpin ? spinRecord.adSpinsUsed + 1 : spinRecord.adSpinsUsed;
+    await Spins.updateSpins(spinRecord._id, newSpinsUsed, newAdSpinsUsed);
 
-    // Update user points
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { $inc: { points: prize, totalEarned: prize } },
-      { new: true }
+      { $inc: { points: prize, totalEarned: prize } }
     );
 
     res.json({
       success: true,
       prize,
       newBalance: user.points,
-      freeSpinsLeft: Math.max(0, DAILY_FREE_SPINS - spinRecord.spinsUsed),
-      adSpinsLeft: Math.max(0, DAILY_AD_SPINS - spinRecord.adSpinsUsed),
+      freeSpinsLeft: Math.max(0, DAILY_FREE_SPINS - newSpinsUsed),
+      adSpinsLeft: Math.max(0, DAILY_AD_SPINS - newAdSpinsUsed),
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to spin' });

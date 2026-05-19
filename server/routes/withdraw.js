@@ -1,16 +1,13 @@
 const express = require('express');
 const User = require('../models/User');
 const Withdraw = require('../models/Withdraw');
-const Notification = require('../models/Notification');
 const { authMiddleware } = require('../middleware/auth');
-const { sendNotification } = require('../services/telegramService');
 
 const router = express.Router();
 
-const MIN_WITHDRAW = 10000; // 10000 pts
-const STARS_RATE = 1000; // 1000 pts = 1 Star
+const MIN_WITHDRAW = 10000;
+const STARS_RATE = 1000;
 
-// GET /api/withdraw/info
 router.get('/info', authMiddleware, async (req, res) => {
   try {
     const user = req.user;
@@ -31,7 +28,6 @@ router.get('/info', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/withdraw/request
 router.post('/request', authMiddleware, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -45,7 +41,6 @@ router.post('/request', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Insufficient balance' });
     }
 
-    // Check for pending requests
     const pendingExists = await Withdraw.findOne({
       telegramId: user.telegramId,
       status: 'pending'
@@ -80,13 +75,9 @@ router.post('/request', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/withdraw/history
 router.get('/history', authMiddleware, async (req, res) => {
   try {
-    const withdrawals = await Withdraw.find({ telegramId: req.user.telegramId })
-      .sort({ createdAt: -1 })
-      .limit(20);
-
+    const withdrawals = await Withdraw.find({ telegramId: req.user.telegramId }, { limit: 20 });
     res.json(withdrawals);
   } catch (error) {
     res.status(500).json({ error: 'Failed to get withdrawal history' });

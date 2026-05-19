@@ -5,7 +5,6 @@ const { verifyTelegramData } = require('../middleware/auth');
 
 const router = express.Router();
 
-// POST /api/auth/telegram - Authenticate via Telegram WebApp
 router.post('/telegram', async (req, res) => {
   try {
     const { initData, user: telegramUser } = req.body;
@@ -14,7 +13,6 @@ router.post('/telegram', async (req, res) => {
       return res.status(400).json({ error: 'Invalid user data' });
     }
 
-    // Verify Telegram initData in production
     if (process.env.NODE_ENV === 'production' && initData) {
       const isValid = verifyTelegramData(initData);
       if (!isValid) {
@@ -23,9 +21,8 @@ router.post('/telegram', async (req, res) => {
     }
 
     const telegramId = telegramUser.id.toString();
-    const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',') || [];
+    const adminIds = process.env.ADMIN_TELEGRAM_IDS?.split(',').map(s => s.trim()) || [];
 
-    // Find or create user
     let user = await User.findOne({ telegramId });
 
     if (!user) {
@@ -44,7 +41,7 @@ router.post('/telegram', async (req, res) => {
       user.photoUrl = telegramUser.photo_url || user.photoUrl;
       user.lastLogin = new Date();
       user.isAdmin = adminIds.includes(telegramId);
-      await user.save();
+      await User.save(user);
     }
 
     if (user.isBanned) {

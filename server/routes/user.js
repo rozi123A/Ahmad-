@@ -4,7 +4,6 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/user/profile
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
     const user = req.user;
@@ -26,10 +25,9 @@ router.get('/profile', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/user/balance
 router.get('/balance', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('points totalEarned totalWithdrawn');
+    const user = await User.findById(req.user._id);
     res.json({ points: user.points, totalEarned: user.totalEarned, totalWithdrawn: user.totalWithdrawn });
   } catch (error) {
     res.status(500).json({ error: 'Failed to get balance' });

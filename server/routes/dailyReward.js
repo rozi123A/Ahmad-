@@ -8,17 +8,15 @@ const router = express.Router();
 const DAILY_REWARD_AMOUNT = 100;
 const COOLDOWN_HOURS = 24;
 
-// GET /api/daily/status
 router.get('/status', authMiddleware, async (req, res) => {
   try {
-    const lastClaim = await DailyReward.findOne({ telegramId: req.user.telegramId })
-      .sort({ claimedAt: -1 });
+    const lastClaim = await DailyReward.findOne({ telegramId: req.user.telegramId });
 
     if (!lastClaim) {
       return res.json({ canClaim: true, nextClaimAt: null, lastClaimAt: null });
     }
 
-    const nextClaimAt = new Date(lastClaim.claimedAt.getTime() + COOLDOWN_HOURS * 60 * 60 * 1000);
+    const nextClaimAt = new Date(new Date(lastClaim.claimedAt).getTime() + COOLDOWN_HOURS * 60 * 60 * 1000);
     const canClaim = new Date() >= nextClaimAt;
 
     res.json({
@@ -32,31 +30,26 @@ router.get('/status', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/daily/claim
 router.post('/claim', authMiddleware, async (req, res) => {
   try {
-    const lastClaim = await DailyReward.findOne({ telegramId: req.user.telegramId })
-      .sort({ claimedAt: -1 });
+    const lastClaim = await DailyReward.findOne({ telegramId: req.user.telegramId });
 
     if (lastClaim) {
-      const nextClaimAt = new Date(lastClaim.claimedAt.getTime() + COOLDOWN_HOURS * 60 * 60 * 1000);
+      const nextClaimAt = new Date(new Date(lastClaim.claimedAt).getTime() + COOLDOWN_HOURS * 60 * 60 * 1000);
       if (new Date() < nextClaimAt) {
         return res.status(400).json({ error: 'Daily reward already claimed', nextClaimAt });
       }
     }
 
-    // Create reward record
     await DailyReward.create({
       userId: req.user._id,
       telegramId: req.user.telegramId,
       amount: DAILY_REWARD_AMOUNT,
     });
 
-    // Update user points
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { $inc: { points: DAILY_REWARD_AMOUNT, totalEarned: DAILY_REWARD_AMOUNT } },
-      { new: true }
+      { $inc: { points: DAILY_REWARD_AMOUNT, totalEarned: DAILY_REWARD_AMOUNT } }
     );
 
     res.json({

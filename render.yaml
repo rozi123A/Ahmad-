@@ -11,7 +11,7 @@ services:
         value: production
       - key: PORT
         value: 5000
-      - key: MONGODB_URI
+      - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
@@ -23,8 +23,10 @@ services:
         value: adsgram
       - key: ADS_API_KEY
         sync: false
+      - key: ADS_API_URL
+        value: https://api.adsgram.ai
       - key: CLIENT_URL
-        value: https://rewardspin.onrender.com
+        value: https://earn-money-jufo.onrender.com
       - key: NODE_OPTIONS
         value: --max-old-space-size=512
       - key: GENERATE_SOURCEMAP

@@ -4,12 +4,9 @@ const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /api/notifications
 router.get('/', authMiddleware, async (req, res) => {
   try {
-    const notifications = await Notification.find({ telegramId: req.user.telegramId })
-      .sort({ createdAt: -1 })
-      .limit(50);
+    const notifications = await Notification.find({ telegramId: req.user.telegramId }, { limit: 50 });
 
     const unreadCount = await Notification.countDocuments({
       telegramId: req.user.telegramId,
@@ -22,7 +19,6 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
-// POST /api/notifications/read-all
 router.post('/read-all', authMiddleware, async (req, res) => {
   try {
     await Notification.updateMany(
