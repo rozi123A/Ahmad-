@@ -18,6 +18,7 @@ import confetti from 'canvas-confetti';
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
   const [dailyModal, setDailyModal] = useState(false);
   const [dailyClaiming, setDailyClaiming] = useState(false);
 
@@ -49,6 +50,7 @@ function App() {
 
       localStorage.setItem('token', token);
       setUser(userData);
+      setAuthError(false);
 
       setTimeout(async () => {
         try {
@@ -60,6 +62,8 @@ function App() {
       }, 1500);
     } catch (error) {
       console.error('Init error:', error);
+      localStorage.removeItem('token');
+      setAuthError(true);
     } finally {
       setLoading(false);
     }
@@ -94,6 +98,27 @@ function App() {
       <div className="loading-screen">
         <div className="spinner"></div>
         <p style={{ color: 'var(--neon-blue)' }}>جاري التحميل...</p>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="loading-screen" style={{ flexDirection: 'column', gap: '16px', padding: '20px' }}>
+        <p style={{ fontSize: '48px' }}>⚠️</p>
+        <p style={{ color: 'var(--neon-pink)', fontSize: '18px', textAlign: 'center' }}>
+          تعذّر الاتصال بالخادم
+        </p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', textAlign: 'center' }}>
+          تأكد من اتصالك بالإنترنت وحاول مجدداً
+        </p>
+        <button
+          className="glow-btn"
+          onClick={() => { setLoading(true); setAuthError(false); initApp(); }}
+          style={{ maxWidth: '200px' }}
+        >
+          🔄 إعادة المحاولة
+        </button>
       </div>
     );
   }
