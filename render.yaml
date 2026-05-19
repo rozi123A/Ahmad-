@@ -2,7 +2,9 @@ services:
   - type: web
     name: rewardspin
     env: node
-    buildCommand: npm install && cd client && npm install && npm run build
+    region: ohio
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && cd client && npm install --legacy-peer-deps && npm run build
     startCommand: node server/index.js
     envVars:
       - key: NODE_ENV
@@ -21,3 +23,7 @@ services:
         value: adsgram
       - key: ADS_API_KEY
         sync: false
+      - key: CLIENT_URL
+        value: https://rewardspin.onrender.com
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=512
