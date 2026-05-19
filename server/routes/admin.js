@@ -1,4 +1,5 @@
 const express = require('express');
+const pool = require('../config/db');
 const User = require('../models/User');
 const Withdraw = require('../models/Withdraw');
 const AdsHistory = require('../models/AdsHistory');
@@ -14,7 +15,7 @@ router.get('/dashboard', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
 
-    const [totalUsers, totalWithdrawals, pendingWithdrawals, totalStarsPaid, todayAdsWatched, newUsersToday] =
+    const [totalUsers, totalWithdrawals, pendingWithdrawals, totalStarsPaid, todayAdsWatched, newUsersToday, referralsResult] =
       await Promise.all([
         User.countDocuments(),
         Withdraw.countDocuments(),
@@ -22,6 +23,7 @@ router.get('/dashboard', async (req, res) => {
         Withdraw.sumApprovedStars(),
         AdsHistory.sumTodayAds(today),
         User.countDocuments({ createdAt: { $gte: new Date(today) } }),
+        pool.query('SELECT COUNT(*) FROM referrals'),
       ]);
 
     res.json({
@@ -31,8 +33,10 @@ router.get('/dashboard', async (req, res) => {
       pendingWithdrawals,
       totalStarsPaid,
       todayAdsWatched,
+      totalReferrals: parseInt(referralsResult.rows[0].count) || 0,
     });
   } catch (error) {
+    console.error('Admin dashboard error:', error);
     res.status(500).json({ error: 'Failed to get dashboard data' });
   }
 });
@@ -51,11 +55,11 @@ router.get('/users', async (req, res) => {
     }
 
     const users = await User.find(query, { limit: parseInt(limit), offset: (page - 1) * limit });
-
     const total = await User.countDocuments(query);
 
     res.json({ users, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
+    console.error('Admin users error:', error);
     res.status(500).json({ error: 'Failed to get users' });
   }
 });
@@ -70,6 +74,7 @@ router.post('/users/:id/ban', async (req, res) => {
 
     res.json({ success: true, isBanned: user.isBanned });
   } catch (error) {
+    console.error('Admin ban error:', error);
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
@@ -81,14 +86,17 @@ router.post('/users/:id/balance', async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     if (action === 'set') {
-      user.points = amount;
+      user.points = parseInt(amount);
+    } else if (action === 'subtract') {
+      user.points = Math.max(0, user.points - parseInt(amount));
     } else {
-      user.points += amount;
+      user.points = user.points + parseInt(amount);
     }
     await User.save(user);
 
     res.json({ success: true, newBalance: user.points });
   } catch (error) {
+    console.error('Admin balance error:', error);
     res.status(500).json({ error: 'Failed to update balance' });
   }
 });
@@ -99,11 +107,11 @@ router.get('/withdrawals', async (req, res) => {
     const query = status ? { status } : {};
 
     const withdrawals = await Withdraw.find(query, { limit: parseInt(limit), offset: (page - 1) * limit });
-
     const total = await Withdraw.countDocuments(query);
 
     res.json({ withdrawals, total, page: parseInt(page), pages: Math.ceil(total / limit) });
   } catch (error) {
+    console.error('Admin withdrawals error:', error);
     res.status(500).json({ error: 'Failed to get withdrawals' });
   }
 });
@@ -157,6 +165,7 @@ router.post('/withdrawals/:id/process', async (req, res) => {
 
     res.json({ success: true, withdrawal });
   } catch (error) {
+    console.error('Admin process withdrawal error:', error);
     res.status(500).json({ error: 'Failed to process withdrawal' });
   }
 });
@@ -182,34 +191,19 @@ router.post('/broadcast', async (req, res) => {
 
     res.json({ success: true, ...results, totalUsers: userIds.length });
   } catch (error) {
+    console.error('Admin broadcast error:', error);
     res.status(500).json({ error: 'Failed to send broadcast' });
-  }
-});
-
-router.get('/chat/:telegramId', async (req, res) => {
-  try {
-    const user = await User.findOne({ telegramId: req.params.telegramId });
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    res.json({
-      user: {
-        telegramId: user.telegramId,
-        username: user.username,
-        firstName: user.firstName,
-        chatLink: `https://t.me/${user.username}`,
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to get chat info' });
   }
 });
 
 router.post('/send-message/:telegramId', async (req, res) => {
   try {
     const { message } = req.body;
+    if (!message) return res.status(400).json({ error: 'Message is required' });
     await sendNotification(req.params.telegramId, '💬 رسالة من الإدارة', message);
     res.json({ success: true });
   } catch (error) {
+    console.error('Admin send message error:', error);
     res.status(500).json({ error: 'Failed to send message' });
   }
 });
