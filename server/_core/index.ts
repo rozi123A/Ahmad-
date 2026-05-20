@@ -35,10 +35,10 @@ import "dotenv/config";
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>*{margin:0;padding:0;box-sizing:border-box}body{background:transparent}</style>
   </head><body>
-  <script>(function(s){s.dataset.zone='11003103',s.src='https://al5sm.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))<\/script>
+  <script>(function(s){s.dataset.zone='11035304',s.src='https://5gvci.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))<\/script>
   <script>
   window.addEventListener('load',function(){
-    var fn=window['show_11003103'];
+    var fn=window['show_11035304'];
     if(typeof fn==='function') fn();
   });
   <\/script>
