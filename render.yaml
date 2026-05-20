@@ -3,7 +3,7 @@ services:
     name: adsgram-pro-app
     env: node
     plan: free
-    buildCommand: pnpm install && pnpm run build
+    buildCommand: npm install -g pnpm@10.4.1 && pnpm install && pnpm run build
     startCommand: pnpm run start
     envVars:
       - key: NODE_ENV
