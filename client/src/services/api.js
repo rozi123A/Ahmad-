@@ -33,7 +33,8 @@ export const playSpin = (isAdSpin = false) => api.post('/spin/play', { isAdSpin 
 
 // Ads
 export const getAdsStatus = () => api.get('/ads/status');
-export const completeAd = (adId, watchDuration) => api.post('/ads/complete', { adId, watchDuration });
+export const startAd = () => api.post('/ads/start');
+export const completeAd = (adId, watchDuration, sessionToken) => api.post('/ads/complete', { adId, watchDuration, sessionToken });
 export const getAdConfig = () => api.get('/ads/config');
 
 // Withdraw

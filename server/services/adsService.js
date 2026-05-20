@@ -1,7 +1,17 @@
 /**
- * Ads Service - Independent module for Rewarded Ads
- * Ready to integrate with Adsgram or any other ad provider
+ * Ads Service - Server-side session tracking to prevent fake ad completions
  */
+
+// In-memory store: sessionToken -> startTimestamp
+const adSessions = new Map();
+
+// Clean expired sessions every 10 minutes
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  for (const [key, ts] of adSessions) {
+    if (ts < cutoff) adSessions.delete(key);
+  }
+}, 10 * 60 * 1000);
 
 class AdsService {
   constructor() {
@@ -11,56 +21,50 @@ class AdsService {
     this.pointsPerAd = 10;
     this.dailyLimit = 50;
     this.spinAdDailyLimit = 5;
+    this.MIN_WATCH_SECONDS = 13; // 15s ad with 2s tolerance
   }
 
-  async verifyAdCompletion(adId, userId, watchDuration) {
-    // Verify that the ad was watched completely
-    // Minimum watch duration is 15 seconds for a valid ad view
-    const MIN_WATCH_DURATION = 15;
-    
-    if (watchDuration < MIN_WATCH_DURATION) {
-      return { valid: false, reason: 'Ad not watched completely' };
+  // Generate a session token when user starts watching
+  startSession(telegramId) {
+    const token = `${telegramId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    adSessions.set(token, Date.now());
+    return token;
+  }
+
+  async verifyAdCompletion(adId, telegramId, watchDuration, sessionToken) {
+    // Primary check: server-side elapsed time via session token
+    if (sessionToken && adSessions.has(sessionToken)) {
+      const startTime = adSessions.get(sessionToken);
+      const serverElapsed = (Date.now() - startTime) / 1000;
+      adSessions.delete(sessionToken); // one-time use
+
+      if (serverElapsed < this.MIN_WATCH_SECONDS) {
+        console.warn(`Ad fraud attempt by ${telegramId}: ${Math.round(serverElapsed)}s elapsed`);
+        return { valid: false, reason: 'Ad not watched completely' };
+      }
+      return { valid: true, points: this.pointsPerAd };
     }
 
-    // In production, verify with ad provider API
-    if (this.apiKey && this.apiUrl) {
-      try {
-        // Verify with provider
-        // const response = await fetch(`${this.apiUrl}/verify`, {
-        //   method: 'POST',
-        //   headers: { 'Authorization': `Bearer ${this.apiKey}` },
-        //   body: JSON.stringify({ adId, userId })
-        // });
-        // return await response.json();
-      } catch (error) {
-        console.error('Ad verification error:', error);
-      }
+    // Fallback: check client-reported duration (less secure but better than nothing)
+    if (!watchDuration || watchDuration < this.MIN_WATCH_SECONDS) {
+      return { valid: false, reason: 'Ad not watched completely' };
     }
 
     return { valid: true, points: this.pointsPerAd };
   }
 
   async getAdUnit(userId, type = 'rewarded') {
-    // Return ad configuration for the client
     return {
       provider: this.provider,
-      type: type,
+      type,
       blockId: this.apiKey || 'configure-in-env',
       minWatchDuration: 15,
     };
   }
 
-  getDailyLimit() {
-    return this.dailyLimit;
-  }
-
-  getSpinAdDailyLimit() {
-    return this.spinAdDailyLimit;
-  }
-
-  getPointsPerAd() {
-    return this.pointsPerAd;
-  }
+  getDailyLimit() { return this.dailyLimit; }
+  getSpinAdDailyLimit() { return this.spinAdDailyLimit; }
+  getPointsPerAd() { return this.pointsPerAd; }
 }
 
 module.exports = new AdsService();

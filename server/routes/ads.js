@@ -27,12 +27,22 @@ router.get('/status', authMiddleware, async (req, res) => {
   }
 });
 
+// Start an ad session — returns a server-side token to verify real watch time
+router.post('/start', authMiddleware, async (req, res) => {
+  try {
+    const token = adsService.startSession(req.user.telegramId);
+    res.json({ sessionToken: token });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to start ad session' });
+  }
+});
+
 router.post('/complete', authMiddleware, async (req, res) => {
   try {
-    const { adId, watchDuration } = req.body;
+    const { adId, watchDuration, sessionToken } = req.body;
     const today = getTodayString();
 
-    const verification = await adsService.verifyAdCompletion(adId, req.user.telegramId, watchDuration);
+    const verification = await adsService.verifyAdCompletion(adId, req.user.telegramId, watchDuration, sessionToken);
     if (!verification.valid) {
       return res.status(400).json({ error: verification.reason || 'Ad not completed' });
     }

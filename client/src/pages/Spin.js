@@ -6,91 +6,52 @@ import { getSpinStatus, playSpin } from '../services/api';
 const PRIZES = [50, 75, 100, 200, 500];
 const COLORS = ['#00d4ff', '#a855f7', '#00ff88', '#ffd700', '#ff006e'];
 
+// — صوت من مستودع Claude —
+const getAudioCtx = () => {
+  try { return new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+};
+
+// الصوت الأول: نقرة واحدة (تُشغَّل بسرعة أثناء الدوران وتتباطأ)
+const playTick = (ctx, t) => {
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.connect(g); g.connect(ctx.destination);
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(900, t);
+  o.frequency.exponentialRampToValueAtTime(400, t + 0.04);
+  g.gain.setValueAtTime(0.18, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  o.start(t); o.stop(t + 0.05);
+};
+
+// الصوت الثاني: نغمة الفوز (وتر دو الكبير)
+const playWinSound = (ctx) => {
+  const now = ctx.currentTime;
+  [261.63, 329.63, 392.0, 523.25].forEach((freq, i) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine';
+    const tt = now + i * 0.13;
+    o.frequency.setValueAtTime(freq, tt);
+    g.gain.setValueAtTime(0, tt);
+    g.gain.linearRampToValueAtTime(0.3, tt + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, tt + 0.35);
+    o.start(tt); o.stop(tt + 0.4);
+  });
+};
+
 const playSpinSound = () => {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-
-    // Tick-tock click sound layer
-    const playTick = (time, vol = 0.18) => {
-      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
-      const data = buf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.008));
-      }
-      const src = ctx.createBufferSource();
-      const gain = ctx.createGain();
-      src.buffer = buf;
-      src.connect(gain);
-      gain.connect(ctx.destination);
-      gain.gain.setValueAtTime(vol, time);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
-      src.start(time);
-    };
-
-    // Spinning whoosh layer
-    const whoosh = ctx.createOscillator();
-    const whooshGain = ctx.createGain();
-    const whooshFilter = ctx.createBiquadFilter();
-    whoosh.type = 'sawtooth';
-    whoosh.frequency.setValueAtTime(180, ctx.currentTime);
-    whoosh.frequency.linearRampToValueAtTime(40, ctx.currentTime + 4.2);
-    whooshFilter.type = 'bandpass';
-    whooshFilter.frequency.setValueAtTime(600, ctx.currentTime);
-    whooshFilter.frequency.linearRampToValueAtTime(200, ctx.currentTime + 4.2);
-    whooshFilter.Q.value = 1.5;
-    whoosh.connect(whooshFilter);
-    whooshFilter.connect(whooshGain);
-    whooshGain.connect(ctx.destination);
-    whooshGain.gain.setValueAtTime(0.06, ctx.currentTime);
-    whooshGain.gain.setValueAtTime(0.06, ctx.currentTime + 3.5);
-    whooshGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.5);
-    whoosh.start(ctx.currentTime);
-    whoosh.stop(ctx.currentTime + 4.5);
-
-    // Bass rumble
-    const bass = ctx.createOscillator();
-    const bassGain = ctx.createGain();
-    bass.type = 'sine';
-    bass.frequency.setValueAtTime(80, ctx.currentTime);
-    bass.frequency.exponentialRampToValueAtTime(30, ctx.currentTime + 4.2);
-    bass.connect(bassGain);
-    bassGain.connect(ctx.destination);
-    bassGain.gain.setValueAtTime(0.1, ctx.currentTime);
-    bassGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 4.5);
-    bass.start(ctx.currentTime);
-    bass.stop(ctx.currentTime + 4.5);
-
-    // Tick clicks — fast at start, slow at end
-    const totalDuration = 4.2;
-    let t = ctx.currentTime + 0.05;
-    let interval = 0.06;
-    let vol = 0.22;
-    while (t < ctx.currentTime + totalDuration) {
-      playTick(t, vol);
-      t += interval;
-      interval = Math.min(interval * 1.045, 0.55);
-      vol = Math.max(vol * 0.985, 0.04);
-    }
-
-    // Win chime at end
-    const chimeNotes = [523.25, 659.25, 783.99, 1046.5];
-    chimeNotes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      const startT = ctx.currentTime + 4.3 + i * 0.12;
-      gain.gain.setValueAtTime(0, startT);
-      gain.gain.linearRampToValueAtTime(0.18, startT + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startT + 0.55);
-      osc.start(startT);
-      osc.stop(startT + 0.6);
-    });
-
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const dur = 4.2;
+    // الصوت الأول: نقرات تتباطأ تدريجياً
+    let t = now, iv = 0.06;
+    while (t < now + dur) { playTick(ctx, t); t += iv; iv = 0.06 + ((t - now) / dur) * 0.55; }
+    // الصوت الثاني: نغمة الفوز بعد توقف العجلة
+    setTimeout(() => { playWinSound(ctx); }, (dur + 0.3) * 1000);
   } catch (e) {}
 };
 

@@ -130,36 +130,42 @@ router.post('/withdrawals/:id/process', async (req, res) => {
     await Withdraw.save(withdrawal);
 
     if (action === 'approve') {
+      // Points were already deducted when request was submitted — only update totalWithdrawn
       await User.findByIdAndUpdate(withdrawal.userId, {
-        $inc: { points: -withdrawal.amount, totalWithdrawn: withdrawal.amount }
+        $inc: { totalWithdrawn: withdrawal.amount }
       });
 
       await sendNotification(
         withdrawal.telegramId,
         '✅ تم قبول طلب السحب',
-        `تم تحويل ${withdrawal.stars} Stars إلى حسابك.`
+        `تم تحويل ${withdrawal.stars} Stars إلى حسابك. شكراً لك! ⭐`
       );
 
       await Notification.create({
         userId: withdrawal.userId,
         telegramId: withdrawal.telegramId,
         type: 'withdraw_approved',
-        title: 'تم قبول طلب السحب',
-        message: `تم تحويل ${withdrawal.stars} Stars إلى حسابك.`,
+        title: '✅ تم قبول طلب السحب',
+        message: `تم تحويل ${withdrawal.stars} Stars إلى حسابك. شكراً لك! ⭐`,
       });
     } else {
+      // Refund points back to user on rejection
+      await User.findByIdAndUpdate(withdrawal.userId, {
+        $inc: { points: withdrawal.amount }
+      });
+
       await sendNotification(
         withdrawal.telegramId,
         '❌ تم رفض طلب السحب',
-        `السبب: ${note || 'لم يتم تحديد سبب'}`
+        `السبب: ${note || 'لم يتم تحديد سبب'}\n\n💰 تم إعادة ${withdrawal.amount.toLocaleString()} نقطة إلى رصيدك.`
       );
 
       await Notification.create({
         userId: withdrawal.userId,
         telegramId: withdrawal.telegramId,
         type: 'withdraw_rejected',
-        title: 'تم رفض طلب السحب',
-        message: `السبب: ${note || 'لم يتم تحديد سبب'}`,
+        title: '❌ تم رفض طلب السحب',
+        message: `السبب: ${note || 'لم يتم تحديد سبب'} — تم إعادة ${withdrawal.amount.toLocaleString()} نقطة إلى رصيدك.`,
       });
     }
 
@@ -200,7 +206,24 @@ router.post('/send-message/:telegramId', async (req, res) => {
   try {
     const { message } = req.body;
     if (!message) return res.status(400).json({ error: 'Message is required' });
+
+    // Find user to get userId for in-app notification
+    const user = await User.findOne({ telegramId: req.params.telegramId });
+
+    // Send Telegram message
     await sendNotification(req.params.telegramId, '💬 رسالة من الإدارة', message);
+
+    // Save in-app notification so it appears in notifications tab
+    if (user) {
+      await Notification.create({
+        userId: user._id,
+        telegramId: user.telegramId,
+        type: 'admin_message',
+        title: '💬 رسالة من الإدارة',
+        message,
+      });
+    }
+
     res.json({ success: true });
   } catch (error) {
     console.error('Admin send message error:', error);
