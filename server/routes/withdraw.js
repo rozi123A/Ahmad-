@@ -44,7 +44,7 @@ router.post('/request', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: `الحد الأدنى للسحب ${MIN_WITHDRAW.toLocaleString()} نقطة` });
     }
 
-    if (user.points < pts) {
+    if (user.points < pts || user.points <= 0) {
       return res.status(400).json({ error: 'رصيدك غير كافٍ' });
     }
 

@@ -7,8 +7,8 @@ const router = express.Router();
 
 const DAILY_FREE_SPINS = 5;
 const DAILY_AD_SPINS = 5;
-const PRIZES = [50, 75, 100, 200, 500];
-const PRIZE_WEIGHTS = [35, 30, 20, 10, 5];
+const PRIZES = [50, 200, 100, 500, 75, 1000, 150, 250];
+const PRIZE_WEIGHTS = [28, 12, 20, 6, 15, 2, 12, 5];
 
 const getRandomPrize = () => {
   const totalWeight = PRIZE_WEIGHTS.reduce((a, b) => a + b, 0);

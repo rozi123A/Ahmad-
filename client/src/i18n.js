@@ -86,6 +86,7 @@ const translations = {
     doneAds: '✅ أتممت إعلانات اليوم!',
     doneAdsSub: 'عد غداً للمزيد من النقاط 🌟',
     // Profile
+    stats: 'الإحصائيات',
     currentBal: 'الرصيد الحالي',
     totalEarned: 'إجمالي الأرباح',
     totalWithdrawn: 'إجمالي السحب',
@@ -181,6 +182,7 @@ const translations = {
     watchBtn: '▶️ Watch Now',
     doneAds: '✅ All ads watched today!',
     doneAdsSub: 'Come back tomorrow for more 🌟',
+    stats: 'Statistics',
     currentBal: 'Current Balance',
     totalEarned: 'Total Earned',
     totalWithdrawn: 'Total Withdrawn',
@@ -274,6 +276,7 @@ const translations = {
     watchBtn: '▶️ Смотреть сейчас',
     doneAds: '✅ Вся реклама просмотрена!',
     doneAdsSub: 'Возвращайся завтра 🌟',
+    stats: 'Статистика',
     currentBal: 'Текущий баланс',
     totalEarned: 'Всего заработано',
     totalWithdrawn: 'Всего выведено',
