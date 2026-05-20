@@ -1,47 +1,44 @@
 services:
-    - type: web
-      name: adsgram-pro-app
-      env: node
-      plan: free
-      buildCommand: npx --yes pnpm@10.4.1 install --no-frozen-lockfile && npx pnpm@10.4.1 run build
-      startCommand: node dist/index.js
-      envVars:
-        - key: NODE_ENV
-          value: production
-        - key: DATABASE_URL
-          sync: false
-        - key: JWT_SECRET
-          generateValue: true
-        - key: VITE_APP_ID
-          value: adsgram-pro
-        - key: OAUTH_SERVER_URL
-          value: ""
-        - key: OWNER_OPEN_ID
-          value: ""
-        - key: BOT_TOKEN
-          sync: false
-        - key: ADMIN_CHAT_ID
-          sync: false
-        - key: ADMIN_KEY
-          sync: false
-        - key: ADMIN_SECRET
-          sync: false
-        - key: ADMIN_TELEGRAM_ID
-          sync: false
-        - key: FRONTEND_URL
-          sync: false
-        - key: WEBAPP_URL
-          sync: false
-        - key: ADSGRAM_BLOCK_ID
-          value: "30350"
-        - key: AD_REWARD
-          value: "100"
-        - key: MIN_WITHDRAW
-          value: "10000"
-        - key: STARS_RATE
-          value: "1000"
-        - key: AD_COOLDOWN
-          value: "30"
-        - key: COREPACK_ENABLE_STRICT
-          value: "0"
-  
+  - type: web
+    name: adsgram-pro-app
+    env: node
+    plan: free
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: VITE_APP_ID
+        value: adsgram-pro
+      - key: OAUTH_SERVER_URL
+        value: ""
+      - key: OWNER_OPEN_ID
+        value: ""
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false
+      - key: ADMIN_KEY
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false
+      - key: ADMIN_TELEGRAM_ID
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
+      - key: ADSGRAM_BLOCK_ID
+        value: "30350"
+      - key: AD_REWARD
+        value: "100"
+      - key: MIN_WITHDRAW
+        value: "10000"
+      - key: STARS_RATE
+        value: "1000"
+      - key: AD_COOLDOWN
+        value: "30"
