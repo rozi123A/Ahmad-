@@ -1,44 +1,22 @@
 services:
   - type: web
-    name: adsgram-pro-app
+    name: rewardspin-bot
     env: node
     plan: free
-    buildCommand: pnpm install && pnpm run build
-    startCommand: pnpm run start
+    buildCommand: npm install && npm run build
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
         sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
       - key: JWT_SECRET
-        generateValue: true
-      - key: VITE_APP_ID
-        value: adsgram-pro
-      - key: OAUTH_SERVER_URL
-        value: ""
-      - key: OWNER_OPEN_ID
-        value: ""
-      - key: BOT_TOKEN
         sync: false
-      - key: ADMIN_CHAT_ID
+      - key: ADMIN_TELEGRAM_IDS
         sync: false
-      - key: ADMIN_KEY
+      - key: CLIENT_URL
         sync: false
-      - key: ADMIN_SECRET
+      - key: BOT_USERNAME
         sync: false
-      - key: ADMIN_TELEGRAM_ID
-        sync: false
-      - key: FRONTEND_URL
-        sync: false
-      - key: WEBAPP_URL
-        sync: false
-      - key: ADSGRAM_BLOCK_ID
-        value: "30350"
-      - key: AD_REWARD
-        value: "100"
-      - key: MIN_WITHDRAW
-        value: "10000"
-      - key: STARS_RATE
-        value: "1000"
-      - key: AD_COOLDOWN
-        value: "30"
