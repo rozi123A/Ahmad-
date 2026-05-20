@@ -46,15 +46,16 @@ const playSpinSound = (ctx, dur) => {
 };
 
 function Spin({ user, updatePoints }) {
-  const canvasRef     = useRef(null);
-  const audioCtxRef   = useRef(null);
-  const rotationRef   = useRef(0);
-  const animFrameRef  = useRef(null);
+  const canvasRef    = useRef(null);
+  const audioCtxRef  = useRef(null);
+  const rotationRef  = useRef(0);
+  const spinningRef  = useRef(false); // track spin state without re-render
+  const rafLoopRef   = useRef(null);  // continuous draw loop
 
-  const [isSpinning,   setIsSpinning]   = useState(false);
-  const [status,       setStatus]       = useState(null);
-  const [loading,      setLoading]      = useState(true);
-  const [showModal,    setShowModal]    = useState(false);
+  const [isSpinning,  setIsSpinning]  = useState(false);
+  const [status,      setStatus]      = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [showModal,   setShowModal]   = useState(false);
 
   useEffect(() => { fetchStatus(); }, []);
 
@@ -64,6 +65,7 @@ function Spin({ user, updatePoints }) {
     finally { setLoading(false); }
   };
 
+  // Draw the wheel at a given rotation angle
   const drawWheel = useCallback((rot) => {
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -72,10 +74,12 @@ function Spin({ user, updatePoints }) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Outer ring
     ctx.beginPath(); ctx.arc(cx, cy, r + 8, 0, 2 * Math.PI);
     ctx.fillStyle = '#1a0a2e'; ctx.fill();
     ctx.strokeStyle = '#8B5CF6'; ctx.lineWidth = 3; ctx.stroke();
 
+    // Segments
     ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot);
     for (let i = 0; i < seg; i++) {
       const s = i * arc, e = s + arc;
@@ -92,6 +96,7 @@ function Spin({ user, updatePoints }) {
     }
     ctx.restore();
 
+    // Center button
     const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, 28);
     grad.addColorStop(0, '#FFD700'); grad.addColorStop(1, '#F59E0B');
     ctx.beginPath(); ctx.arc(cx, cy, 28, 0, 2 * Math.PI);
@@ -101,6 +106,7 @@ function Spin({ user, updatePoints }) {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('GO', cx, cy);
 
+    // Pointer/tick at top
     ctx.beginPath();
     ctx.moveTo(cx - 12, cy - r - 8);
     ctx.lineTo(cx + 12, cy - r - 8);
@@ -110,14 +116,30 @@ function Spin({ user, updatePoints }) {
     ctx.strokeStyle = '#0a0a1a'; ctx.lineWidth = 1.5; ctx.stroke();
   }, []);
 
-  useEffect(() => { drawWheel(rotationRef.current); }, [drawWheel]);
+  // ─── Continuous draw loop so canvas never goes blank ───────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const loop = () => {
+      if (cancelled) return;
+      drawWheel(rotationRef.current);
+      rafLoopRef.current = requestAnimationFrame(loop);
+    };
+    rafLoopRef.current = requestAnimationFrame(loop);
+    return () => {
+      cancelled = true;
+      if (rafLoopRef.current) cancelAnimationFrame(rafLoopRef.current);
+    };
+  }, [drawWheel]);
+  // ───────────────────────────────────────────────────────────────────────────
 
   const handleSpin = async () => {
-    if (isSpinning) return;
+    if (spinningRef.current) return;
     const freeLeft = status?.freeSpinsLeft ?? 0;
     if (freeLeft <= 0) { setShowModal(true); return; }
 
+    spinningRef.current = true;
     setIsSpinning(true);
+
     if (!audioCtxRef.current) audioCtxRef.current = getAudioCtx();
     const actx = audioCtxRef.current;
     if (actx?.state === 'suspended') await actx.resume();
@@ -134,26 +156,28 @@ function Spin({ user, updatePoints }) {
       const dur = 4000, t0 = Date.now(), r0 = cur;
       if (actx) playSpinSound(actx, dur / 1000);
 
+      // The continuous loop above will keep drawing rotationRef.current,
+      // so we just update the ref inside our animation callback
       const animate = () => {
         const p = Math.min((Date.now() - t0) / dur, 1);
-        const eased = r0 + (target - r0) * (1 - Math.pow(1 - p, 4));
-        rotationRef.current = eased;
-        drawWheel(eased);
-        if (p < 1) { animFrameRef.current = requestAnimationFrame(animate); }
-        else {
+        rotationRef.current = r0 + (target - r0) * (1 - Math.pow(1 - p, 4));
+        if (p < 1) {
+          requestAnimationFrame(animate);
+        } else {
           rotationRef.current = target;
-          drawWheel(target);
           if (actx) playWinSound(actx);
           updatePoints(newBalance);
           setStatus({ freeSpinsLeft, adSpinsLeft });
+          spinningRef.current = false;
           setIsSpinning(false);
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 }, colors: ['#FFD700', '#8B5CF6', '#FF6B6B', '#4ECDC4'] });
           toast.success(`🎉 ربحت ${prize} نقطة!`);
           if (freeSpinsLeft <= 0) setTimeout(() => setShowModal(true), 1200);
         }
       };
-      animFrameRef.current = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     } catch (err) {
+      spinningRef.current = false;
       setIsSpinning(false);
       toast.error(err.response?.data?.error || 'حدث خطأ، حاول مجدداً');
     }
@@ -171,6 +195,7 @@ function Spin({ user, updatePoints }) {
 
   return (
     <div style={{ padding: '20px 16px 32px', position: 'relative', zIndex: 1 }}>
+
       {/* No Spins Modal */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -214,9 +239,16 @@ function Spin({ user, updatePoints }) {
         <div style={{ position: 'absolute', width: 280, height: 280, background: 'rgba(139,92,246,0.08)', borderRadius: '50%', filter: 'blur(32px)' }} />
         <canvas
           ref={canvasRef}
-          width={320} height={320}
+          width={320}
+          height={320}
           onClick={!isSpinning && freeLeft > 0 ? handleSpin : undefined}
-          style={{ position: 'relative', zIndex: 1, cursor: !isSpinning && freeLeft > 0 ? 'pointer' : 'default', filter: 'drop-shadow(0 0 18px rgba(139,92,246,0.35))', borderRadius: '50%', transition: 'transform 0.15s', transform: !isSpinning && freeLeft > 0 ? 'scale(1.02)' : 'scale(1)' }}
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            cursor: !isSpinning && freeLeft > 0 ? 'pointer' : 'default',
+            filter: 'drop-shadow(0 0 18px rgba(139,92,246,0.35))',
+            borderRadius: '50%',
+          }}
         />
       </div>
 
@@ -238,7 +270,7 @@ function Spin({ user, updatePoints }) {
         <button
           onClick={handleSpin}
           disabled={isSpinning}
-          style={{ width: '100%', height: 56, borderRadius: 18, border: 'none', background: isSpinning ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#eab308,#ca8a04)', color: isSpinning ? 'rgba(255,255,255,0.3)' : '#0f172a', fontSize: 17, fontWeight: 900, cursor: isSpinning ? 'not-allowed' : 'pointer', boxShadow: isSpinning ? 'none' : '0 4px 20px rgba(234,179,8,0.4)', transition: 'all 0.3s' }}
+          style={{ width: '100%', height: 56, borderRadius: 18, border: 'none', background: isSpinning ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#eab308,#ca8a04)', color: isSpinning ? 'rgba(255,255,255,0.3)' : '#0f172a', fontSize: 17, fontWeight: 900, cursor: isSpinning ? 'not-allowed' : 'pointer', boxShadow: isSpinning ? 'none' : '0 4px 20px rgba(234,179,8,0.4)', transition: 'all 0.3s', fontFamily: 'inherit' }}
         >
           {isSpinning ? '⏳ جاري الدوران...' : `🎰 أدر العجلة (${freeLeft} متبقي)`}
         </button>
@@ -252,7 +284,7 @@ function Spin({ user, updatePoints }) {
           <button
             onClick={() => { toast.info('ميزة الإعلانات قريباً!'); }}
             disabled={adLeft <= 0}
-            style={{ width: '100%', height: 54, borderRadius: 18, border: 'none', background: adLeft > 0 ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 15, fontWeight: 900, cursor: adLeft > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: adLeft > 0 ? '0 4px 20px rgba(139,92,246,0.4)' : 'none' }}
+            style={{ width: '100%', height: 54, borderRadius: 18, border: 'none', background: adLeft > 0 ? 'linear-gradient(135deg,#7c3aed,#4f46e5)' : 'rgba(255,255,255,0.06)', color: '#fff', fontSize: 15, fontWeight: 900, cursor: adLeft > 0 ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: adLeft > 0 ? '0 4px 20px rgba(139,92,246,0.4)' : 'none', fontFamily: 'inherit' }}
           >
             📺 {adLeft > 0 ? 'شاهد إعلان واربح دورة' : 'انتهت الإعلانات اليومية'}
           </button>
