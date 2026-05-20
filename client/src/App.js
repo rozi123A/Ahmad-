@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -11,8 +11,9 @@ import WatchAds from './pages/WatchAds';
 import Withdraw from './pages/Withdraw';
 import Profile from './pages/Profile';
 import Referral from './pages/Referral';
+import Notifications from './pages/Notifications';
 import AdminDashboard from './pages/AdminDashboard';
-import { authTelegram, getDailyStatus, claimDaily } from './services/api';
+import { authTelegram, getDailyStatus, claimDaily, getNotifications } from './services/api';
 import { LanguageProvider, useLang } from './LanguageContext';
 import confetti from 'canvas-confetti';
 
@@ -23,8 +24,37 @@ function AppInner() {
   const [authError, setAuthError] = useState(false);
   const [dailyModal, setDailyModal] = useState(false);
   const [dailyClaiming, setDailyClaiming] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [prevUnread, setPrevUnread] = useState(0);
 
   useEffect(() => { initApp(); }, []);
+
+  const pollNotifications = useCallback(async () => {
+    try {
+      const res = await getNotifications();
+      const count = res.data.unreadCount || 0;
+      setUnreadCount(count);
+      // Show toast when new notification arrives
+      if (count > prevUnread && prevUnread >= 0) {
+        const newest = res.data.notifications?.[0];
+        if (newest && !newest.read) {
+          toast.info(`🔔 ${newest.title}`, {
+            position: 'top-center',
+            autoClose: 4000,
+            onClick: () => { window.location.hash = '#/notifications'; },
+          });
+        }
+      }
+      setPrevUnread(count);
+    } catch (e) {}
+  }, [prevUnread]);
+
+  useEffect(() => {
+    if (!user) return;
+    pollNotifications();
+    const interval = setInterval(pollNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [user, pollNotifications]);
 
   const initApp = async () => {
     try {
@@ -128,6 +158,7 @@ function AppInner() {
           <Route path="/withdraw" element={<Withdraw user={user} />} />
           <Route path="/profile" element={<Profile user={user} />} />
           <Route path="/referral" element={<Referral user={user} />} />
+          <Route path="/notifications" element={<Notifications onMarkRead={() => setUnreadCount(0)} />} />
           <Route path="/admin" element={user?.isAdmin ? <AdminDashboard user={user} /> : <div style={{ display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',color:'#ef4444',fontSize:'18px' }}>⛔ {lang === 'ar' ? 'غير مصرح' : 'Unauthorized'}</div>} />
         </Routes>
 
@@ -144,14 +175,43 @@ function AppInner() {
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
             <span>{t('friends')}</span>
           </NavLink>
-          <NavLink to="/ads" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .89-2 2v12c0 1.1.89 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.11-.9-2-2-2zm0 14H3V5h18v12zm-5-6l-7 4V7z"/></svg>
-            <span>{t('ads')}</span>
+
+          {/* Notifications Bell with Badge */}
+          <NavLink to="/notifications" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <div style={{ position: 'relative', display: 'inline-flex', justifyContent: 'center' }}>
+              <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 24, height: 24 }}>
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+              </svg>
+              {unreadCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: -6, right: -8,
+                  minWidth: 17, height: 17,
+                  background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+                  borderRadius: '50%',
+                  fontSize: 10,
+                  fontWeight: 900,
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '0 4px',
+                  boxShadow: '0 0 8px rgba(239,68,68,0.7)',
+                  animation: 'pulse-badge 1.5s ease-in-out infinite',
+                  lineHeight: 1,
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </div>
+            <span>{lang === 'ar' ? 'إشعارات' : lang === 'ru' ? 'Уведомления' : 'Alerts'}</span>
           </NavLink>
+
           <NavLink to="/withdraw" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
             <span>{t('withdraw')}</span>
           </NavLink>
+
           {user?.isAdmin && (
             <NavLink to="/admin" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
@@ -159,6 +219,13 @@ function AppInner() {
             </NavLink>
           )}
         </nav>
+
+        <style>{`
+          @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(239,68,68,0.7); }
+            50% { transform: scale(1.15); box-shadow: 0 0 14px rgba(239,68,68,0.9); }
+          }
+        `}</style>
       </div>
     </Router>
   );
