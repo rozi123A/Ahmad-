@@ -21,6 +21,9 @@ import "dotenv/config";
     const app = express();
     const server = createServer(app);
 
+    // Trust Render/cloud reverse proxy (fixes ERR_ERL_UNEXPECTED_X_FORWARDED_FOR)
+    app.set("trust proxy", 1);
+
     // Configure body parser with larger size limit for file uploads
     app.use(express.json({ limit: "50mb" }));
     app.use(express.urlencoded({ limit: "50mb", extended: true }));
