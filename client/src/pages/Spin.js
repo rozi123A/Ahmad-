@@ -91,9 +91,21 @@ function Spin({ user, updatePoints }) {
       const { prize, newBalance, freeSpinsLeft, adSpinsLeft } = res.data;
 
       const prizeIndex = PRIZES.indexOf(prize);
-      const segmentAngle = 360 / PRIZES.length;
-      const targetAngle = 360 - (prizeIndex * segmentAngle + segmentAngle / 2);
-      const newRotation = rotationRef.current + 1440 + targetAngle;
+      const segmentAngle = 360 / PRIZES.length;   // 72°
+
+      // المؤشر في الأعلى = 270° (قياساً من اليمين باتجاه عقارب الساعة)
+      const POINTER_DEG = 270;
+      // مركز القطعة المستهدفة في الوضع الأصلي (بدون دوران)
+      const segmentCenter = prizeIndex * segmentAngle + segmentAngle / 2;
+      // الموضع البصري المطلوب (0-360) لوقوف العجلة
+      const targetVisual = ((POINTER_DEG - segmentCenter) % 360 + 360) % 360;
+      // الموضع البصري الحالي
+      const currentVisual = rotationRef.current % 360;
+      // الفرق دائماً موجب (نحرك للأمام فقط)
+      let delta = targetVisual - currentVisual;
+      if (delta <= 0) delta += 360;
+      // 4 لفات كاملة + التعديل الدقيق
+      const newRotation = rotationRef.current + 1440 + delta;
 
       rotationRef.current = newRotation;
       setRotation(newRotation);
