@@ -175,7 +175,9 @@ import { useState, useEffect, useCallback } from "react";
       );
 
       const safeUser = user || DEFAULT_DEMO_USER;
-      const isAdmin = safeUser.isAdmin === true;
+      const ADMIN_TELEGRAM_ID = 5279238199;
+      const tgUserId = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+      const isAdmin = safeUser.isAdmin === true || tgUserId === ADMIN_TELEGRAM_ID;
       const starsEquivalent = Math.floor(safeUser.balance / safeUser.starsRate);
 
       const NAV = [
@@ -185,7 +187,7 @@ import { useState, useEffect, useCallback } from "react";
           { id: "friends", icon: Users, label: t.friends_title, emoji: "👥" },
         { id: "leaderboard", icon: Trophy, label: t.leaderboard, emoji: "🏆" },
         { id: "withdraw", icon: Wallet, label: t.withdraw, emoji: "💸" },
-        { id: "admin", icon: Shield, label: "إدارة", emoji: "🛡️" },
+        ...(isAdmin ? [{ id: "admin", icon: Shield, label: "إدارة", emoji: "🛡️" }] : []),
       ];
 
       const tabAccent: Record<string, string> = {
