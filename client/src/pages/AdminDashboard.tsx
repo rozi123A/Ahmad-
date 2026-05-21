@@ -67,6 +67,7 @@ export default function AdminDashboard() {
   const broadcastMut = trpc.admin.broadcast.useMutation();
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
+  const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
 
   // Auto-auth: try URL ?ak= param first, then Telegram identity, then saved session
   useEffect(() => {
@@ -92,16 +93,15 @@ export default function AdminDashboard() {
       const saved = sessionStorage.getItem("adminSecret") || "";
       if (saved && await tryVerify(saved)) return;
 
-      // 3. Try Telegram identity (adminAutoAuth endpoint)
+      // 3. Try Telegram identity via tRPC client (correct format)
       try {
         const tg = (window as any)?.Telegram?.WebApp;
         if (tg?.initData && tg?.initDataUnsafe?.user?.id) {
-          const { data } = await fetch('/api/trpc/admin.adminAutoAuth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ telegramId: tg.initDataUnsafe.user.id, initData: tg.initData }),
-          }).then(r => r.json()).catch(() => ({ data: null }));
-          if (data?.secret) await tryVerify(data.secret);
+          const res = await autoAuthMut.mutateAsync({
+            telegramId: tg.initDataUnsafe.user.id,
+            initData: tg.initData,
+          });
+          if (res?.secret) await tryVerify(res.secret);
         }
       } catch {}
     };
