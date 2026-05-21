@@ -242,8 +242,8 @@ export const appRouter = router({
           }
         } else {
           // ── Process referral for existing users who haven't been credited yet ──
-          if (input.referredBy && input.referredBy !== input.telegramId && !user.referredBy) {
-            const existingTxs = await getTransactions(input.telegramId);
+          if (input.referredBy && input.referredBy !== input.telegramId) {
+            const existingTxs = await getTransactions(input.telegramId, 100);
             const alreadyRewarded = existingTxs.some((tx: any) => {
               try { return JSON.parse(tx.metadata || '{}').action === 'referral_welcome'; } catch { return false; }
             });
