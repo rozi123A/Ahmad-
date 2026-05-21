@@ -12,7 +12,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
   const [claiming, setClaiming] = useState(false);
   const { toast } = useToast();
   const t = translations[lang];
-  const referralLink = `https://t.me/ads_reward123_bot/rewardzone?startapp=${user.telegramId}`;
+  const referralLink = `https://t.me/EarnStar123Bot?start=ref_${user.telegramId}`;
 
   const { data: stats, refetch } = trpc.telegram.getReferralStats.useQuery(
     { telegramId: user.telegramId },
