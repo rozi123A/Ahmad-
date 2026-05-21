@@ -49,7 +49,7 @@ function StatCard({ emoji, label, value, color, sub }: { emoji: string; label: s
 }
 
 export default function AdminDashboard() {
-  const [secret, setSecret] = useState(() => sessionStorage.getItem("adminSecret") || "");
+  const [secret, setSecret] = useState(() => localStorage.getItem("adminSecret") || "");
   const [showPass, setShowPass] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     const tryVerify = (s: string) =>
       verifyMut.mutateAsync({ secret: s }).then(res => {
         if (res.success) {
-          sessionStorage.setItem("adminSecret", s);
+          localStorage.setItem("adminSecret", s);
           setSecret(s);
           setAuthed(true);
           return true;
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
       if (urlSecret && await tryVerify(urlSecret)) return;
 
       // 2. Try saved session
-      const saved = sessionStorage.getItem("adminSecret") || "";
+      const saved = localStorage.getItem("adminSecret") || "";
       if (saved && await tryVerify(saved)) return;
 
       // 3. Try Telegram identity via tRPC client (correct format)
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
     try {
       const res = await verifyMut.mutateAsync({ secret });
       if (res.success) {
-        sessionStorage.setItem("adminSecret", secret);
+        localStorage.setItem("adminSecret", secret);
         setAuthed(true);
         toast({ title: "✅ تم الدخول", description: "مرحباً بك في لوحة التحكم" });
       } else {
@@ -133,7 +133,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("adminSecret");
+    localStorage.removeItem("adminSecret");
     setAuthed(false);
     setSecret("");
   };
