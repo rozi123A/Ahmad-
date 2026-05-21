@@ -64,6 +64,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   const verifyMut = trpc.admin.verify.useMutation();
+  const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
   const broadcastMut = trpc.admin.broadcast.useMutation();
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
