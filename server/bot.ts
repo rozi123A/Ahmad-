@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { getTelegramUser, upsertTelegramUser, getInactiveUsers } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL;
+const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
 // Use WEBAPP_URL as base for webhook if PUBLIC_URL is not set, but prioritize PUBLIC_URL
 const PUBLIC_URL =
   process.env.PUBLIC_URL ||
@@ -162,7 +162,7 @@ let isBotStarted = false;
           upsertTelegramUser({ telegramId, balance: newBal }),
           createTransaction({ telegramId, type: "task_penalty", points: -ut.pointsEarned, metadata: JSON.stringify({ taskId: task.id }) }),
         ]);
-        const webappUrl = process.env.WEBAPP_URL || "";
+        const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
         await ctx.telegram.sendMessage(telegramId,
           `⚠️ غادرت ${task.name} وتم خصم ${ut.pointsEarned} نقطة من رصيدك!`,
           webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] } } : {}
