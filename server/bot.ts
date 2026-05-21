@@ -4,53 +4,49 @@ import { getTelegramUser, upsertTelegramUser, getInactiveUsers } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
-// Use WEBAPP_URL as base for webhook if PUBLIC_URL is not set, but prioritize PUBLIC_URL
 const PUBLIC_URL =
   process.env.PUBLIC_URL ||
   process.env.WEBHOOK_URL ||
   process.env.RENDER_EXTERNAL_URL ||
   (WEBAPP_URL ? new URL(WEBAPP_URL).origin : undefined);
 
-// Global flag to prevent multiple instances in the same process
 let isBotStarted = false;
 
-
-  // ===== نظام إشعارات المستخدمين الغائبين =====
-  async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
-    try {
-      const inactiveUsers = await getInactiveUsers(3, 50);
-      let sent = 0;
-      for (const user of inactiveUsers) {
-        try {
-          const name = user.firstName || user.username || "صديقي";
-          await bot.telegram.sendMessage(
-            user.telegramId,
-            `👋 مرحباً ${name}!\n\n` +
-            `لاحظنا أنك لم تلعب منذ فترة 😔\n\n` +
-            `🎁 لديك ${user.spinsLeft} دورة مجانية بانتظارك!\n` +
-            `💰 رصيدك الحالي: ${user.balance} نقطة\n\n` +
-            `تعال والعب الآن واربح أكثر! 🚀`,
-            webappUrl ? {
-              reply_markup: {
-                inline_keyboard: [
-                  [{ text: "🎮 العب الآن!", web_app: { url: webappUrl } }]
-                ]
-              }
-            } : undefined
-          );
-          sent++;
-          await new Promise(r => setTimeout(r, 1000));
-        } catch (err: any) {
-          console.warn(`[Bot] Failed to notify user ${user.telegramId}:`, err?.message);
-        }
+async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
+  try {
+    const inactiveUsers = await getInactiveUsers(3, 50);
+    let sent = 0;
+    for (const user of inactiveUsers) {
+      try {
+        const name = user.firstName || user.username || "صديقي";
+        await bot.telegram.sendMessage(
+          user.telegramId,
+          `👋 مرحباً ${name}!\n\n` +
+          `لاحظنا أنك لم تلعب منذ فترة 😔\n\n` +
+          `🎁 لديك ${user.spinsLeft} دورة مجانية بانتظارك!\n` +
+          `💰 رصيدك الحالي: ${user.balance} نقطة\n\n` +
+          `تعال والعب الآن واربح أكثر! 🚀`,
+          webappUrl ? {
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: "🎮 العب الآن!", web_app: { url: webappUrl } }]
+              ]
+            }
+          } : undefined
+        );
+        sent++;
+        await new Promise(r => setTimeout(r, 1000));
+      } catch (err: any) {
+        console.warn(`[Bot] Failed to notify user ${user.telegramId}:`, err?.message);
       }
-      console.log(`[Bot] Sent inactivity reminders to ${sent}/${inactiveUsers.length} users`);
-    } catch (err) {
-      console.error("[Bot] Error in sendInactivityReminders:", err);
     }
+    console.log(`[Bot] Sent inactivity reminders to ${sent}/${inactiveUsers.length} users`);
+  } catch (err) {
+    console.error("[Bot] Error in sendInactivityReminders:", err);
   }
+}
 
-  export async function startBot(app?: Express) {
+export async function startBot(app?: Express) {
   if (!BOT_TOKEN) {
     console.warn("[Bot] BOT_TOKEN is not set. Bot will not start.");
     return;
@@ -64,22 +60,21 @@ let isBotStarted = false;
 
   const bot = new Telegraf(BOT_TOKEN);
 
-    // تشغيل فحص المستخدمين الغائبين كل يوم الساعة 10 صباحاً
-    setInterval(async () => {
-      const now = new Date();
-      if (now.getHours() === 10 && now.getMinutes() === 0) {
-        console.log("[Bot] Running daily inactivity check...");
-        await sendInactivityReminders(bot, WEBAPP_URL || "");
-      }
-    }, 60 * 1000);
+  setInterval(async () => {
+    const now = new Date();
+    if (now.getHours() === 10 && now.getMinutes() === 0) {
+      console.log("[Bot] Running daily inactivity check...");
+      await sendInactivityReminders(bot, WEBAPP_URL || "");
+    }
+  }, 60 * 1000);
 
-  // Setup bot commands and handlers (Logic remains untouched)
   bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || "";
     const firstName = ctx.from.first_name || "";
     const lastName = ctx.from.last_name || "";
-    // Extract referral from start payload: ?start=ref_12345
+
+    // Extract referral ID from start payload (e.g. /start ref_12345)
     const startPayload = ctx.payload || "";
     let referrerId: string | null = null;
     if (startPayload.startsWith("ref_")) {
@@ -87,7 +82,7 @@ let isBotStarted = false;
       if (/^\d+$/.test(rid)) referrerId = rid;
     }
 
-    console.log(`[Bot] New user started bot: ${telegramId} (@${username})`);
+    console.log(`[Bot] New user started bot: ${telegramId} (@${username}) ref=${referrerId || "none"}`);
 
     try {
       let user = await getTelegramUser(telegramId);
@@ -104,10 +99,14 @@ let isBotStarted = false;
       const welcomeMessage = `مرحباً بك يا ${firstName}! 🚀\n\n🎮 العب الآن واربح النقاط!\n🚀 كلما لعبت أكثر ربحت أكثر.\n💰 اجمع النقاط واستبدلها بالجوائز.`;
 
       if (WEBAPP_URL) {
+        // Embed referral ID in URL so the Mini App can read it via ?ref=
+        const appUrl = referrerId
+          ? WEBAPP_URL.replace(/\/+$/, "") + "?ref=" + referrerId
+          : WEBAPP_URL;
+
         await ctx.reply(
           welcomeMessage,
           Markup.inlineKeyboard([
-            const appUrl = referrerId ? WEBAPP_URL.replace(//+$/, "") + "?ref=" + referrerId : WEBAPP_URL;
             [Markup.button.webApp("فتح التطبيق 📱", appUrl)],
             [Markup.button.url("قناة التحديثات 📢", "https://t.me/ads_reward123")],
           ])
@@ -123,30 +122,28 @@ let isBotStarted = false;
 
   const ADMIN_TELEGRAM_ID = Number(process.env.ADMIN_TELEGRAM_ID || "0");
 
-    bot.command("admin", async (ctx) => {
-      if (!ADMIN_TELEGRAM_ID || ctx.from.id !== ADMIN_TELEGRAM_ID) {
-        await ctx.reply("❌ هذا الأمر للمشرف فقط.");
-        return;
-      }
-      const adminUrl = WEBAPP_URL ? `${WEBAPP_URL.replace(/\/+$/, "")}/admin` : null;
-      if (adminUrl) {
-        await ctx.reply(
-          "🛡️ مرحباً يا مشرف! افتح لوحة الإدارة:",
-          Markup.inlineKeyboard([
-            [Markup.button.webApp("🛡️ فتح لوحة الإدارة", adminUrl)]
-          ])
-        );
-      } else {
-        await ctx.reply("⚠️ WEBAPP_URL غير مهيأ.");
-      }
-    });
+  bot.command("admin", async (ctx) => {
+    if (!ADMIN_TELEGRAM_ID || ctx.from.id !== ADMIN_TELEGRAM_ID) {
+      await ctx.reply("❌ هذا الأمر للمشرف فقط.");
+      return;
+    }
+    const adminUrl = WEBAPP_URL ? `${WEBAPP_URL.replace(/\/+$/, "")}/admin` : null;
+    if (adminUrl) {
+      await ctx.reply(
+        "🛡️ مرحباً يا مشرف! افتح لوحة الإدارة:",
+        Markup.inlineKeyboard([
+          [Markup.button.webApp("🛡️ فتح لوحة الإدارة", adminUrl)]
+        ])
+      );
+    } else {
+      await ctx.reply("⚠️ WEBAPP_URL غير مهيأ.");
+    }
+  });
 
-    bot.help((ctx) => {
+  bot.help((ctx) => {
     ctx.reply("استخدم الزر 'فتح التطبيق' للوصول إلى واجهة الكسب الخاصة بك.");
   });
 
-
-  // Detect when user leaves a channel (task deduction)
   bot.on("chat_member", async (ctx) => {
     try {
       const update = (ctx.update as any).chat_member;
@@ -179,7 +176,6 @@ let isBotStarted = false;
     } catch (e) { console.error("[Bot] chat_member error:", e); }
   });
 
-  // CRITICAL: Cleanup any existing sessions
   try {
     console.log("[Bot] Clearing existing webhook/polling state to prevent 409...");
     await bot.telegram.deleteWebhook({ drop_pending_updates: true });
@@ -190,7 +186,6 @@ let isBotStarted = false;
 
   const isProduction = process.env.NODE_ENV === "production";
 
-  // MANDATORY: Use Webhook in production to avoid 409 Conflict
   if (isProduction && PUBLIC_URL && app) {
     const secretPath = `/telegraf/${bot.secretPathComponent()}`;
     const webhookUrl = `${PUBLIC_URL.replace(/\/+$/, "")}${secretPath}`;
@@ -205,7 +200,6 @@ let isBotStarted = false;
     }
   }
 
-  // Fallback to polling only if not in production or webhook failed
   if (!isProduction) {
     console.log("[Bot] Starting in long polling mode (Development)...");
     try {
@@ -219,7 +213,6 @@ let isBotStarted = false;
     console.error("[Bot] ❌ CRITICAL: Webhook could not be established in production. Polling disabled to prevent 409.");
   }
 
-  // Graceful stop
   const stopBot = (reason: string) => {
     bot.stop(reason);
     isBotStarted = false;
