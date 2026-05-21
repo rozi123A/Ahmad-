@@ -1,6 +1,6 @@
 import { Telegraf, Markup } from "telegraf";
 import type { Express } from "express";
-import { getTelegramUser, upsertTelegramUser, getInactiveUsers } from "./db";
+import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
@@ -86,14 +86,86 @@ export async function startBot(app?: Express) {
 
     try {
       let user = await getTelegramUser(telegramId);
+      const isNewUser = !user;
       if (!user) {
-        await upsertTelegramUser({
+        user = await upsertTelegramUser({
           telegramId,
           username,
           firstName,
           lastName,
           referralCode: "ref_" + Math.random().toString(36).substr(2, 9).toUpperCase(),
+          referredBy: referrerId ? parseInt(referrerId) : undefined,
+        }) || null;
+        await createTransaction({ telegramId, type: "bonus", points: 0, metadata: JSON.stringify({ action: "registration" }) });
+      }
+
+      // ── Process referral bonus (for new users AND existing users without prior reward) ──
+      if (referrerId && parseInt(referrerId) !== telegramId) {
+        const referrerIdNum = parseInt(referrerId);
+        const existingTxs = await getTransactions(telegramId, 100);
+        const alreadyRewarded = existingTxs.some((tx: any) => {
+          try { return JSON.parse(tx.metadata || '{}').action === 'referral_welcome'; } catch { return false; }
         });
+        if (!alreadyRewarded) {
+          const inviter = await getTelegramUser(referrerIdNum);
+          if (inviter && !inviter.isBanned) {
+            const bonusPerReferral = 100;
+            // Credit inviter
+            await upsertTelegramUser({
+              ...inviter,
+              balance: Number(inviter.balance) + bonusPerReferral,
+              totalEarned: Number(inviter.totalEarned) + bonusPerReferral,
+            });
+            await createTransaction({
+              telegramId: referrerIdNum, type: "referral", points: bonusPerReferral,
+              metadata: JSON.stringify({ action: "referral_bonus", newUserId: telegramId }),
+            });
+            // Save referredBy if not already set
+            if (user && !user.referredBy) {
+              await upsertTelegramUser({ telegramId, referredBy: referrerIdNum });
+            }
+            // Notify inviter
+            const webappUrlInviter = WEBAPP_URL || "";
+            const newInviterBalance = Number(inviter.balance) + bonusPerReferral;
+            const inviterMsg =
+              `🎉 *مبروك!* انضم *${firstName || username || "صديق جديد"}* عبر رابطك!\n\n` +
+              `✅ تمت إضافة *${bonusPerReferral} نقطة* إلى رصيدك تلقائياً\n` +
+              `💰 رصيدك الجديد: *${newInviterBalance.toLocaleString()} نقطة*\n\n` +
+              `👥 شارك رابطك مع المزيد من الأصدقاء لتربح أكثر!`;
+            const inviterBody: any = { chat_id: referrerIdNum, text: inviterMsg, parse_mode: "Markdown" };
+            if (webappUrlInviter) inviterBody.reply_markup = JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrlInviter } }]] });
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(inviterBody),
+            }).catch(() => {});
+            // Welcome bonus for new user (300 pts)
+            const welcomeBonus = 300;
+            const currentUser = await getTelegramUser(telegramId);
+            await upsertTelegramUser({
+              telegramId,
+              balance: Number(currentUser?.balance || 0) + welcomeBonus,
+              totalEarned: Number(currentUser?.totalEarned || 0) + welcomeBonus,
+            });
+            await createTransaction({
+              telegramId, type: "bonus", points: welcomeBonus,
+              metadata: JSON.stringify({ action: "referral_welcome", invitedBy: referrerIdNum }),
+            });
+            // Welcome notification to new user
+            const inviterName = inviter.firstName
+              ? `${inviter.firstName}${inviter.lastName ? " " + inviter.lastName : ""}`
+              : (inviter.username ? `@${inviter.username}` : "صديقك");
+            const welcomeMsg =
+              `⭐ *Stars* 🎊 *أهلاً وسهلاً!*\n\n` +
+              `لقد انضممت عبر رابط *${inviterName}* وحصلت على:\n` +
+              `🎁 *${welcomeBonus} نقطة* ترحيبية أُضيفت لرصيدك الآن!\n\n` +
+              `📺 شاهد الإعلانات يومياً واربح المزيد من النقاط\n` +
+              `🌟 حوّل نقاطك إلى *Telegram Stars* ⭐`;
+            const welcomeBody: any = { chat_id: telegramId, text: welcomeMsg, parse_mode: "Markdown" };
+            if (WEBAPP_URL) welcomeBody.reply_markup = JSON.stringify({ inline_keyboard: [[{ text: "🎮 ابدأ اللعب والربح!", web_app: { url: WEBAPP_URL } }]] });
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(welcomeBody),
+            }).catch(() => {});
+          }
+        }
       }
 
       const welcomeMessage = `مرحباً بك يا ${firstName}! 🚀\n\n🎮 العب الآن واربح النقاط!\n🚀 كلما لعبت أكثر ربحت أكثر.\n💰 اجمع النقاط واستبدلها بالجوائز.`;
