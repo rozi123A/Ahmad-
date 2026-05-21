@@ -114,7 +114,7 @@ import { useState, useEffect, useCallback } from "react";
               const data = await getUserMutation.mutateAsync({
                 telegramId: telegramUser.id,
                 initData: initData || "",
-                referredBy: startParam ? parseInt(startParam) : undefined,
+                referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
               }).catch(() => ({ success: false, user: null }));
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });
