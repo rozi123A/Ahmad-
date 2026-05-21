@@ -79,6 +79,13 @@ let isBotStarted = false;
     const username = ctx.from.username || "";
     const firstName = ctx.from.first_name || "";
     const lastName = ctx.from.last_name || "";
+    // Extract referral from start payload: ?start=ref_12345
+    const startPayload = ctx.payload || "";
+    let referrerId: string | null = null;
+    if (startPayload.startsWith("ref_")) {
+      const rid = startPayload.replace("ref_", "");
+      if (/^\d+$/.test(rid)) referrerId = rid;
+    }
 
     console.log(`[Bot] New user started bot: ${telegramId} (@${username})`);
 
@@ -100,7 +107,8 @@ let isBotStarted = false;
         await ctx.reply(
           welcomeMessage,
           Markup.inlineKeyboard([
-            [Markup.button.webApp("فتح التطبيق 📱", WEBAPP_URL)],
+            const appUrl = referrerId ? WEBAPP_URL.replace(//+$/, "") + "?ref=" + referrerId : WEBAPP_URL;
+            [Markup.button.webApp("فتح التطبيق 📱", appUrl)],
             [Markup.button.url("قناة التحديثات 📢", "https://t.me/ads_reward123")],
           ])
         );
