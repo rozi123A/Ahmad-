@@ -645,6 +645,19 @@ export const appRouter = router({
 
 
     admin: router({
+      // Auto-auth using Telegram identity (admin only)
+      adminAutoAuth: publicProcedure
+        .input(z.object({ telegramId: z.number(), initData: z.string() }))
+        .mutation(async ({ input }) => {
+          const verified = verifyTelegramWebApp(input.initData);
+          if (!verified || verified.id !== input.telegramId) return { success: false, secret: '' };
+          const adminId = ENV.adminTelegramId;
+          if (!adminId || adminId !== input.telegramId) return { success: false, secret: '' };
+          const adminSecret = process.env.ADMIN_SECRET || '';
+          if (!adminSecret) return { success: false, secret: '' };
+          return { success: true, secret: adminSecret };
+        }),
+
       // Verify admin access — checks secret against env
       verify: publicProcedure
         .input(z.object({ secret: z.string() }))
