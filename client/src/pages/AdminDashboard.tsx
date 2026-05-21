@@ -68,25 +68,45 @@ export default function AdminDashboard() {
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
 
-  // Auto-auth: read secret from URL ?ak= (sent by bot) or saved session
+  // Auto-auth: try URL ?ak= param first, then Telegram identity, then saved session
   useEffect(() => {
     if (authed) return;
-    try {
+    const tryVerify = (s: string) =>
+      verifyMut.mutateAsync({ secret: s }).then(res => {
+        if (res.success) {
+          sessionStorage.setItem("adminSecret", s);
+          setSecret(s);
+          setAuthed(true);
+          return true;
+        }
+        return false;
+      }).catch(() => false);
+
+    const tryAutoAuth = async () => {
+      // 1. Try URL ?ak= (from bot link)
       const params = new URLSearchParams(window.location.search);
       const urlSecret = params.get("ak") || "";
+      if (urlSecret && await tryVerify(urlSecret)) return;
+
+      // 2. Try saved session
       const saved = sessionStorage.getItem("adminSecret") || "";
-      const candidate = urlSecret || saved;
-      if (!candidate) return;
-      verifyMut.mutateAsync({ secret: candidate }).then(res => {
-        if (res.success) {
-          sessionStorage.setItem("adminSecret", candidate);
-          setSecret(candidate);
-          setAuthed(true);
-        } else {
-          sessionStorage.removeItem("adminSecret");
+      if (saved && await tryVerify(saved)) return;
+
+      // 3. Try Telegram identity (adminAutoAuth endpoint)
+      try {
+        const tg = (window as any)?.Telegram?.WebApp;
+        if (tg?.initData && tg?.initDataUnsafe?.user?.id) {
+          const { data } = await fetch('/trpc/admin.adminAutoAuth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegramId: tg.initDataUnsafe.user.id, initData: tg.initData }),
+          }).then(r => r.json()).catch(() => ({ data: null }));
+          if (data?.secret) await tryVerify(data.secret);
         }
-      }).catch(() => {});
-    } catch {}
+      } catch {}
+    };
+
+    tryAutoAuth();
   }, []);
 
   const statsQ = trpc.admin.getStats.useQuery({ secret }, { enabled: authed, refetchInterval: 30000 });
