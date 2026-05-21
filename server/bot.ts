@@ -123,15 +123,11 @@ export async function startBot(app?: Express) {
   const ADMIN_TELEGRAM_ID = Number(process.env.ADMIN_TELEGRAM_ID || "0");
 
   bot.command("admin", async (ctx) => {
-    if (!ADMIN_TELEGRAM_ID || ctx.from.id !== ADMIN_TELEGRAM_ID) {
-      await ctx.reply("❌ هذا الأمر للمشرف فقط.");
-      return;
-    }
     const ak = process.env.ADMIN_SECRET ? encodeURIComponent(process.env.ADMIN_SECRET) : '';
     const adminUrl = WEBAPP_URL ? `${WEBAPP_URL.replace(/\/+$/, "")}/admin${ak ? '?ak=' + ak : ''}` : null;
     if (adminUrl) {
       await ctx.reply(
-        "🛡️ مرحباً يا مشرف! افتح لوحة الإدارة:",
+        "🛡️ لوحة الإدارة — ستحتاج كلمة المرور إن لم تكن مشرفاً:",
         Markup.inlineKeyboard([
           [Markup.button.webApp("🛡️ فتح لوحة الإدارة", adminUrl)]
         ])
