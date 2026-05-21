@@ -64,26 +64,28 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   const verifyMut = trpc.admin.verify.useMutation();
-  const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
   const broadcastMut = trpc.admin.broadcast.useMutation();
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
 
-  // Auto-auth for admin Telegram user
+  // Auto-auth: read secret from URL ?ak= (sent by bot) or saved session
   useEffect(() => {
     if (authed) return;
     try {
-      const tg = (window as any)?.Telegram?.WebApp;
-      if (!tg) return;
-      const tgUser = tg.initDataUnsafe?.user;
-      if (tgUser?.id === 5279238199) {
-        const saved = sessionStorage.getItem("adminSecret");
-        if (saved) {
-          verifyMut.mutateAsync({ secret: saved }).then(res => {
-            if (res.success) { setSecret(saved); setAuthed(true); }
-          }).catch(() => {});
+      const params = new URLSearchParams(window.location.search);
+      const urlSecret = params.get("ak") || "";
+      const saved = sessionStorage.getItem("adminSecret") || "";
+      const candidate = urlSecret || saved;
+      if (!candidate) return;
+      verifyMut.mutateAsync({ secret: candidate }).then(res => {
+        if (res.success) {
+          sessionStorage.setItem("adminSecret", candidate);
+          setSecret(candidate);
+          setAuthed(true);
+        } else {
+          sessionStorage.removeItem("adminSecret");
         }
-      }
+      }).catch(() => {});
     } catch {}
   }, []);
 
