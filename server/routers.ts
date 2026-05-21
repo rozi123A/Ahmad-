@@ -214,11 +214,11 @@ export const appRouter = router({
                   ? `${inviter.firstName}${inviter.lastName ? " " + inviter.lastName : ""}`
                   : (inviter.username ? `@${inviter.username}` : "صديقك");
                 const welcomeMsg =
-                  `🎊 *أهلاً وسهلاً!*\n\n` +
+                  `⭐ *Stars* 🎊 *أهلاً وسهلاً!*\n\n` +
                   `لقد انضممت عبر رابط *${inviterName}* وحصلت على:\n` +
                   `🎁 *${welcomeBonus} نقطة* ترحيبية أُضيفت لرصيدك الآن!\n\n` +
                   `📺 شاهد الإعلانات يومياً واربح المزيد من النقاط\n` +
-                  `🌟 حوّل نقاطك إلى Telegram Stars`;
+                  `🌟 حوّل نقاطك إلى *Telegram Stars* ⭐`;
                 const welcomeBody: any = {
                   chat_id: input.telegramId,
                   text: welcomeMsg,
