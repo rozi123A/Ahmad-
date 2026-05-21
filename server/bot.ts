@@ -127,7 +127,8 @@ export async function startBot(app?: Express) {
       await ctx.reply("❌ هذا الأمر للمشرف فقط.");
       return;
     }
-    const adminUrl = WEBAPP_URL ? `${WEBAPP_URL.replace(/\/+$/, "")}/admin` : null;
+    const ak = process.env.ADMIN_SECRET ? encodeURIComponent(process.env.ADMIN_SECRET) : '';
+    const adminUrl = WEBAPP_URL ? `${WEBAPP_URL.replace(/\/+$/, "")}/admin${ak ? '?ak=' + ak : ''}` : null;
     if (adminUrl) {
       await ctx.reply(
         "🛡️ مرحباً يا مشرف! افتح لوحة الإدارة:",
