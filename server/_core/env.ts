@@ -9,7 +9,7 @@ export const ENV = {
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
   botToken: process.env.BOT_TOKEN ?? "",
   adsgramBlockId: (() => {
-    const raw = process.env.ADSGRAM_BLOCK_ID ?? "";
+    const raw = process.env.ADSGRAM_BLOCK ?? process.env.ADSGRAM_BLOCK_ID ?? "";
     const cleaned = raw.replace(/[^0-9]/g, "");
     if (cleaned.length >= 4) return cleaned;
     return "";
