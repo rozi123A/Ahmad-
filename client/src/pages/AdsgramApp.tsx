@@ -106,7 +106,8 @@ import { useState, useEffect, useCallback } from "react";
             tg.ready(); tg.expand();
             const initData = tg.initData;
             const telegramUser = tg.initDataUnsafe?.user;
-            const startParam = tg.initDataUnsafe?.start_param;
+            const startParam = tg.initDataUnsafe?.start_param
+              || new URLSearchParams(window.location.search).get('ref') || undefined;
             if (!telegramUser) { setErrorType("no_user"); setLoading(false); return; }
             setDisplayName(telegramUser.first_name || telegramUser.username || "");
             try {
