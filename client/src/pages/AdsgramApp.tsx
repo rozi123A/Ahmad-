@@ -185,7 +185,7 @@ import { useState, useEffect, useCallback } from "react";
           { id: "friends", icon: Users, label: t.friends_title, emoji: "👥" },
         { id: "leaderboard", icon: Trophy, label: t.leaderboard, emoji: "🏆" },
         { id: "withdraw", icon: Wallet, label: t.withdraw, emoji: "💸" },
-        { id: "admin", icon: Shield, label: "إدارة", emoji: "🛡️" },
+        ...(localStorage.getItem("adminSecret") ? [{ id: "admin", icon: Shield, label: "إدارة", emoji: "🛡️" }] : []),
       ];
 
       const tabAccent: Record<string, string> = {
