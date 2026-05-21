@@ -280,7 +280,7 @@ import { useState, useEffect, useCallback } from "react";
                 {/* Quick Actions */}
                 <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, overflow: "hidden" }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ {t.tasks}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ الإجراءات السريعة</span>
                   </div>
                   {[
                     { emoji: "📺", label: t.watch_ad, sub: `+${safeUser.adReward} ${t.points}`, color: "#F59E0B", tab: "ads" },
