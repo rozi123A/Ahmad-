@@ -158,7 +158,7 @@ export const appRouter = router({
                 ? `${verified.first_name}${verified.last_name ? " " + verified.last_name : ""}`
                 : (verified.username ? `@${verified.username}` : "صديق جديد");
               if (botToken) {
-                const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || "";
+                const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
                 const msg =
                   `🎉 *مبروك!* انضم ${newUserName} عبر رابطك!\n\n` +
                   `🎁 لديك *100 نقطة* في انتظارك\n` +
@@ -718,7 +718,7 @@ export const appRouter = router({
           if (!adminSecret || input.secret !== adminSecret) return { success: false, sent: 0, message: "غير مصرح" };
 
           const botToken = ENV.botToken;
-          const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || "";
+          const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
           if (!botToken) return { success: false, sent: 0, message: "BOT_TOKEN غير مضبوط" };
 
           let users: any[] = [];
