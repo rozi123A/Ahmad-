@@ -241,6 +241,84 @@ export const appRouter = router({
             }
           }
         } else {
+          // ── Process referral for existing users who haven't been credited yet ──
+          if (input.referredBy && input.referredBy !== input.telegramId && !user.referredBy) {
+            const existingTxs = await getTransactions(input.telegramId);
+            const alreadyRewarded = existingTxs.some((tx: any) => {
+              try { return JSON.parse(tx.metadata || '{}').action === 'referral_welcome'; } catch { return false; }
+            });
+            if (!alreadyRewarded) {
+              const inviter = await getTelegramUser(input.referredBy);
+              if (inviter && !inviter.isBanned) {
+                const bonusPerReferral = 100;
+                // ── AUTO-CREDIT inviter ──
+                await upsertTelegramUser({
+                  ...inviter,
+                  balance: Number(inviter.balance) + bonusPerReferral,
+                  totalEarned: Number(inviter.totalEarned) + bonusPerReferral,
+                });
+                await createTransaction({
+                  telegramId: input.referredBy,
+                  type: "referral",
+                  points: bonusPerReferral,
+                  metadata: JSON.stringify({ action: "referral_bonus", newUserId: input.telegramId }),
+                });
+                // ── Save referredBy on existing user ──
+                await upsertTelegramUser({ telegramId: input.telegramId, referredBy: input.referredBy });
+                // ── Notify inviter ──
+                const botToken2 = ENV.botToken;
+                const newUserName2 = verified.first_name
+                  ? `${verified.first_name}${verified.last_name ? " " + verified.last_name : ""}`
+                  : (verified.username ? `@${verified.username}` : "صديق جديد");
+                if (botToken2) {
+                  const webappUrl2 = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+                  const newInviterBalance2 = Number(inviter.balance) + bonusPerReferral;
+                  const msg2 =
+                    `🎉 *مبروك!* انضم *${newUserName2}* عبر رابطك!\n\n` +
+                    `✅ تمت إضافة *${bonusPerReferral} نقطة* إلى رصيدك تلقائياً\n` +
+                    `💰 رصيدك الجديد: *${newInviterBalance2.toLocaleString()} نقطة*\n\n` +
+                    `👥 شارك رابطك مع المزيد من الأصدقاء لتربح أكثر!`;
+                  const body2: any = { chat_id: input.referredBy, text: msg2, parse_mode: "Markdown" };
+                  if (webappUrl2) body2.reply_markup = JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl2 } }]] });
+                  fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`, {
+                    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body2),
+                  }).catch(() => {});
+                }
+                // ── Welcome bonus for the existing user ──
+                const welcomeBonus2 = 300;
+                await upsertTelegramUser({
+                  telegramId: input.telegramId,
+                  balance: Number(user.balance) + welcomeBonus2,
+                  totalEarned: Number(user.totalEarned) + welcomeBonus2,
+                });
+                await createTransaction({
+                  telegramId: input.telegramId,
+                  type: "bonus",
+                  points: welcomeBonus2,
+                  metadata: JSON.stringify({ action: "referral_welcome", invitedBy: input.referredBy }),
+                });
+                // ── Welcome notification ──
+                if (botToken2) {
+                  const webappUrl3 = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+                  const inviterName2 = inviter.firstName
+                    ? `${inviter.firstName}${inviter.lastName ? " " + inviter.lastName : ""}`
+                    : (inviter.username ? `@${inviter.username}` : "صديقك");
+                  const welcomeMsg2 =
+                    `⭐ *Stars* 🎊 *أهلاً وسهلاً!*\n\n` +
+                    `لقد انضممت عبر رابط *${inviterName2}* وحصلت على:\n` +
+                    `🎁 *${welcomeBonus2} نقطة* ترحيبية أُضيفت لرصيدك الآن!\n\n` +
+                    `📺 شاهد الإعلانات يومياً واربح المزيد من النقاط\n` +
+                    `🌟 حوّل نقاطك إلى *Telegram Stars* ⭐`;
+                  const welcomeBody2: any = { chat_id: input.telegramId, text: welcomeMsg2, parse_mode: "Markdown" };
+                  if (webappUrl3) welcomeBody2.reply_markup = JSON.stringify({ inline_keyboard: [[{ text: "🎮 ابدأ اللعب والربح!", web_app: { url: webappUrl3 } }]] });
+                  fetch(`https://api.telegram.org/bot${botToken2}/sendMessage`, {
+                    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(welcomeBody2),
+                  }).catch(() => {});
+                }
+                user = await getTelegramUser(input.telegramId);
+              }
+            }
+          }
           const dailyUpdates = resetDailyIfNeeded(user);
           if (Object.keys(dailyUpdates).length > 0) {
             user = await upsertTelegramUser({ ...user, ...dailyUpdates });
