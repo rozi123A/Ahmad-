@@ -735,7 +735,13 @@ export const appRouter = router({
 
           for (const u of users) {
             try {
-              const payload: any = { chat_id: u.telegramId, text: input.message, parse_mode: "HTML" };
+              // Replace personalized template variables per user
+              const name = u.firstName || u.username || "صديق";
+              const balance = String(u.balance ?? 0);
+              const personalizedText = input.message
+                .replace(/{name}/g, name)
+                .replace(/{balance}/g, balance);
+              const payload: any = { chat_id: u.telegramId, text: personalizedText, parse_mode: "HTML" };
               if (keyboard) payload.reply_markup = keyboard;
               const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: "POST",
