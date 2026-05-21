@@ -96,7 +96,7 @@ export default function AdminDashboard() {
       try {
         const tg = (window as any)?.Telegram?.WebApp;
         if (tg?.initData && tg?.initDataUnsafe?.user?.id) {
-          const { data } = await fetch('/trpc/admin.adminAutoAuth', {
+          const { data } = await fetch('/api/trpc/admin.adminAutoAuth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ telegramId: tg.initDataUnsafe.user.id, initData: tg.initData }),
