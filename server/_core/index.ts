@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express from "express";
+import helmet from "helmet";
+import cors from "cors";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -41,9 +43,18 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Security headers
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  // CORS — allow configured frontend origin
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || process.env.WEBAPP_URL || true,
+    credentials: true,
+  }));
+
+  // Body parser — 2mb limit to prevent DoS attacks
+  app.use(express.json({ limit: "2mb" }));
+  app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
     // ── Ad view page — served inside Telegram's built-in browser ──
     // The ad script runs inside a sandboxed iframe (no allow-top-navigation)
