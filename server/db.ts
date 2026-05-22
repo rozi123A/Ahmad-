@@ -16,7 +16,7 @@ export async function getDb() {
     try {
       _pool = new Pool({
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
+        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : false,
         max: 10,
       });
       _db = drizzle(_pool);
@@ -447,7 +447,7 @@ export async function initDb() {
   const { Client } = await import('pg');
   const client = new Client({
     connectionString: url,
-    ssl: { rejectUnauthorized: false },
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : false,
     connectionTimeoutMillis: 10000,
   });
 
