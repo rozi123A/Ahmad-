@@ -347,14 +347,22 @@ export const appRouter = router({
         };
       }),
     getTransactions: publicProcedure
-      .input(z.object({ telegramId: z.number() }))
+      .input(z.object({ telegramId: z.number(), initData: z.string().optional() }))
       .query(async ({ input }) => {
+        if (input.initData) {
+          const verified = verifyTelegramWebApp(input.initData);
+          if (!verified || verified.id !== input.telegramId) return [];
+        }
         return await getTransactions(input.telegramId);
       }),
 
     getReferralStats: publicProcedure
-      .input(z.object({ telegramId: z.number() }))
+      .input(z.object({ telegramId: z.number(), initData: z.string().optional() }))
       .query(async ({ input }) => {
+        if (input.initData) {
+          const verified = verifyTelegramWebApp(input.initData);
+          if (!verified || verified.id !== input.telegramId) return { count: 0, totalEarned: 0 };
+        }
         return await getReferralStats(input.telegramId);
       }),
 
@@ -372,8 +380,14 @@ export const appRouter = router({
         const referredCount = stats.count;
         if (referredCount === 0) return { success: true, claimed: 0, points: 0 };
 
-        // Count existing referral transactions for this user
-        const existingTxCount = Math.floor(stats.totalEarned / 100);
+        // Count actual referral transactions (not divide totalEarned which includes other types)
+        const allUserTxs = await getTransactions(input.telegramId, 500);
+        const existingTxCount = allUserTxs.filter((tx: any) => {
+          try {
+            const m = JSON.parse(tx.metadata || '{}');
+            return tx.type === 'referral' && (m.action === 'referral_bonus' || m.action === 'claim_missed_referral');
+          } catch { return false; }
+        }).length;
 
         // How many referrals haven't been paid yet
         const unpaidCount = Math.max(0, referredCount - existingTxCount);
@@ -615,7 +629,7 @@ export const appRouter = router({
   withdraw: router({
     // Create a new withdrawal request
     request: publicProcedure
-      .input(z.object({ telegramId: z.number(), amount: z.number(), initData: z.string() }))
+      .input(z.object({ telegramId: z.number(), amount: z.number().int().positive().min(10000), initData: z.string() }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) {
@@ -629,6 +643,10 @@ export const appRouter = router({
         const starsRate = await getSetting("starsRate", 1000);
         const currentBalance = Number(user.balance) || 0;
 
+        // Enforce minimum 10000 and positive integer at server level too
+        if (!Number.isInteger(input.amount) || input.amount <= 0) {
+          return { success: false, message: "المبلغ يجب أن يكون عدداً صحيحاً موجباً" };
+        }
         if (input.amount < minWithdraw) {
           return { success: false, message: `الحد الأدنى للسحب ${minWithdraw.toLocaleString()} نقطة` };
         }
@@ -644,6 +662,9 @@ export const appRouter = router({
         }
 
         const stars = Math.floor(input.amount / starsRate);
+        if (stars < 1) {
+          return { success: false, message: `الحد الأدنى للسحب هو 10,000 نقطة (= 10 نجوم)` };
+        }
 
         const db = await getDb();
         if (!db) return { success: false, message: "قاعدة البيانات غير متوفرة" };
