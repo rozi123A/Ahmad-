@@ -49,7 +49,7 @@ function StatCard({ emoji, label, value, color, sub }: { emoji: string; label: s
 }
 
 export default function AdminDashboard() {
-  const [secret, setSecret] = useState(() => localStorage.getItem("adminSecret") || "");
+  const [secret, setSecret] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
     const tryVerify = (s: string) =>
       verifyMut.mutateAsync({ secret: s }).then(res => {
         if (res.success) {
-          localStorage.setItem("adminSecret", s);
+          
           setSecret(s);
           setAuthed(true);
           return true;
@@ -84,14 +84,9 @@ export default function AdminDashboard() {
       }).catch(() => false);
 
     const tryAutoAuth = async () => {
-      // 1. Try URL ?ak= (from bot link)
-      const params = new URLSearchParams(window.location.search);
-      const urlSecret = params.get("ak") || "";
-      if (urlSecret && await tryVerify(urlSecret)) return;
+      // URL param auth removed for security
 
-      // 2. Try saved session
-      const saved = localStorage.getItem("adminSecret") || "";
-      if (saved && await tryVerify(saved)) return;
+      
 
       // 3. Try Telegram identity via tRPC client (correct format)
       try {
@@ -119,7 +114,7 @@ export default function AdminDashboard() {
     try {
       const res = await verifyMut.mutateAsync({ secret });
       if (res.success) {
-        localStorage.setItem("adminSecret", secret);
+        
         setAuthed(true);
         toast({ title: "✅ تم الدخول", description: "مرحباً بك في لوحة التحكم" });
       } else {
@@ -190,12 +185,7 @@ export default function AdminDashboard() {
     else window.open(url, "_blank");
   };
 
-  // Block non-admin Telegram users
-  const tgRuntime = typeof window !== "undefined" && !!(window as any)?.Telegram?.WebApp?.initData;
-  const tgUserId = tgRuntime ? (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.id : null;
-  if (tgRuntime && tgUserId !== null && tgUserId !== 5279238199) {
-    return (
-      <div style={{ minHeight: "100vh", background: "#070711", display: "flex", alignItems: "center", justifyContent: "center" }}>
+  }>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 64, marginBottom: 16 }}>🚫</div>
           <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>غير مصرح</p>
