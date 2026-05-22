@@ -10,13 +10,22 @@ import { v4 as uuidv4 } from "uuid";
 import { ENV } from "./_core/env";
 
 // ── Anti-bot: in-memory rate limiter ──
-const tokenRateMap = new Map();
+// NOTE: Resets on server restart — migrate to Redis for persistent rate limiting.
+const tokenRateMap = new Map<number, { count: number; windowStart: number }>();
 const MIN_AD_SECONDS = 15;
 const INSTANT_BAN_SECONDS = 8;
 const RATE_WINDOW_MS = 120_000;
 const MAX_TOKENS_PER_MIN = 3;
 
-function checkRateLimit(telegramId) {
+// Purge stale entries every 5 minutes to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, rec] of tokenRateMap.entries()) {
+    if (now - rec.windowStart > RATE_WINDOW_MS * 2) tokenRateMap.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
+function checkRateLimit(telegramId: number): boolean {
   const now = Date.now();
   const rec = tokenRateMap.get(telegramId);
   if (!rec || now - rec.windowStart > RATE_WINDOW_MS) {
