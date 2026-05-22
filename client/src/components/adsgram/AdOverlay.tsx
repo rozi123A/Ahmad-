@@ -10,8 +10,8 @@ interface AdOverlayProps {
 /* ------------------------------------------------------------------ */
 /* Config — replace ZONE_ID with your PropellerAds / Monetag Zone ID  */
 /* ------------------------------------------------------------------ */
-const AD_ZONE_ID  = (window as any).__AD_ZONE_ID__ || import.meta.env.VITE_AD_ZONE_ID || "";
-const AD_SCRIPT   = (window as any).__AD_SCRIPT__  || import.meta.env.VITE_AD_SCRIPT_SRC || "https://czathooyou.com/tag.min.js"; // PropellerAds Interstitial CDN
+const AD_ZONE_ID  = "11043107";                          // Monetag Vignette banner
+const AD_SCRIPT   = "https://n6wxm.com/vignette.min.js"; // Monetag Vignette CDN
 
 type Phase =
   | "idle"       // waiting for user tap
