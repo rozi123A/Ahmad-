@@ -43,7 +43,8 @@ import { useState, useEffect, useCallback } from "react";
     };
 
     function ActivityLog({ telegramId, lang }: { telegramId: number; lang: Language }) {
-      const { data: transactions, isLoading } = trpc.telegram.getTransactions.useQuery({ telegramId });
+      const initData = typeof window !== "undefined" ? (window as any).Telegram?.WebApp?.initData || "" : "";
+      const { data: transactions, isLoading } = trpc.telegram.getTransactions.useQuery({ telegramId, initData: initData || undefined });
       const t = translations[lang];
       const typeIcons: Record<string, string> = { ad: "📺", spin: "🎡", referral: "👥", withdraw: "💸", bonus: "🎁", task: "✅" };
       const typeColors: Record<string, string> = { ad: "#F59E0B", spin: "#8B5CF6", referral: "#3B82F6", withdraw: "#EF4444", bonus: "#10B981", task: "#6366F1" };
