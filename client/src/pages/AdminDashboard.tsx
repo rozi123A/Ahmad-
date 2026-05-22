@@ -185,14 +185,7 @@ export default function AdminDashboard() {
     else window.open(url, "_blank");
   };
 
-  }>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>🚫</div>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14 }}>غير مصرح</p>
-        </div>
-      </div>
-    );
-  }
+
 
   /* ── LOGIN ── */
   if (!authed) {
