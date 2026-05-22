@@ -11,71 +11,6 @@ import { useState, useRef, useCallback } from "react";
 
   type Phase = "idle" | "loading" | "countdown" | "ready" | "claimed" | "error";
 
-  // Inline SVG thumbnail — looks like a real ad preview
-  function AdThumbnail() {
-    return (
-      <div style={{
-        width: "100%", borderRadius: 16, overflow: "hidden",
-        position: "relative", height: 160,
-        background: "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
-        border: "1px solid rgba(255,255,255,0.1)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        marginBottom: 4,
-      }}>
-        {/* background glow blobs */}
-        <div style={{ position:"absolute", top:-20, right:-20, width:120, height:120, borderRadius:"50%", background:"rgba(250,204,21,0.12)", filter:"blur(30px)" }}/>
-        <div style={{ position:"absolute", bottom:-30, left:-10, width:100, height:100, borderRadius:"50%", background:"rgba(99,102,241,0.15)", filter:"blur(25px)" }}/>
-
-        {/* play button circle */}
-        <div style={{
-          width: 64, height: 64, borderRadius: "50%",
-          background: "linear-gradient(135deg,rgba(250,204,21,0.9),rgba(234,179,8,0.9))",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 0 30px rgba(250,204,21,0.5), 0 4px 20px rgba(0,0,0,0.4)",
-          zIndex: 2,
-          animation: "thumbPulse 2s ease-in-out infinite",
-        }}>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="#1a1a2e">
-            <polygon points="5,3 19,12 5,21" />
-          </svg>
-        </div>
-
-        {/* stars decoration */}
-        <div style={{ position:"absolute", top:14, left:16, fontSize:18, opacity:0.7 }}>⭐</div>
-        <div style={{ position:"absolute", top:10, right:20, fontSize:14, opacity:0.5 }}>✨</div>
-        <div style={{ position:"absolute", bottom:14, right:16, fontSize:16, opacity:0.6 }}>💰</div>
-
-        {/* bottom label */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          background: "linear-gradient(to top,rgba(0,0,0,0.8),transparent)",
-          padding: "20px 14px 10px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 600 }}>إعلان مدفوع</span>
-          <span style={{
-            background: "rgba(250,204,21,0.2)", border: "1px solid rgba(250,204,21,0.4)",
-            color: "#fcd34d", fontSize: 10, fontWeight: 700,
-            padding: "2px 8px", borderRadius: 20,
-          }}>AD</span>
-        </div>
-
-        {/* top bar */}
-        <div style={{
-          position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
-          display: "flex", gap: 5,
-        }}>
-          {[1,2,3].map(i => (
-            <div key={i} style={{
-              height: 3, width: i === 2 ? 24 : 14, borderRadius: 3,
-              background: i === 1 ? "rgba(250,204,21,0.8)" : "rgba(255,255,255,0.2)",
-            }}/>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   export default function AdOverlay({
     seconds = 15,
     rewardLabel,
@@ -211,7 +146,7 @@ import { useState, useRef, useCallback } from "react";
 
         {/* timer pill */}
         <div style={{
-          marginTop: 32,
+          marginTop: 32, flexShrink: 0,
           background: phase === "ready"
             ? "linear-gradient(135deg,rgba(22,163,74,0.9),rgba(21,128,61,0.9))"
             : "rgba(255,255,255,0.07)",
@@ -221,24 +156,64 @@ import { useState, useRef, useCallback } from "react";
           fontWeight: 900, fontSize: 24, color: "#fff",
           letterSpacing: "0.08em", fontVariantNumeric: "tabular-nums",
           boxShadow: phase === "ready" ? "0 0 30px rgba(22,163,74,0.5)" : "0 2px 20px rgba(0,0,0,0.4)",
-          transition: "all 0.4s", flexShrink: 0,
+          transition: "all 0.4s",
         }}>
           {phase === "ready" ? "✅ جاهز!" : phase === "claimed" ? "🎁" : phase === "countdown" ? `${mm}:${ss}` : "💎"}
         </div>
 
         {/* card */}
         <div style={{
-          marginTop: 14, width: "100%", maxWidth: 420,
+          marginTop: 14, width: "100%", maxWidth: 420, flexShrink: 0,
           background: "rgba(255,255,255,0.04)",
           border: "1px solid rgba(255,255,255,0.09)",
           borderRadius: 24, overflow: "hidden",
           boxShadow: "0 16px 60px rgba(0,0,0,0.5)",
-          flexShrink: 0,
         }}>
-          {/* thumbnail — shown only when idle or error */}
+
+          {/* === REAL AD THUMBNAIL IMAGE === */}
           {(phase === "idle" || phase === "error") && (
-            <div style={{ padding: "14px 14px 0" }}>
-              <AdThumbnail />
+            <div style={{ position: "relative", width: "100%", cursor: "pointer" }} onClick={handleStartAd}>
+              <img
+                src="/ad-thumbnail.png"
+                alt="ad preview"
+                style={{
+                  width: "100%",
+                  display: "block",
+                  objectFit: "cover",
+                  maxHeight: 220,
+                }}
+              />
+              {/* dark overlay gradient at bottom */}
+              <div style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, height: 70,
+                background: "linear-gradient(to top,rgba(13,20,32,1),transparent)",
+              }}/>
+              {/* play button centered */}
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <div style={{
+                  width: 60, height: 60, borderRadius: "50%",
+                  background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
+                  border: "2px solid rgba(255,255,255,0.6)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 0 30px rgba(255,255,255,0.2)",
+                  animation: "thumbPulse 2s ease-in-out infinite",
+                }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+                    <polygon points="6,3 20,12 6,21" />
+                  </svg>
+                </div>
+              </div>
+              {/* Ad badge */}
+              <div style={{
+                position: "absolute", top: 10, left: 10,
+                background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                borderRadius: 6, padding: "2px 8px",
+                color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 700,
+              }}>AD · 18+</div>
             </div>
           )}
 
@@ -264,7 +239,7 @@ import { useState, useRef, useCallback } from "react";
                  "تم الاستلام!"}
               </p>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: "3px 0 0" }}>
-                {phase === "idle" ? "سيظهر الإعلان مباشرة على شاشتك" :
+                {phase === "idle" ? "اضغط على الصورة أو الزر أدناه للبدء" :
                  phase === "countdown" ? `انتظر ${mm}:${ss} ثم استلم` :
                  phase === "ready" ? "اضغط زر الاستلام أدناه" :
                  phase === "error" ? "فشل تحميل الإعلان" :
@@ -371,8 +346,8 @@ import { useState, useRef, useCallback } from "react";
             50%      { box-shadow: 0 4px 40px rgba(99,102,241,0.85); }
           }
           @keyframes thumbPulse {
-            0%,100% { box-shadow: 0 0 30px rgba(250,204,21,0.5), 0 4px 20px rgba(0,0,0,0.4); transform: scale(1); }
-            50%      { box-shadow: 0 0 45px rgba(250,204,21,0.75), 0 4px 20px rgba(0,0,0,0.4); transform: scale(1.06); }
+            0%,100% { transform: scale(1); box-shadow: 0 0 30px rgba(255,255,255,0.2); }
+            50%      { transform: scale(1.08); box-shadow: 0 0 45px rgba(255,255,255,0.35); }
           }
         `}</style>
       </div>
