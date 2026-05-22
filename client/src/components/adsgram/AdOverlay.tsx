@@ -8,6 +8,22 @@ interface AdOverlayProps {
 }
 
 const MONETAG_ZONE = "11020553";
+const MONETAG_SRC  = "https://al5sm.com/tag.min.js";
+
+function loadMonotagScript(): Promise<void> {
+  return new Promise((resolve) => {
+    if ((window as any)[`show_${MONETAG_ZONE}`]) { resolve(); return; }
+    const existing = document.querySelector(`script[data-zone="${MONETAG_ZONE}"]`);
+    if (existing) { setTimeout(resolve, 500); return; }
+    const s = document.createElement("script");
+    s.dataset.zone = MONETAG_ZONE;
+    s.src = MONETAG_SRC;
+    s.async = true;
+    s.onload = () => setTimeout(resolve, 300);
+    s.onerror = () => resolve();
+    document.head.appendChild(s);
+  });
+}
 
 export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose }: AdOverlayProps) {
   const [timeLeft,  setTimeLeft]  = useState(seconds);
@@ -27,27 +43,35 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
   };
 
   useEffect(() => {
-    const showFn = (window as any)[`show_${MONETAG_ZONE}`];
-    if (typeof showFn === "function") {
+    let cancelled = false;
+
+    const runAd = async () => {
+      await loadMonotagScript();
+      if (cancelled) return;
+
       setAdStarted(true);
-      showFn()
-        .then(() => {
-          setAdDone(true);
-          startCountdown();
-        })
-        .catch(() => {
-          setAdError(true);
-          setAdDone(true);
-          startCountdown();
-        });
-    } else {
-      setAdStarted(true);
-      setAdError(true);
-      setAdDone(true);
-      startCountdown();
-    }
+      const showFn = (window as any)[`show_${MONETAG_ZONE}`];
+
+      if (typeof showFn === "function") {
+        try {
+          await showFn();
+        } catch {
+          if (!cancelled) setAdError(true);
+        }
+      } else {
+        setAdError(true);
+      }
+
+      if (!cancelled) {
+        setAdDone(true);
+        startCountdown();
+      }
+    };
+
+    runAd();
 
     return () => {
+      cancelled = true;
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -126,9 +150,9 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
         {/* Steps */}
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { icon: "1️⃣", text: "الإعلان يظهر تلقائياً",                           done: adStarted },
-            { icon: "2️⃣", text: "شاهد الإعلان كاملاً للحصول على المكافأة",         done: adDone   },
-            { icon: "3️⃣", text: "انتظر العداد واستلم مكافأتك",                     done: canClaim },
+            { icon: "1️⃣", text: "الإعلان يظهر تلقائياً",                     done: adStarted },
+            { icon: "2️⃣", text: "شاهد الإعلان كاملاً للحصول على المكافأة",   done: adDone   },
+            { icon: "3️⃣", text: "انتظر العداد واستلم مكافأتك",               done: canClaim },
           ].map((step, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 12,
