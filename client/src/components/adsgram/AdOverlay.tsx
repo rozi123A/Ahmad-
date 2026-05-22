@@ -7,54 +7,54 @@ interface AdOverlayProps {
   onClose: () => void;
 }
 
+const MONETAG_ZONE = "11020553";
+
 export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose }: AdOverlayProps) {
-  const [timeLeft, setTimeLeft] = useState(seconds);
-  const [claimed,  setClaimed]  = useState(false);
-  const [adOpened, setAdOpened] = useState(false);
-  const [returned, setReturned] = useState(false);
+  const [timeLeft,  setTimeLeft]  = useState(seconds);
+  const [claimed,   setClaimed]   = useState(false);
+  const [adStarted, setAdStarted] = useState(false);
+  const [adDone,    setAdDone]    = useState(false);
+  const [adError,   setAdError]   = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const visRef   = useRef<(() => void) | null>(null);
 
-  const openAdPage = () => {
-    const tg = (window as any).Telegram?.WebApp;
-    const adUrl = `${window.location.origin}/ad-view`;
-    if (tg?.openLink) {
-      tg.openLink(adUrl, { try_instant_view: false });
-    } else {
-      window.open(adUrl, "_blank");
-    }
-  };
-
-  useEffect(() => {
-    openAdPage();
-    setAdOpened(true);
-
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        setReturned(true);
-        document.removeEventListener("visibilitychange", onVisible);
-        visRef.current = null;
-      }
-    };
-    visRef.current = onVisible;
-    document.addEventListener("visibilitychange", onVisible);
-
+  const startCountdown = () => {
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) { clearInterval(timerRef.current!); return 0; }
         return prev - 1;
       });
     }, 1000);
+  };
+
+  useEffect(() => {
+    const showFn = (window as any)[`show_${MONETAG_ZONE}`];
+    if (typeof showFn === "function") {
+      setAdStarted(true);
+      showFn()
+        .then(() => {
+          setAdDone(true);
+          startCountdown();
+        })
+        .catch(() => {
+          setAdError(true);
+          setAdDone(true);
+          startCountdown();
+        });
+    } else {
+      setAdStarted(true);
+      setAdError(true);
+      setAdDone(true);
+      startCountdown();
+    }
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (visRef.current) document.removeEventListener("visibilitychange", visRef.current);
     };
   }, []);
 
   const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
   const ss = String(timeLeft % 60).padStart(2, "0");
-  const canClaim = timeLeft === 0 && !claimed;
+  const canClaim = timeLeft === 0 && adDone && !claimed;
 
   const handleClaim = () => {
     if (!canClaim) return;
@@ -115,10 +115,10 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
           }}>📺</div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 17, fontWeight: 900, color: "#fff", margin: 0 }}>
-              {returned ? "شكراً لمشاهدتك!" : "الإعلان مفتوح في Telegram"}
+              {adDone ? "شكراً لمشاهدتك!" : adStarted ? "جاري تحميل الإعلان..." : "تحميل..."}
             </p>
             <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "4px 0 0", lineHeight: 1.4 }}>
-              {returned ? "انتظر انتهاء العداد ثم اضغط استلم" : "شاهد الإعلان كاملاً ثم ارجع هنا"}
+              {adDone ? "انتظر انتهاء العداد ثم اضغط استلم" : "الإعلان يظهر الآن — شاهده كاملاً"}
             </p>
           </div>
         </div>
@@ -126,9 +126,9 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
         {/* Steps */}
         <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { icon: "1️⃣", text: "الإعلان يفتح في متصفح Telegram", done: adOpened },
-            { icon: "2️⃣", text: "شاهد الإعلان كاملاً — انقر للحصول على المكافأة",  done: returned },
-            { icon: "3️⃣", text: "ارجع هنا واستلم مكافأتك",                          done: canClaim },
+            { icon: "1️⃣", text: "الإعلان يظهر تلقائياً",                           done: adStarted },
+            { icon: "2️⃣", text: "شاهد الإعلان كاملاً للحصول على المكافأة",         done: adDone   },
+            { icon: "3️⃣", text: "انتظر العداد واستلم مكافأتك",                     done: canClaim },
           ].map((step, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 12,
@@ -145,18 +145,13 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
           ))}
         </div>
 
-        {/* Reopen */}
-        {!canClaim && (
+        {adError && (
           <div style={{ padding: "0 20px 10px" }}>
-            <button onClick={openAdPage} style={{
-              width: "100%", height: 44, borderRadius: 12,
-              border: "1px solid rgba(14,165,233,0.3)",
-              background: "rgba(14,165,233,0.08)", color: "rgba(14,165,233,0.9)",
-              fontWeight: 700, fontSize: 13, cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            }}>
-              ✈️ إعادة فتح الإعلان في Telegram
-            </button>
+            <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 12, padding: "10px 14px" }}>
+              <p style={{ fontSize: 12, color: "rgba(245,158,11,0.8)", margin: 0, textAlign: "center" }}>
+                ⚠️ لم يتم تحميل الإعلان — قد يكون اتصالك بطيئاً أو Ad Blocker مفعّل
+              </p>
+            </div>
           </div>
         )}
 
@@ -175,7 +170,7 @@ export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose 
           }}>
             {canClaim
               ? <><span style={{ fontSize: 22 }}>🎁</span> انقر للحصول على المكافأة!{rewardLabel ? ` (${rewardLabel})` : ""}</>
-              : <><span>⏳</span> انتظر {mm}:{ss}</>}
+              : <><span>⏳</span> {adDone ? `انتظر ${mm}:${ss}` : "جاري الإعلان..."}</>}
           </button>
 
           <button onClick={onClose} style={{
