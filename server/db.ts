@@ -1,4 +1,4 @@
-import { eq, and, desc, lt, count, sum, sql } from "drizzle-orm";
+import { eq, and, desc, lt, count, sum, sql, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -329,6 +329,9 @@ export async function getAdminStats() {
   const db = await getDb();
   if (!db) return null;
   try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const [
       [{ totalUsers }],
       [{ bannedUsers }],
@@ -336,9 +339,13 @@ export async function getAdminStats() {
       [{ pendingStars }],
       [{ totalTransactions }],
       [{ totalAdViews }],
+      [{ todayAds }],
       [{ totalSpins }],
       [{ totalWithdrawals }],
-      [{ totalPointsDistributed }],
+      [{ totalPoints }],
+      [{ newUsersToday }],
+      [{ totalStarsWithdrawn }],
+      topUsers,
     ] = await Promise.all([
       db.select({ totalUsers: count() }).from(telegramUsers),
       db.select({ bannedUsers: count() }).from(telegramUsers).where(eq(telegramUsers.isBanned, true)),
@@ -346,14 +353,30 @@ export async function getAdminStats() {
       db.select({ pendingStars: sql<number>`coalesce(sum(stars), 0)` }).from(withdrawals).where(eq(withdrawals.status, "pending")),
       db.select({ totalTransactions: count() }).from(transactions),
       db.select({ totalAdViews: count() }).from(transactions).where(eq(transactions.type, "ad")),
+      db.select({ todayAds: count() }).from(transactions).where(
+        and(eq(transactions.type, "ad"), gte(transactions.createdAt, todayStart))
+      ),
       db.select({ totalSpins: count() }).from(transactions).where(eq(transactions.type, "spin")),
       db.select({ totalWithdrawals: count() }).from(transactions).where(eq(transactions.type, "withdraw")),
-      db.select({ totalPointsDistributed: sql<number>`coalesce(sum(points) filter (where points > 0), 0)` }).from(transactions),
+      db.select({ totalPoints: sql<number>`coalesce(sum(points) filter (where points > 0), 0)` }).from(transactions),
+      db.select({ newUsersToday: count() }).from(telegramUsers).where(gte(telegramUsers.createdAt, todayStart)),
+      db.select({ totalStarsWithdrawn: sql<number>`coalesce(sum(stars), 0)` }).from(withdrawals).where(
+        sql`status in ('approved', 'completed')`
+      ),
+      db.select({
+        telegramId: telegramUsers.telegramId,
+        firstName: telegramUsers.firstName,
+        username: telegramUsers.username,
+        totalEarned: telegramUsers.totalEarned,
+        balance: telegramUsers.balance,
+      }).from(telegramUsers).orderBy(desc(telegramUsers.totalEarned)).limit(5),
     ]);
     return {
       totalUsers, bannedUsers, pendingWithdrawals, pendingStars,
-      totalTransactions, totalPointsDistributed,
-      totalAdViews, totalSpins, totalWithdrawals,
+      totalTransactions, totalPoints,
+      totalAdViews, todayAds, totalSpins, totalWithdrawals,
+      newUsersToday, totalStarsWithdrawn,
+      topUsers,
     };
   } catch (err) {
     console.error("[Database] getAdminStats failed:", err);
