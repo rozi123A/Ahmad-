@@ -9,7 +9,7 @@ import { useState, useRef, useCallback } from "react";
     monetagScriptUrl?: string;
   }
 
-  type Phase = "idle" | "loading" | "showing" | "countdown" | "ready" | "claimed" | "error";
+  type Phase = "idle" | "loading" | "countdown" | "ready" | "claimed" | "error";
 
   export default function AdOverlay({
     seconds = 15,
@@ -67,27 +67,26 @@ import { useState, useRef, useCallback } from "react";
     }, [startCountdown]);
 
     const loadAdScript = useCallback(() => {
-      // Remove any previous script
       if (scriptRef.current) {
         scriptRef.current.remove();
         scriptRef.current = null;
       }
 
-      // Set zone id on window for Monetag
+      // Set zone id for Monetag
       (window as any).monetag_zone_id = monetagZoneId;
 
       const script = document.createElement("script");
-      script.src = monetagScriptUrl;
+      script.src = `${monetagScriptUrl}?zone=${monetagZoneId}&t=${Date.now()}`;
       script.async = true;
+      script.setAttribute("data-zone", monetagZoneId);
 
       script.onload = () => {
-        // Script loaded successfully — start countdown
-        setTimeout(startCountdown, 1000);
+        // Ad script loaded — wait 2s for ad to render then start countdown
+        setTimeout(startCountdown, 2000);
       };
 
       script.onerror = () => {
-        // Script failed to load — fallback to openLink
-        setPhase("showing");
+        // Fallback to openLink if script fails
         openAdFallback();
       };
 
@@ -116,6 +115,42 @@ import { useState, useRef, useCallback } from "react";
       { label: "شاهد الإعلان كاملاً", done: ["countdown", "ready", "claimed"].includes(phase) },
       { label: "انتظر العداد واستلم مكافأتك", done: phase === "ready" || phase === "claimed" },
     ];
+
+    // When loading: hide our overlay completely so Monetag ad shows on top
+    // Show only a tiny floating pill so user knows to come back
+    if (phase === "loading") {
+      return (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 10,
+          background: "transparent",
+          pointerEvents: "none",
+        }}>
+          <div style={{
+            position: "absolute", bottom: 80, left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.85)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 50,
+            padding: "10px 22px",
+            display: "flex", alignItems: "center", gap: 10,
+            pointerEvents: "auto",
+            boxShadow: "0 4px 30px rgba(0,0,0,0.6)",
+          }}>
+            <div style={{
+              width: 18, height: 18,
+              border: "2px solid rgba(14,165,233,0.3)",
+              borderTopColor: "#0ea5e9",
+              borderRadius: "50%",
+              animation: "spin 0.8s linear infinite",
+              flexShrink: 0,
+            }} />
+            <span style={{ color: "#fff", fontSize: 13, fontWeight: 600 }}>جاري تحميل الإعلان...</span>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      );
+    }
 
     return (
       <div style={{
@@ -153,7 +188,6 @@ import { useState, useRef, useCallback } from "react";
           borderRadius: 24, overflow: "hidden",
           boxShadow: "0 16px 60px rgba(0,0,0,0.5)",
         }}>
-          {/* header */}
           <div style={{
             padding: "18px 18px 14px",
             background: "linear-gradient(135deg,rgba(14,165,233,0.12),rgba(99,102,241,0.08))",
@@ -169,17 +203,13 @@ import { useState, useRef, useCallback } from "react";
             <div style={{ flex: 1 }}>
               <p style={{ fontSize: 16, fontWeight: 900, color: "#fff", margin: 0 }}>
                 {phase === "idle" ? "شاهد إعلاناً واكسب نقاطاً" :
-                 phase === "loading" ? "جاري تحميل الإعلان..." :
-                 phase === "showing" ? "الإعلان مفتوح في Telegram..." :
                  phase === "countdown" ? "شكراً! انتظر العداد" :
                  phase === "ready" ? "مبروك! استلم مكافأتك" :
                  phase === "error" ? "حدث خطأ، حاول مجدداً" :
                  "تم الاستلام!"}
               </p>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", margin: "4px 0 0" }}>
-                {phase === "idle" ? "سيظهر الإعلان مباشرة هنا" :
-                 phase === "loading" ? "يرجى الانتظار..." :
-                 phase === "showing" ? "أغلق الإعلان بعد مشاهدته للعودة هنا" :
+                {phase === "idle" ? "سيظهر الإعلان مباشرة على شاشتك" :
                  phase === "countdown" ? `انتظر ${mm}:${ss} ثم استلم` :
                  phase === "ready" ? "اضغط زر الاستلام أدناه" :
                  phase === "error" ? "فشل تحميل الإعلان" :
@@ -188,7 +218,6 @@ import { useState, useRef, useCallback } from "react";
             </div>
           </div>
 
-          {/* steps */}
           <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
             {steps.map((step, i) => (
               <div key={i} style={{
@@ -210,7 +239,6 @@ import { useState, useRef, useCallback } from "react";
             ))}
           </div>
 
-          {/* buttons */}
           <div style={{ padding: "10px 18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
             {phase === "idle" && (
               <button onClick={handleStartAd} style={{
@@ -224,28 +252,6 @@ import { useState, useRef, useCallback } from "react";
                 <span style={{ fontSize: 22 }}>▶️</span>
                 ابدأ مشاهدة الإعلان
               </button>
-            )}
-
-            {(phase === "loading" || phase === "showing") && (
-              <div style={{
-                width: "100%", borderRadius: 16,
-                background: "rgba(14,165,233,0.08)", border: "1px solid rgba(14,165,233,0.2)",
-                padding: "14px 16px", textAlign: "center",
-              }}>
-                <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600, margin: "0 0 6px" }}>
-                  {phase === "loading" ? "⏳ جاري تحميل الإعلان..." : "📲 الإعلان مفتوح في Telegram"}
-                </p>
-                <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, margin: 0 }}>
-                  {phase === "loading" ? "يرجى الانتظار لحظة" : "شاهد الإعلان ثم اضغط ✕ للعودة هنا"}
-                </p>
-                <div style={{
-                  margin: "12px auto 0",
-                  width: 24, height: 24,
-                  border: "3px solid rgba(14,165,233,0.3)",
-                  borderTopColor: "#0ea5e9", borderRadius: "50%",
-                  animation: "spin 0.8s linear infinite",
-                }} />
-              </div>
             )}
 
             {phase === "error" && (
