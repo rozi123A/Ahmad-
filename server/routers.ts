@@ -1,3 +1,4 @@
+import { randomInt } from "crypto";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -540,7 +541,7 @@ export const appRouter = router({
         
         // Weighted random
         let totalWeight = weights.reduce((a, b) => a + b, 0);
-        let random = Math.random() * totalWeight;
+        let random = randomInt(0, 1e9) / 1e9 * totalWeight;
         let prize = prizes[0];
         for (let i = 0; i < weights.length; i++) {
           if (random < weights[i]) {
