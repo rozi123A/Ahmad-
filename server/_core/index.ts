@@ -70,7 +70,7 @@ async function startServer() {
   const server = createServer(app);
 
   // Security headers
-  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", "data:", "https:"], connectSrc: ["'self'", "https:"] } } }));
+  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://telegram.org", "https://*.telegram.org", "https://n6wxm.com", "https://*.monetag.com"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", "data:", "https:"], connectSrc: ["'self'", "https://telegram.org", "https://*.telegram.org", "https://api.telegram.org", "https:"], frameSrc: ["'self'", "https://telegram.org", "https://*.telegram.org"] } } }));
 
   // CORS — allow configured frontend origin
   app.use(cors({
