@@ -45,9 +45,13 @@ function verifyTelegramWebApp(initData: string) {
     let userData: any = null;
     try { userData = JSON.parse(userRaw); } catch { return null; }
 
-    // If BOT_TOKEN not configured, skip HMAC check (dev / no-token mode)
+    // Strict validation: BOT_TOKEN is required for security in production
     if (!botToken) {
-      return userData;
+      if (process.env.NODE_ENV === "production") {
+        console.error("[Auth] Security Error: BOT_TOKEN missing in production!");
+        return null;
+      }
+      return userData; // Allow in development for testing
     }
 
     const dataCheckString = Array.from(urlParams.entries())
@@ -641,28 +645,46 @@ export const appRouter = router({
 
         const stars = Math.floor(input.amount / starsRate);
 
-        // Deduct balance
-        await upsertTelegramUser({
-          ...user,
-          balance: currentBalance - input.amount,
-        });
+        const db = await getDb();
+        if (!db) return { success: false, message: "قاعدة البيانات غير متوفرة" };
 
-        // Create withdrawal record
-        const withdrawal = await createWithdrawal({
-          telegramId: input.telegramId,
-          amount: input.amount,
-          stars,
-          method: "telegram_stars",
-          status: "pending",
-        });
+        try {
+          await db.transaction(async (tx) => {
+            // 1. Re-verify balance inside transaction
+            const [latestUser] = await tx.select().from(telegramUsers).where(eq(telegramUsers.telegramId, input.telegramId)).limit(1);
+            if (!latestUser || Number(latestUser.balance) < input.amount) {
+              throw new Error("رصيدك غير كافٍ أو حدث خطأ في المزامنة");
+            }
 
-        // Create transaction record
-        await createTransaction({
-          telegramId: input.telegramId,
-          type: "withdraw",
-          points: -input.amount,
-          metadata: JSON.stringify({ stars, status: "pending" }),
-        });
+            // 2. Deduct balance
+            await tx.update(telegramUsers)
+              .set({ 
+                balance: Number(latestUser.balance) - input.amount,
+                updatedAt: new Date() 
+              })
+              .where(eq(telegramUsers.telegramId, input.telegramId));
+
+            // 3. Create withdrawal record
+            await tx.insert(withdrawals).values({
+              telegramId: input.telegramId,
+              amount: input.amount,
+              stars,
+              method: "telegram_stars",
+              status: "pending",
+            });
+
+            // 4. Create transaction record
+            await tx.insert(transactions).values({
+              telegramId: input.telegramId,
+              type: "withdraw",
+              points: -input.amount,
+              metadata: JSON.stringify({ stars, status: "pending" }),
+            });
+          });
+        } catch (error: any) {
+          console.error("[Withdraw] Transaction failed:", error);
+          return { success: false, message: error.message || "فشلت عملية السحب، يرجى المحاولة لاحقاً" };
+        }
 
         // Notify admin via Telegram Bot API
         const botToken = ENV.botToken;
