@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+  import { Clock } from "lucide-react";
 
   interface AdOverlayProps {
     seconds?: number;
@@ -7,67 +8,11 @@ import { useState, useRef, useCallback } from "react";
     onClose: () => void;
   }
 
-  const AD_ZONE_ID  = "11043107";
-  const AD_SCRIPT   = "https://n6wxm.com/vignette.min.js";
+  type Phase = "idle" | "showing" | "countdown" | "ready" | "claimed";
 
-  type Phase =
-    | "idle"
-    | "loading"
-    | "showing"
-    | "countdown"
-    | "ready"
-    | "claimed";
-
-  /* ------------------------------------------------------------------ */
-  /* Load ad script and wait for show_ZONEID function                    */
-  /* ------------------------------------------------------------------ */
-  function loadAdScript(zoneId: string, src: string): Promise<(() => unknown) | null> {
-    return new Promise((resolve) => {
-      const fnName = `show_${zoneId}`;
-      if (typeof (window as any)[fnName] === "function") {
-        resolve((window as any)[fnName]);
-        return;
-      }
-
-      let scriptErrored = false;
-      let poll: ReturnType<typeof setInterval>;
-
-      const existing = document.querySelector(`script[data-zone="${zoneId}"]`);
-      if (!existing) {
-        const s = document.createElement("script");
-        s.dataset.zone = zoneId;
-        s.src = src;
-        s.async = true;
-        s.onerror = () => {
-          scriptErrored = true;
-          clearInterval(poll);
-          resolve(null);
-        };
-        document.head.appendChild(s);
-      }
-
-      const t0 = Date.now();
-      poll = setInterval(() => {
-        if (scriptErrored) return;
-        const fn = (window as any)[fnName];
-        if (typeof fn === "function") {
-          clearInterval(poll);
-          resolve(fn);
-        } else if (Date.now() - t0 > 10_000) {
-          clearInterval(poll);
-          resolve(null);
-        }
-      }, 150);
-    });
-  }
-
-  /* ------------------------------------------------------------------ */
-  /* Component                                                           */
-  /* ------------------------------------------------------------------ */
   export default function AdOverlay({ seconds = 15, rewardLabel, onClaim, onClose }: AdOverlayProps) {
     const [phase,    setPhase]    = useState<Phase>("idle");
     const [timeLeft, setTimeLeft] = useState(seconds);
-    const [errMsg,   setErrMsg]   = useState<string | null>(null);
     const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
     const adDoneRef = useRef(false);
 
@@ -85,16 +30,19 @@ import { useState, useRef, useCallback } from "react";
       }, 1000);
     }, []);
 
-    const watchForReturn = useCallback((timeoutMs = 5000) => {
+    // Wait for user to return from Telegram in-app browser
+    const waitForReturn = useCallback((timeoutMs = 10_000) => {
+      adDoneRef.current = false;
       const handler = () => {
         if (document.visibilityState === "visible" && !adDoneRef.current) {
           adDoneRef.current = true;
           document.removeEventListener("visibilitychange", handler);
+          clearTimeout(fallbackTimer);
           setTimeout(startCountdown, 400);
         }
       };
       document.addEventListener("visibilitychange", handler);
-      setTimeout(() => {
+      const fallbackTimer = setTimeout(() => {
         if (!adDoneRef.current) {
           adDoneRef.current = true;
           document.removeEventListener("visibilitychange", handler);
@@ -103,72 +51,26 @@ import { useState, useRef, useCallback } from "react";
       }, timeoutMs);
     }, [startCountdown]);
 
-    const handleStartAd = useCallback(async () => {
+    const handleStartAd = useCallback(() => {
       if (phase !== "idle") return;
 
-      if (!AD_ZONE_ID) {
-        setErrMsg("Zone ID غير مضبوط.");
-        return;
-      }
-
-      setPhase("loading");
-      setErrMsg(null);
-
       const tg = (window as any).Telegram?.WebApp;
-      const origOpen = window.open.bind(window);
-      let didOpen = false;
-      (window as any).open = (url?: string | URL, _t?: string, _f?: string) => {
-        didOpen = true;
-        if (url) {
-          const u = String(url);
-          try { const w = origOpen(u, "_blank"); if (w) return w; } catch { /**/ }
-          tg?.openLink?.(u);
-        }
-        return null;
-      };
+      // Build the ad-view URL from current origin
+      const adViewUrl = `${window.location.origin}/ad-view`;
 
-      try {
-        const showFn = await loadAdScript(AD_ZONE_ID, AD_SCRIPT);
+      setPhase("showing");
 
-        if (!showFn) {
-          window.open = origOpen;
-          // ── Fallback: open /ad-view page inside Telegram browser ──
-          const adViewUrl = `${window.location.origin}/ad-view`;
-          if (tg?.openLink) {
-            tg.openLink(adViewUrl);
-            adDoneRef.current = false;
-            setPhase("showing");
-            watchForReturn(8000);
-          } else {
-            setErrMsg("تعذّر تحميل الإعلان. تحقق من اتصالك بالإنترنت.");
-            setPhase("idle");
-          }
-          return;
-        }
-
-        setPhase("showing");
-
-        const result = await Promise.race([
-          Promise.resolve(showFn()),
-          new Promise<void>(r => setTimeout(r, 800)),
-        ]);
-
-        window.open = origOpen;
-
-        if (result !== undefined) {
-          adDoneRef.current = true;
-          setTimeout(startCountdown, 400);
-        } else if (didOpen) {
-          watchForReturn(8000);
-        } else {
-          watchForReturn(3000);
-        }
-      } catch {
-        window.open = origOpen;
-        setErrMsg("حدث خطأ. حاول مجدداً.");
-        setPhase("idle");
+      if (tg?.openLink) {
+        // Opens in Telegram's built-in in-app browser (X button, minimize, etc.)
+        tg.openLink(adViewUrl);
+      } else {
+        // Fallback for non-Telegram environments
+        window.open(adViewUrl, "_blank");
       }
-    }, [phase, startCountdown, watchForReturn]);
+
+      // Start waiting for user to close the browser and return
+      waitForReturn(12_000);
+    }, [phase, waitForReturn]);
 
     const handleClaim = useCallback(() => {
       if (phase !== "ready") return;
@@ -177,8 +79,8 @@ import { useState, useRef, useCallback } from "react";
       setTimeout(onClose, 300);
     }, [phase, onClaim, onClose]);
 
-    const mm  = String(Math.floor(timeLeft / 60)).padStart(2, "0");
-    const ss  = String(timeLeft % 60).padStart(2, "0");
+    const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+    const ss = String(timeLeft % 60).padStart(2, "0");
 
     const steps = [
       { label: "اضغط زر بدء الإعلان",          done: phase !== "idle" },
@@ -194,92 +96,89 @@ import { useState, useRef, useCallback } from "react";
         fontFamily: "'Inter','Segoe UI',sans-serif",
         padding: "0 14px",
       }}>
+        {/* bg blobs */}
         <div style={{ position:"absolute", top:-60, right:-60, width:200, height:200, borderRadius:"50%", background:"rgba(99,102,241,0.08)", pointerEvents:"none" }}/>
         <div style={{ position:"absolute", bottom:-80, left:-60, width:240, height:240, borderRadius:"50%", background:"rgba(16,185,129,0.06)", pointerEvents:"none" }}/>
 
+        {/* timer pill */}
         <div style={{
           marginTop: 40,
           background: phase==="ready"
             ? "linear-gradient(135deg,rgba(22,163,74,0.9),rgba(21,128,61,0.9))"
             : "rgba(255,255,255,0.07)",
           backdropFilter: "blur(16px)",
-          border:`1px solid ${phase==="ready"?"rgba(74,222,128,0.5)":"rgba(255,255,255,0.12)"}`,
-          borderRadius:50, padding:"10px 32px",
-          fontWeight:900, fontSize:24, color:"#fff",
-          letterSpacing:"0.08em", fontVariantNumeric:"tabular-nums",
-          boxShadow: phase==="ready"?"0 0 30px rgba(22,163,74,0.5)":"0 2px 20px rgba(0,0,0,0.4)",
-          transition:"all 0.4s",
+          border: `1px solid ${phase==="ready" ? "rgba(74,222,128,0.5)" : "rgba(255,255,255,0.12)"}`,
+          borderRadius: 50, padding: "10px 32px",
+          fontWeight: 900, fontSize: 24, color: "#fff",
+          letterSpacing: "0.08em", fontVariantNumeric: "tabular-nums",
+          boxShadow: phase==="ready" ? "0 0 30px rgba(22,163,74,0.5)" : "0 2px 20px rgba(0,0,0,0.4)",
+          transition: "all 0.4s",
         }}>
           {phase==="ready" ? "✅ جاهز!" : phase==="claimed" ? "🎁" : phase==="countdown" ? `${mm}:${ss}` : "💎"}
         </div>
 
+        {/* card */}
         <div style={{
-          marginTop:18, width:"100%", maxWidth:420,
-          background:"rgba(255,255,255,0.04)",
-          border:"1px solid rgba(255,255,255,0.09)",
-          borderRadius:24, overflow:"hidden",
-          boxShadow:"0 16px 60px rgba(0,0,0,0.5)",
+          marginTop: 18, width: "100%", maxWidth: 420,
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.09)",
+          borderRadius: 24, overflow: "hidden",
+          boxShadow: "0 16px 60px rgba(0,0,0,0.5)",
         }}>
+          {/* header */}
           <div style={{
-            padding:"18px 18px 14px",
-            background:"linear-gradient(135deg,rgba(14,165,233,0.12),rgba(99,102,241,0.08))",
-            borderBottom:"1px solid rgba(255,255,255,0.06)",
-            display:"flex", alignItems:"center", gap:14,
+            padding: "18px 18px 14px",
+            background: "linear-gradient(135deg,rgba(14,165,233,0.12),rgba(99,102,241,0.08))",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            display: "flex", alignItems: "center", gap: 14,
           }}>
             <div style={{
-              width:48, height:48, borderRadius:"50%", flexShrink:0,
-              background:"linear-gradient(135deg,#0ea5e9,#6366f1)",
-              display:"flex", alignItems:"center", justifyContent:"center", fontSize:24,
-              boxShadow:"0 4px 16px rgba(14,165,233,0.4)",
+              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+              background: "linear-gradient(135deg,#0ea5e9,#6366f1)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+              boxShadow: "0 4px 16px rgba(14,165,233,0.4)",
             }}>📺</div>
             <div style={{flex:1}}>
               <p style={{fontSize:16, fontWeight:900, color:"#fff", margin:0}}>
                 {phase==="idle"      ? "شاهد إعلاناً واكسب نقاطاً"     :
-                 phase==="loading"   ? "جاري تحميل الإعلان..."          :
-                 phase==="showing"   ? "الإعلان يُعرض الآن..."          :
+                 phase==="showing"   ? "الإعلان مفتوح في Telegram..."    :
                  phase==="countdown" ? "شكراً! انتظر العداد"            :
                  phase==="ready"     ? "مبروك! استلم مكافأتك"           :
                                        "تم الاستلام!"}
               </p>
               <p style={{fontSize:12, color:"rgba(255,255,255,0.4)", margin:"4px 0 0"}}>
-                {phase==="idle"      ? "اضغط لبدء الإعلان"                          :
-                 phase==="loading"   ? "انتظر لحظة..."                              :
-                 phase==="showing"   ? "لا تغلق الشاشة — شاهد الإعلان كاملاً"      :
-                 phase==="countdown" ? `انتظر ${mm}:${ss} ثم استلم`                 :
-                 phase==="ready"     ? "اضغط زر الاستلام أدناه"                    :
+                {phase==="idle"      ? "سيفتح الإعلان في متصفح Telegram"              :
+                 phase==="showing"   ? "أغلق الإعلان بعد مشاهدته للعودة هنا"          :
+                 phase==="countdown" ? `انتظر ${mm}:${ss} ثم استلم`                  :
+                 phase==="ready"     ? "اضغط زر الاستلام أدناه"                      :
                                        "تمت إضافة النقاط لحسابك ✓"}
               </p>
             </div>
           </div>
 
+          {/* steps */}
           <div style={{padding:"14px 18px", display:"flex", flexDirection:"column", gap:8}}>
             {steps.map((step, i) => (
               <div key={i} style={{
                 display:"flex", alignItems:"center", gap:12,
-                background: step.done?"rgba(22,163,74,0.08)":"rgba(255,255,255,0.03)",
-                border:`1px solid ${step.done?"rgba(74,222,128,0.2)":"rgba(255,255,255,0.05)"}`,
+                background: step.done ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)",
+                border: `1px solid ${step.done ? "rgba(74,222,128,0.2)" : "rgba(255,255,255,0.05)"}`,
                 borderRadius:12, padding:"10px 14px", transition:"all 0.3s",
               }}>
                 <span style={{fontSize:18, minWidth:24, textAlign:"center"}}>
                   {step.done ? "✅" : `${i+1}️⃣`}
                 </span>
-                <span style={{fontSize:13, fontWeight:step.done?700:400,
-                  color:step.done?"rgba(255,255,255,0.85)":"rgba(255,255,255,0.4)"}}>
+                <span style={{fontSize:13, fontWeight: step.done ? 700 : 400,
+                  color: step.done ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.4)"}}>
                   {step.label}
                 </span>
               </div>
             ))}
           </div>
 
-          {errMsg && (
-            <div style={{padding:"0 18px 10px"}}>
-              <div style={{background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.25)", borderRadius:12, padding:"10px 14px"}}>
-                <p style={{fontSize:12, color:"rgba(239,68,68,0.85)", margin:0, textAlign:"center"}}>⚠️ {errMsg}</p>
-              </div>
-            </div>
-          )}
-
+          {/* buttons */}
           <div style={{padding:"10px 18px 20px", display:"flex", flexDirection:"column", gap:10}}>
+
             {phase === "idle" && (
               <button onClick={handleStartAd} style={{
                 width:"100%", height:58, borderRadius:16, border:"none",
@@ -294,24 +193,29 @@ import { useState, useRef, useCallback } from "react";
               </button>
             )}
 
-            {(phase==="loading" || phase==="showing") && (
+            {phase === "showing" && (
               <div style={{
-                width:"100%", height:58, borderRadius:16,
-                background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.2)",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:14,
+                width:"100%", borderRadius:16,
+                background:"rgba(14,165,233,0.08)", border:"1px solid rgba(14,165,233,0.2)",
+                padding:"14px 16px", textAlign:"center",
               }}>
+                <p style={{color:"rgba(255,255,255,0.6)", fontSize:14, fontWeight:600, margin:"0 0 6px"}}>
+                  📲 الإعلان مفتوح في Telegram
+                </p>
+                <p style={{color:"rgba(255,255,255,0.3)", fontSize:12, margin:0}}>
+                  شاهد الإعلان ثم اضغط ✕ للعودة هنا
+                </p>
                 <div style={{
-                  width:22, height:22, border:"3px solid rgba(99,102,241,0.3)",
-                  borderTopColor:"#6366f1", borderRadius:"50%",
+                  margin:"12px auto 0",
+                  width:24, height:24,
+                  border:"3px solid rgba(14,165,233,0.3)",
+                  borderTopColor:"#0ea5e9", borderRadius:"50%",
                   animation:"spin 0.8s linear infinite",
                 }}/>
-                <span style={{color:"rgba(255,255,255,0.5)", fontSize:14, fontWeight:600}}>
-                  {phase==="loading" ? "جاري تحميل الإعلان..." : "يُعرض الإعلان — لا تغلق الشاشة"}
-                </span>
               </div>
             )}
 
-            {phase==="countdown" && (
+            {phase === "countdown" && (
               <div style={{
                 width:"100%", height:58, borderRadius:16,
                 background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
@@ -324,16 +228,16 @@ import { useState, useRef, useCallback } from "react";
               </div>
             )}
 
-            {(phase==="ready" || phase==="claimed") && (
-              <button onClick={handleClaim} disabled={phase==="claimed"} style={{
+            {(phase === "ready" || phase === "claimed") && (
+              <button onClick={handleClaim} disabled={phase === "claimed"} style={{
                 width:"100%", height:58, borderRadius:16, border:"none",
                 background: phase==="claimed"
                   ? "rgba(22,163,74,0.3)"
                   : "linear-gradient(135deg,#16a34a,#15803d)",
                 color:"#fff", fontWeight:900, fontSize:17,
-                cursor: phase==="claimed"?"not-allowed":"pointer",
+                cursor: phase==="claimed" ? "not-allowed" : "pointer",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:10,
-                boxShadow: phase==="claimed"?"none":"0 4px 28px rgba(22,163,74,0.45)",
+                boxShadow: phase==="claimed" ? "none" : "0 4px 28px rgba(22,163,74,0.45)",
               }}>
                 <span style={{fontSize:22}}>{phase==="claimed" ? "✅" : "🎁"}</span>
                 {phase==="claimed" ? "تم الاستلام!" : `استلم ${rewardLabel || "المكافأة"}`}
