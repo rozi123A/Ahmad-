@@ -60,16 +60,18 @@ async function startServer() {
     // The ad script runs inside a sandboxed iframe (no allow-top-navigation)
     // so intent:// / market:// redirects are blocked by the browser itself —
     // they cannot reach or crash the parent page.
+    const monetagZone = process.env.MONETAG_ZONE_ID || "11043107";
+    const monetagScript = process.env.MONETAG_SCRIPT_URL || "https://n6wxm.com/vignette.min.js";
     const AD_IFRAME_CONTENT = encodeURIComponent(`<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:transparent}</style>
 </head><body>
-<script>(function(s){s.dataset.zone='11003103',s.src='https://al5sm.com/tag.min.js'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))<\/script>
+<script>(function(s){s.dataset.zone='${monetagZone}',s.src='${monetagScript}'})([document.documentElement,document.body].filter(Boolean).pop().appendChild(document.createElement('script')))<\/script>
 <script>
 window.addEventListener('load',function(){
-  var fn=window['show_11003103'];
+  var fn=window['show_${monetagZone}'];
   if(typeof fn==='function') fn();
 });
 <\/script>
