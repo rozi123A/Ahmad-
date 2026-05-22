@@ -11,6 +11,82 @@ import { useState, useRef, useCallback } from "react";
 
   type Phase = "idle" | "loading" | "countdown" | "ready" | "claimed" | "error";
 
+  // Daily-rotating ad thumbnails — one per day (cycles every 5 days)
+  function getDailyThumbnail(): React.ReactNode {
+    const dayIndex = Math.floor(Date.now() / 86_400_000) % 5;
+
+    const thumbnails: React.ReactNode[] = [
+      // Day 0 — Real casino image
+      <img
+        src="/ad-thumbnail.png"
+        alt="ad"
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      />,
+
+      // Day 1 — Crypto / earn money
+      <div style={{
+        width:"100%", height:"100%",
+        background:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8,
+      }}>
+        <div style={{ fontSize:52 }}>₿</div>
+        <p style={{ color:"#f59e0b", fontWeight:900, fontSize:22, margin:0, textAlign:"center", textShadow:"0 0 20px rgba(245,158,11,0.6)" }}>Earn Crypto Daily!</p>
+        <p style={{ color:"rgba(255,255,255,0.6)", fontSize:13, margin:0 }}>Trade & earn up to 300% APY</p>
+        <div style={{ display:"flex", gap:6, marginTop:4 }}>
+          {["🪙","💎","🚀"].map((e,i) => <span key={i} style={{ fontSize:22 }}>{e}</span>)}
+        </div>
+      </div>,
+
+      // Day 2 — Gaming / Win prizes
+      <div style={{
+        width:"100%", height:"100%",
+        background:"linear-gradient(135deg,#1a0533,#3d0070,#6a0dad)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8,
+      }}>
+        <div style={{ fontSize:50 }}>🎮</div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:22, margin:0, textAlign:"center" }}>WIN BIG PRIZES!</p>
+        <p style={{ color:"#e879f9", fontSize:13, margin:0 }}>Play & Win up to $10,000</p>
+        <div style={{
+          background:"linear-gradient(135deg,#a855f7,#ec4899)",
+          borderRadius:20, padding:"6px 20px", marginTop:4,
+          color:"#fff", fontWeight:800, fontSize:14,
+        }}>PLAY FREE NOW</div>
+      </div>,
+
+      // Day 3 — Shopping / Deals
+      <div style={{
+        width:"100%", height:"100%",
+        background:"linear-gradient(135deg,#0d1b2a,#1b4332,#2d6a4f)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8,
+      }}>
+        <div style={{ fontSize:50 }}>🛍️</div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:20, margin:0, textAlign:"center" }}>MEGA SALE — 90% OFF</p>
+        <p style={{ color:"#6ee7b7", fontSize:13, margin:0 }}>Limited time offer today only!</p>
+        <div style={{
+          background:"#f59e0b", borderRadius:20, padding:"6px 20px", marginTop:4,
+          color:"#000", fontWeight:900, fontSize:14,
+        }}>SHOP NOW 🔥</div>
+      </div>,
+
+      // Day 4 — App / Download
+      <div style={{
+        width:"100%", height:"100%",
+        background:"linear-gradient(135deg,#0ea5e9,#2563eb,#1e1b4b)",
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8,
+      }}>
+        <div style={{ fontSize:50 }}>📱</div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:20, margin:0, textAlign:"center" }}>New App — Install Free</p>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:13, margin:0 }}>⭐⭐⭐⭐⭐  4.9 · 10M+ Downloads</p>
+        <div style={{
+          background:"#22c55e", borderRadius:20, padding:"6px 20px", marginTop:4,
+          color:"#fff", fontWeight:800, fontSize:14,
+        }}>INSTALL NOW ↓</div>
+      </div>,
+    ];
+
+    return thumbnails[dayIndex];
+  }
+
   export default function AdOverlay({
     seconds = 15,
     rewardLabel,
@@ -24,6 +100,7 @@ import { useState, useRef, useCallback } from "react";
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const scriptRef = useRef<HTMLScriptElement | null>(null);
     const adDoneRef = useRef(false);
+    const dailyThumb = useRef(getDailyThumbnail());
 
     const startCountdown = useCallback(() => {
       setPhase("countdown");
@@ -98,13 +175,7 @@ import { useState, useRef, useCallback } from "react";
     const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
     const ss = String(timeLeft % 60).padStart(2, "0");
 
-    const steps = [
-      { label: "اضغط زر بدء الإعلان", done: phase !== "idle" },
-      { label: "شاهد الإعلان كاملاً", done: ["countdown", "ready", "claimed"].includes(phase) },
-      { label: "انتظر العداد واستلم مكافأتك", done: phase === "ready" || phase === "claimed" },
-    ];
-
-    // While ad loads — hide our overlay so Monetag renders on top
+    // Loading screen — transparent so Monetag ad shows on top
     if (phase === "loading") {
       return (
         <div style={{
@@ -146,7 +217,7 @@ import { useState, useRef, useCallback } from "react";
 
         {/* timer pill */}
         <div style={{
-          marginTop: 32, flexShrink: 0,
+          marginTop: 28, flexShrink: 0,
           background: phase === "ready"
             ? "linear-gradient(135deg,rgba(22,163,74,0.9),rgba(21,128,61,0.9))"
             : "rgba(255,255,255,0.07)",
@@ -170,99 +241,76 @@ import { useState, useRef, useCallback } from "react";
           boxShadow: "0 16px 60px rgba(0,0,0,0.5)",
         }}>
 
-          {/* === REAL AD THUMBNAIL IMAGE === */}
+          {/* === DAILY ROTATING THUMBNAIL === */}
           {(phase === "idle" || phase === "error") && (
-            <div style={{ position: "relative", width: "100%", cursor: "pointer" }} onClick={handleStartAd}>
-              <img
-                src="/ad-thumbnail.png"
-                alt="ad preview"
-                style={{
-                  width: "100%",
-                  display: "block",
-                  objectFit: "cover",
-                  maxHeight: 220,
-                }}
-              />
-              {/* dark overlay gradient at bottom */}
+            <div
+              onClick={handleStartAd}
+              style={{
+                position: "relative", width: "100%", height: 260,
+                overflow: "hidden", cursor: "pointer",
+                borderRadius: "24px 24px 0 0",
+              }}
+            >
+              {dailyThumb.current}
+
+              {/* gradient overlay at bottom */}
               <div style={{
-                position: "absolute", bottom: 0, left: 0, right: 0, height: 70,
-                background: "linear-gradient(to top,rgba(13,20,32,1),transparent)",
+                position: "absolute", bottom: 0, left: 0, right: 0, height: 80,
+                background: "linear-gradient(to top,rgba(13,20,32,1) 0%,transparent 100%)",
+                pointerEvents: "none",
               }}/>
-              {/* play button centered */}
+
+              {/* play button */}
               <div style={{
                 position: "absolute", inset: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
+                pointerEvents: "none",
               }}>
                 <div style={{
-                  width: 60, height: 60, borderRadius: "50%",
+                  width: 64, height: 64, borderRadius: "50%",
                   background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)",
-                  border: "2px solid rgba(255,255,255,0.6)",
+                  border: "2px solid rgba(255,255,255,0.7)",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: "0 0 30px rgba(255,255,255,0.2)",
+                  boxShadow: "0 0 30px rgba(255,255,255,0.25)",
                   animation: "thumbPulse 2s ease-in-out infinite",
                 }}>
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
                     <polygon points="6,3 20,12 6,21" />
                   </svg>
                 </div>
               </div>
-              {/* Ad badge */}
+
+              {/* AD badge */}
               <div style={{
-                position: "absolute", top: 10, left: 10,
-                background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+                position: "absolute", top: 12, left: 12,
+                background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
                 border: "1px solid rgba(255,255,255,0.2)",
-                borderRadius: 6, padding: "2px 8px",
-                color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 700,
+                borderRadius: 6, padding: "2px 9px",
+                color: "rgba(255,255,255,0.75)", fontSize: 10, fontWeight: 700,
+                pointerEvents: "none",
               }}>AD · 18+</div>
             </div>
           )}
 
-          {/* header */}
-          <div style={{
-            padding: "14px 18px 12px",
-            background: "linear-gradient(135deg,rgba(14,165,233,0.12),rgba(99,102,241,0.08))",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            display: "flex", alignItems: "center", gap: 14,
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-              background: "linear-gradient(135deg,#0ea5e9,#6366f1)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
-              boxShadow: "0 4px 16px rgba(14,165,233,0.4)",
-            }}>📺</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 15, fontWeight: 900, color: "#fff", margin: 0 }}>
-                {phase === "idle" ? "شاهد إعلاناً واكسب نقاطاً" :
-                 phase === "countdown" ? "شكراً! انتظر العداد" :
-                 phase === "ready" ? "مبروك! استلم مكافأتك" :
-                 phase === "error" ? "حدث خطأ، حاول مجدداً" :
-                 "تم الاستلام!"}
-              </p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", margin: "3px 0 0" }}>
-                {phase === "idle" ? "اضغط على الصورة أو الزر أدناه للبدء" :
-                 phase === "countdown" ? `انتظر ${mm}:${ss} ثم استلم` :
-                 phase === "ready" ? "اضغط زر الاستلام أدناه" :
-                 phase === "error" ? "فشل تحميل الإعلان" :
-                 "تمت إضافة النقاط لحسابك ✓"}
-              </p>
-            </div>
-          </div>
-
-          {/* steps */}
-          <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 7 }}>
-            {steps.map((step, i) => (
+          {/* steps — no numbers, only checkmarks */}
+          <div style={{ padding: "14px 14px 0" }}>
+            {[
+              { label: "اضغط على الإعلان للبدء", done: phase !== "idle" },
+              { label: "شاهد الإعلان كاملاً", done: ["countdown","ready","claimed"].includes(phase) },
+              { label: "استلم مكافأتك", done: phase === "ready" || phase === "claimed" },
+            ].map((step, i) => (
               <div key={i} style={{
-                display: "flex", alignItems: "center", gap: 10,
+                display: "flex", alignItems: "center", gap: 10, marginBottom: 7,
                 background: step.done ? "rgba(22,163,74,0.08)" : "rgba(255,255,255,0.03)",
                 border: `1px solid ${step.done ? "rgba(74,222,128,0.2)" : "rgba(255,255,255,0.05)"}`,
                 borderRadius: 10, padding: "9px 12px", transition: "all 0.3s",
               }}>
                 <span style={{ fontSize: 16, minWidth: 22, textAlign: "center" }}>
-                  {step.done ? "✅" : `${i + 1}️⃣`}
+                  {step.done ? "✅" : "⬜"}
                 </span>
                 <span style={{
                   fontSize: 12, fontWeight: step.done ? 700 : 400,
-                  color: step.done ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.4)"
+                  color: step.done ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.4)",
                 }}>
                   {step.label}
                 </span>
@@ -282,7 +330,7 @@ import { useState, useRef, useCallback } from "react";
                 animation: "startPulse 1.5s ease-in-out infinite",
               }}>
                 <span style={{ fontSize: 20 }}>▶️</span>
-                ابدأ مشاهدة الإعلان
+                ابدأ المشاهدة
               </button>
             )}
 
