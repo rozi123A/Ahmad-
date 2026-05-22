@@ -85,7 +85,7 @@ import { useState, useEffect, useCallback } from "react";
     export default function AdsgramApp() {
       const [user, setUser] = useState<UserData | null>(null);
       const [loading, setLoading] = useState(true);
-      const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user">(null);
+      const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user" | "banned">(null);
       const [activeTab, setActiveTab] = useState("home");
       const [lang, setLang] = useState<Language>("ar");
     const [displayName, setDisplayName] = useState("");
@@ -116,7 +116,8 @@ import { useState, useEffect, useCallback } from "react";
                 telegramId: telegramUser.id,
                 initData: initData || "",
                 referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
-              }).catch(() => ({ success: false, user: null }));
+              }).catch(() => ({ success: false, user: null, banned: false }));
+              if ((data as any)?.banned === true) { setErrorType("banned"); setLoading(false); return; }
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });
             } catch { setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id }); }
@@ -172,6 +173,61 @@ import { useState, useEffect, useCallback } from "react";
           >
             إعادة المحاولة
           </button>
+        </div>
+      );
+
+      if (errorType === "banned") return (
+        <div style={{ minHeight: "100vh", background: "#0a0608", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: 0, overflow: "hidden", position: "relative" }}>
+          {/* red glow bg */}
+          <div style={{ position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)", width: 340, height: 340, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "40px 28px", textAlign: "center", zIndex: 1 }}>
+            {/* ban icon */}
+            <div style={{ position: "relative" }}>
+              <div style={{ width: 100, height: 100, borderRadius: "50%", background: "rgba(239,68,68,0.12)", border: "2px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 52 }}>
+                🚫
+              </div>
+              <div style={{ position: "absolute", bottom: -4, right: -4, width: 32, height: 32, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚠️</div>
+            </div>
+
+            {/* title */}
+            <div>
+              <h1 style={{ color: "#EF4444", fontSize: 26, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.5px" }}>
+                تم حظرك نهائياً
+              </h1>
+              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, margin: 0, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                PERMANENT BAN
+              </p>
+            </div>
+
+            {/* reason card */}
+            <div style={{ width: "100%", maxWidth: 320, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 20, padding: "20px 20px" }}>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, margin: 0 }}>
+                تم تعليق حسابك بشكل دائم بسبب انتهاك شروط الاستخدام.<br/>
+                <strong style={{ color: "#FCA5A5" }}>استخدام السكربتات أو الأتمتة</strong> مخالف صريح لقواعد المنصة.
+              </p>
+            </div>
+
+            {/* details */}
+            <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
+              {[
+                { icon: "🤖", text: "استخدام سكربتات أو بوتات للتلاعب بالنقاط" },
+                { icon: "⚡", text: "نشاط مشبوه وغير طبيعي في الحساب" },
+                { icon: "🔒", text: "الحظر نهائي ولا يمكن التراجع عنه" },
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px" }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* footer */}
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", lineHeight: 1.6, maxWidth: 280, margin: "4px 0 0" }}>
+              إذا كنت تعتقد أن هذا خطأ، تواصل مع الإدارة عبر Telegram
+            </p>
+          </div>
         </div>
       );
 
