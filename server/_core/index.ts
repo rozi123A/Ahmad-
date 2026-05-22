@@ -44,7 +44,10 @@ function startKeepAlive(baseUrl: string) {
 
   const ping = async () => {
     try {
-      const res = await fetch(pingUrl, { signal: AbortSignal.timeout(10_000) });
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 10000);
+      const res = await fetch(pingUrl, { signal: controller.signal });
+      clearTimeout(timer);
       console.log(`[KeepAlive] ✓ Ping OK — ${new Date().toISOString()} (${res.status})`);
     } catch (err: any) {
       console.warn(`[KeepAlive] ✗ Ping failed — ${err?.message}`);
