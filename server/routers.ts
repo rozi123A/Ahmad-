@@ -123,6 +123,11 @@ export const appRouter = router({
         let user = await getTelegramUser(input.telegramId);
         const now = new Date();
 
+        // ── Permanent ban check — blocked before ANY processing ──
+        if (user && user.isBanned) {
+          return { success: false, banned: true, message: "تم حظر حسابك نهائياً من استخدام هذا التطبيق" };
+        }
+
         if (!user) {
           // New user registration
           user = await upsertTelegramUser({
