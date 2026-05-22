@@ -14,5 +14,6 @@ export const ENV = {
     if (cleaned.length >= 4) return cleaned;
     return "";
   })(),
+  monetagZoneId: process.env.MONETAG_ZONE_ID ?? "11020553",
   adminTelegramId: process.env.ADMIN_TELEGRAM_ID ? Number(process.env.ADMIN_TELEGRAM_ID) : null,
 };
