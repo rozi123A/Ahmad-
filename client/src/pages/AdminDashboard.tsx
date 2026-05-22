@@ -369,7 +369,7 @@ export default function AdminDashboard() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                         <p style={{ fontSize: 13, fontWeight: 800, color: "#E2E8F0", margin: 0 }}>{u.firstName || ""} {u.lastName || ""}</p>
-                        {u.isBanned === "true" && <span style={{ fontSize: 9, color: "#EF4444", background: "rgba(239,68,68,0.15)", borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>محظور</span>}
+                        {!!u.isBanned && <span style={{ fontSize: 9, color: "#EF4444", background: "rgba(239,68,68,0.15)", borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>محظور</span>}
                       </div>
                       <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>
                         {u.username ? `@${u.username} · ` : ""}💰 {fmtN(Number(u.balance))} · #{u.telegramId}
@@ -377,9 +377,9 @@ export default function AdminDashboard() {
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => openTelegramChat(u.telegramId, u.username)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><MessageCircle size={14} /></button>
-                      <button onClick={() => handleBan(u.telegramId, u.isBanned !== "true")} style={{ height: 34, borderRadius: 10, border: "none", background: u.isBanned === "true" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)", color: u.isBanned === "true" ? "#34D399" : "#FCA5A5", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 10px", display: "flex", alignItems: "center", gap: 5 }}>
-                        {u.isBanned === "true" ? <CheckCircle size={13} /> : <Ban size={13} />}
-                        {u.isBanned === "true" ? "رفع" : "حظر"}
+                      <button onClick={() => handleBan(u.telegramId, !u.isBanned)} style={{ height: 34, borderRadius: 10, border: "none", background: !!u.isBanned ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)", color: !!u.isBanned ? "#34D399" : "#FCA5A5", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 10px", display: "flex", alignItems: "center", gap: 5 }}>
+                        {!!u.isBanned ? <CheckCircle size={13} /> : <Ban size={13} />}
+                        {!!u.isBanned ? "رفع" : "حظر"}
                       </button>
                     </div>
                   </div>
