@@ -37,6 +37,29 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
+// ── Keep-Alive: prevents Render free-tier sleep (pings every 14 min) ──
+function startKeepAlive(baseUrl: string) {
+  const INTERVAL_MS = 14 * 60 * 1000; // 14 minutes
+  const pingUrl = `${baseUrl.replace(/\/$/, "")}/ping`;
+
+  const ping = async () => {
+    try {
+      const res = await fetch(pingUrl, { signal: AbortSignal.timeout(10_000) });
+      console.log(`[KeepAlive] ✓ Ping OK — ${new Date().toISOString()} (${res.status})`);
+    } catch (err: any) {
+      console.warn(`[KeepAlive] ✗ Ping failed — ${err?.message}`);
+    }
+  };
+
+  // First ping after 1 minute, then every 14 minutes
+  setTimeout(() => {
+    ping();
+    setInterval(ping, INTERVAL_MS);
+  }, 60_000);
+
+  console.log(`[KeepAlive] Started — pinging ${pingUrl} every 14 min`);
+}
+
 async function startServer() {
   await initDb();
 
@@ -44,7 +67,7 @@ async function startServer() {
   const server = createServer(app);
 
   // Security headers
-  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["\x27self\x27"], scriptSrc: ["\x27self\x27","\x27unsafe-inline\x27"], styleSrc: ["\x27self\x27","\x27unsafe-inline\x27"], imgSrc: ["\x27self\x27","data:","https:"], connectSrc: ["\x27self\x27","https:"] } } }));
+  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["'self'"], scriptSrc: ["'self'", "'unsafe-inline'"], styleSrc: ["'self'", "'unsafe-inline'"], imgSrc: ["'self'", "data:", "https:"], connectSrc: ["'self'", "https:"] } } }));
 
   // CORS — allow configured frontend origin
   app.use(cors({
@@ -56,10 +79,20 @@ async function startServer() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
-    // ── Ad view page — served inside Telegram's built-in browser ──
-    // The ad script runs inside a sandboxed iframe (no allow-top-navigation)
-    // so intent:// / market:// redirects are blocked by the browser itself —
-    // they cannot reach or crash the parent page.
+  // ── /ping — health check + keep-alive target ──
+  app.get("/ping", (_req, res) => {
+    res.status(200).json({
+      status: "alive",
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+      memory: Math.round(process.memoryUsage().rss / 1024 / 1024) + "MB",
+    });
+  });
+
+  // ── /healthz — alias for uptime monitors ──
+  app.get("/healthz", (_req, res) => res.status(200).send("OK"));
+
+    // ── Ad view page ──
     const monetagZone = process.env.MONETAG_ZONE_ID || "11043107";
     const monetagScript = process.env.MONETAG_SCRIPT_URL || "https://n6wxm.com/vignette.min.js";
     const AD_IFRAME_CONTENT = encodeURIComponent(`<!DOCTYPE html>
@@ -101,7 +134,6 @@ window.addEventListener('load',function(){
   </style>
 </head>
 <body>
-  <!-- sandbox without allow-top-navigation: intent:// links silently dropped -->
   <iframe
     id="ad-frame"
     sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
@@ -119,7 +151,7 @@ window.addEventListener('load',function(){
       res.setHeader("Cache-Control", "no-cache");
       res.send(AD_VIEW_HTML);
     });
-  
+
   registerStorageProxy(app);
   registerOAuthRoutes(app);
 
@@ -148,8 +180,23 @@ window.addEventListener('load',function(){
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
     // Start Telegram Bot
     startBot(app).catch(err => console.error("[Bot] Error starting bot:", err));
+
+    // Start Keep-Alive self-ping (production only)
+    const appUrl =
+      process.env.RENDER_EXTERNAL_URL ||
+      process.env.WEBAPP_URL ||
+      process.env.FRONTEND_URL ||
+      "";
+    if (appUrl && process.env.NODE_ENV === "production") {
+      startKeepAlive(appUrl);
+    } else if (process.env.NODE_ENV !== "production") {
+      console.log("[KeepAlive] Skipped in development mode");
+    } else {
+      console.warn("[KeepAlive] No app URL found — set RENDER_EXTERNAL_URL env var");
+    }
   });
 }
 
