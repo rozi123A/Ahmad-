@@ -348,22 +348,18 @@ export const appRouter = router({
         };
       }),
     getTransactions: publicProcedure
-      .input(z.object({ telegramId: z.number(), initData: z.string().optional() }))
+      .input(z.object({ telegramId: z.number(), initData: z.string() }))
       .query(async ({ input }) => {
-        if (input.initData) {
-          const verified = verifyTelegramWebApp(input.initData);
-          if (!verified || verified.id !== input.telegramId) return [];
-        }
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return [];
         return await getTransactions(input.telegramId);
       }),
 
     getReferralStats: publicProcedure
-      .input(z.object({ telegramId: z.number(), initData: z.string().optional() }))
+      .input(z.object({ telegramId: z.number(), initData: z.string() }))
       .query(async ({ input }) => {
-        if (input.initData) {
-          const verified = verifyTelegramWebApp(input.initData);
-          if (!verified || verified.id !== input.telegramId) return { count: 0, totalEarned: 0 };
-        }
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { count: 0, totalEarned: 0 };
         return await getReferralStats(input.telegramId);
       }),
 
@@ -742,8 +738,10 @@ export const appRouter = router({
 
     // Get current user's withdrawal history
     getHistory: publicProcedure
-      .input(z.object({ telegramId: z.number() }))
+      .input(z.object({ telegramId: z.number(), initData: z.string() }))
       .query(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return [];
         return await getUserWithdrawals(input.telegramId, 10);
       }),
 
