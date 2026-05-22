@@ -44,11 +44,11 @@ async function startServer() {
   const server = createServer(app);
 
   // Security headers
-  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(helmet({ contentSecurityPolicy: { directives: { defaultSrc: ["\x27self\x27"], scriptSrc: ["\x27self\x27","\x27unsafe-inline\x27"], styleSrc: ["\x27self\x27","\x27unsafe-inline\x27"], imgSrc: ["\x27self\x27","data:","https:"], connectSrc: ["\x27self\x27","https:"] } } }));
 
   // CORS — allow configured frontend origin
   app.use(cors({
-    origin: process.env.FRONTEND_URL || process.env.WEBAPP_URL || true,
+    origin: process.env.FRONTEND_URL || process.env.WEBAPP_URL || "http://localhost:3000",
     credentials: true,
   }));
 
