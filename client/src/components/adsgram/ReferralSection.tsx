@@ -16,8 +16,8 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
   const referralLink = `https://t.me/${botUsername}?start=ref_${user.telegramId}`;
 
   const { data: stats, refetch } = trpc.telegram.getReferralStats.useQuery(
-    { telegramId: user.telegramId, initData: initData || undefined },
-    { refetchInterval: 30000 }
+    { telegramId: user.telegramId, initData: initData },
+    { refetchInterval: 30000, enabled: !!initData }
   );
 
   const claimMutation = trpc.telegram.claimReferral.useMutation();
