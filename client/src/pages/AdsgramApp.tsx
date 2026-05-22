@@ -24,6 +24,7 @@ import { useState, useEffect, useCallback } from "react";
       adsgramBlockId: string;
       lastAdTime: number | null;
       isAdmin: boolean;
+      isBanned: boolean;
     }
 
     const DEFAULT_DEMO_USER: UserData = {
@@ -40,6 +41,7 @@ import { useState, useEffect, useCallback } from "react";
       adsgramBlockId: "",
       lastAdTime: null,
       isAdmin: false,
+      isBanned: false,
     };
 
     function ActivityLog({ telegramId, lang }: { telegramId: number; lang: Language }) {
@@ -85,7 +87,7 @@ import { useState, useEffect, useCallback } from "react";
     export default function AdsgramApp() {
       const [user, setUser] = useState<UserData | null>(null);
       const [loading, setLoading] = useState(true);
-      const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user" | "banned">(null);
+      const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user">(null);
       const [activeTab, setActiveTab] = useState("home");
       const [lang, setLang] = useState<Language>("ar");
     const [displayName, setDisplayName] = useState("");
@@ -116,8 +118,7 @@ import { useState, useEffect, useCallback } from "react";
                 telegramId: telegramUser.id,
                 initData: initData || "",
                 referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
-              }).catch(() => ({ success: false, user: null, banned: false }));
-              if ((data as any)?.banned === true) { setErrorType("banned"); setLoading(false); return; }
+              }).catch(() => ({ success: false, user: null }));
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });
             } catch { setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id }); }
@@ -176,66 +177,48 @@ import { useState, useEffect, useCallback } from "react";
         </div>
       );
 
-      if (errorType === "banned") return (
-        <div style={{ minHeight: "100vh", background: "#0a0608", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 0, padding: 0, overflow: "hidden", position: "relative" }}>
-          {/* red glow bg */}
-          <div style={{ position: "absolute", top: -80, left: "50%", transform: "translateX(-50%)", width: 340, height: 340, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%)", pointerEvents: "none" }} />
-          <div style={{ position: "absolute", bottom: -60, right: -60, width: 200, height: 200, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, padding: "40px 28px", textAlign: "center", zIndex: 1 }}>
-            {/* ban icon */}
-            <div style={{ position: "relative" }}>
-              <div style={{ width: 100, height: 100, borderRadius: "50%", background: "rgba(239,68,68,0.12)", border: "2px solid rgba(239,68,68,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 52 }}>
-                🚫
-              </div>
-              <div style={{ position: "absolute", bottom: -4, right: -4, width: 32, height: 32, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>⚠️</div>
-            </div>
-
-            {/* title */}
-            <div>
-              <h1 style={{ color: "#EF4444", fontSize: 26, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.5px" }}>
-                تم حظرك نهائياً
-              </h1>
-              <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 12, margin: 0, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase" }}>
-                PERMANENT BAN
-              </p>
-            </div>
-
-            {/* reason card */}
-            <div style={{ width: "100%", maxWidth: 320, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 20, padding: "20px 20px" }}>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, margin: 0 }}>
-                تم تعليق حسابك بشكل دائم بسبب انتهاك شروط الاستخدام.<br/>
-                <strong style={{ color: "#FCA5A5" }}>استخدام السكربتات أو الأتمتة</strong> مخالف صريح لقواعد المنصة.
-              </p>
-            </div>
-
-            {/* details */}
-            <div style={{ width: "100%", maxWidth: 320, display: "flex", flexDirection: "column", gap: 10 }}>
-              {[
-                { icon: "🤖", text: "استخدام سكربتات أو بوتات للتلاعب بالنقاط" },
-                { icon: "⚡", text: "نشاط مشبوه وغير طبيعي في الحساب" },
-                { icon: "🔒", text: "الحظر نهائي ولا يمكن التراجع عنه" },
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "10px 14px" }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{item.text}</span>
-                </div>
-              ))}
-            </div>
-
-            {/* footer */}
-            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.15)", lineHeight: 1.6, maxWidth: 280, margin: "4px 0 0" }}>
-              إذا كنت تعتقد أن هذا خطأ، تواصل مع الإدارة عبر Telegram
-            </p>
-          </div>
-        </div>
-      );
-
       const safeUser = user || DEFAULT_DEMO_USER;
       const ADMIN_TELEGRAM_ID = 5279238199;
       const tgUserId = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
       const isAdmin = safeUser.isAdmin === true || tgUserId === ADMIN_TELEGRAM_ID;
       const starsEquivalent = Math.floor(safeUser.balance / safeUser.starsRate);
+
+      if (safeUser.isBanned && !isAdmin) return (
+        <div style={{ minHeight: "100vh", background: "#060408", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", fontFamily: "'Inter', system-ui, sans-serif" }}>
+          <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "36px 28px", textAlign: "center", zIndex: 1 }}>
+            <div style={{ position: "relative" }}>
+              <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🚫</div>
+              <div style={{ position: "absolute", bottom: -4, right: -4, width: 30, height: 30, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>⚠️</div>
+            </div>
+            <div>
+              <h1 style={{ color: "#EF4444", fontSize: 24, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.5px" }}>Account Permanently Banned</h1>
+              <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 11, margin: 0, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>PERMANENT BAN · EarnStar</p>
+            </div>
+            <div style={{ width: "100%", maxWidth: 310, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.22)", borderRadius: 18, padding: "18px 18px" }}>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 1.85, margin: 0 }}>
+                Your account has been <strong style={{ color: "#FCA5A5" }}>permanently banned</strong> due to a violation of our Terms of Service.<br/>
+                The use of <strong style={{ color: "#FCA5A5" }}>scripts, bots, or automation tools</strong> is strictly prohibited.
+              </p>
+            </div>
+            <div style={{ width: "100%", maxWidth: 310, display: "flex", flexDirection: "column", gap: 9 }}>
+              {[
+                { icon: "🤖", text: "Script or bot usage detected on your account" },
+                { icon: "⚡", text: "Suspicious and abnormal activity recorded" },
+                { icon: "🔒", text: "This ban is permanent and enforced by the platform" },
+              ].map((item, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.055)", borderRadius: 12, padding: "10px 14px" }}>
+                  <span style={{ fontSize: 17, flexShrink: 0 }}>{item.icon}</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.5 }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: "rgba(255,255,255,0.12)", lineHeight: 1.7, maxWidth: 270, margin: "2px 0 0" }}>
+              If you believe this is a mistake, please contact the admin via Telegram.
+            </p>
+          </div>
+        </div>
+      );
 
       const NAV = [
         { id: "home", icon: Home, label: t.home, emoji: "🏠" },
