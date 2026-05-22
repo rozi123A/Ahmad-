@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-    import { Home, Play, Gift, Users, Wallet, ChevronRight, History, Shield, Trophy } from "lucide-react";
+    import { ChevronRight, History } from "lucide-react";
     import { translations, type Language } from "@/lib/i18n";
     import WatchAdsSection from "@/components/adsgram/WatchAdsSection";
     import SpinWheelSection from "@/components/adsgram/SpinWheelSection";
@@ -101,6 +101,13 @@ import { useState, useEffect, useCallback } from "react";
       };
 
       useEffect(() => { initializeTelegramApp(); }, []);
+
+      // Force banned users back to home if they land on a restricted tab
+      useEffect(() => {
+        if (!user?.isBanned) return;
+        const restricted = ["ads", "spin", "friends", "withdraw"];
+        if (restricted.includes(activeTab)) setActiveTab("home");
+      }, [user?.isBanned, activeTab]);
 
       const initializeTelegramApp = async () => {
         try {
@@ -220,19 +227,78 @@ import { useState, useEffect, useCallback } from "react";
         </div>
       );
 
-      const NAV = [
-        { id: "home", icon: Home, label: t.home, emoji: "🏠" },
-        { id: "ads", icon: Play, label: t.ads, emoji: "📺" },
-        { id: "spin", icon: Gift, label: t.spin, emoji: "🎡" },
-          { id: "friends", icon: Users, label: t.friends_title, emoji: "👥" },
-        { id: "leaderboard", icon: Trophy, label: t.leaderboard, emoji: "🏆" },
-        { id: "withdraw", icon: Wallet, label: t.withdraw, emoji: "💸" },
-        ...(isAdmin ? [{ id: "admin", icon: Shield, label: "إدارة", emoji: "🛡️" }] : []),
+      const NAV_ALL = [
+        { id: "home",        label: t.home,           color: "#8B5CF6", bannedAllowed: true  },
+        { id: "ads",         label: t.ads,            color: "#F59E0B", bannedAllowed: false },
+        { id: "spin",        label: t.spin,           color: "#EC4899", bannedAllowed: false },
+        { id: "friends",     label: t.friends_title,  color: "#3B82F6", bannedAllowed: false },
+        { id: "leaderboard", label: t.leaderboard,    color: "#FFD700", bannedAllowed: true  },
+        { id: "withdraw",    label: t.withdraw,       color: "#10B981", bannedAllowed: false },
+        ...(isAdmin ? [{ id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true }] : []),
       ];
+      const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
 
-      const tabAccent: Record<string, string> = {
-        home: "#8B5CF6", ads: "#F59E0B", spin: "#EC4899", friends: "#3B82F6", leaderboard: "#F59E0B", withdraw: "#10B981",
-        admin: "#7C3AED"
+      const NavIcon = ({ id, active, color }: { id: string; active: boolean; color: string }) => {
+        const c = active ? color : "rgba(255,255,255,0.3)";
+        const s = { display: "block" } as React.CSSProperties;
+        if (id === "home") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <path d="M3 12L12 3L21 12" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M5 10V20C5 20.55 5.45 21 6 21H9V16H15V21H18C18.55 21 19 20.55 19 20V10" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            {active && <path d="M10 21V17H14V21" stroke={color} strokeWidth="2" strokeLinecap="round"/>}
+          </svg>
+        );
+        if (id === "ads") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <rect x="2" y="4" width="20" height="14" rx="3" stroke={c} strokeWidth="2"/>
+            <circle cx="12" cy="11" r="4" stroke={c} strokeWidth="1.5"/>
+            <path d="M10.5 9.5L14.5 11L10.5 12.5V9.5Z" fill={c}/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="12" y1="18" x2="12" y2="21" stroke={c} strokeWidth="2"/>
+          </svg>
+        );
+        if (id === "spin") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="2"/>
+            <circle cx="12" cy="12" r="3" fill={c}/>
+            <line x1="12" y1="3" x2="12" y2="9" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="12" y1="15" x2="12" y2="21" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="3" y1="12" x2="9" y2="12" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="15" y1="12" x2="21" y2="12" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="5.6" y1="5.6" x2="9.8" y2="9.8" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="14.2" y1="14.2" x2="18.4" y2="18.4" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        );
+        if (id === "friends") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <circle cx="9" cy="7" r="3.5" stroke={c} strokeWidth="2"/>
+            <path d="M2 20C2 17.2 5 15 9 15C13 15 16 17.2 16 20" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="17" cy="7" r="2.5" stroke={c} strokeWidth="1.5"/>
+            <path d="M20 17C21.5 17.8 22 19 22 20" stroke={c} strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        );
+        if (id === "leaderboard") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <path d="M12 3L13.5 7.5H18.5L14.5 10.5L16 15L12 12L8 15L9.5 10.5L5.5 7.5H10.5L12 3Z" stroke={c} strokeWidth="2" strokeLinejoin="round" fill={active ? `${color}30` : "none"}/>
+            <line x1="12" y1="15" x2="12" y2="20" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <line x1="8" y1="20" x2="16" y2="20" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+        if (id === "withdraw") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <rect x="2" y="6" width="20" height="14" rx="3" stroke={c} strokeWidth="2"/>
+            <path d="M2 10H22" stroke={c} strokeWidth="2"/>
+            <circle cx="16" cy="15" r="2" fill={c}/>
+            <path d="M7 3H17" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+        if (id === "admin") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <path d="M12 3L20 7V13C20 17.4 16.4 21.4 12 22C7.6 21.4 4 17.4 4 13V7L12 3Z" stroke={c} strokeWidth="2" strokeLinejoin="round" fill={active ? `${color}25` : "none"}/>
+            <path d="M9 12L11 14L15 10" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
+        return null;
       };
 
       return (
@@ -410,18 +476,29 @@ import { useState, useEffect, useCallback } from "react";
               )}
 
           {/* BOTTOM NAV */}
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "center", padding: "0 10px 10px" }}>
-            <div style={{ width: "100%", maxWidth: 480, background: "rgba(7,7,17,0.88)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", borderRadius: 26, border: "1px solid rgba(255,255,255,0.07)", padding: "6px 4px", display: "flex", justifyContent: "space-around", boxShadow: "0 -2px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.08)" }}>
-              {NAV.map(({ id, icon: Icon, label, emoji }) => {
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "center", padding: "0 10px 12px" }}>
+            <div style={{ width: "100%", maxWidth: 480, background: "rgba(7,7,17,0.92)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 28, border: "1px solid rgba(255,255,255,0.09)", padding: "8px 6px 6px", display: "flex", justifyContent: "space-around", boxShadow: "0 -4px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+              {NAV.map(({ id, label, color }) => {
                 const active = activeTab === id;
-                const c = tabAccent[id];
                 return (
-                  <button key={id} onClick={() => { if (id === "admin") { window.location.href = "/admin"; return; } setActiveTab(id); }} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "8px 2px 6px", background: "none", border: "none", cursor: "pointer", position: "relative", borderRadius: 18, transition: "all 0.2s" }}>
-                    {active && <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 28, height: 2.5, borderRadius: 2, background: `linear-gradient(90deg, ${c}, ${c}aa)` }} />}
-                    <div style={{ width: 40, height: 36, borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", background: active ? `${c}22` : "transparent", transition: "all 0.2s" }}>
-                      <Icon size={19} style={{ color: active ? c : "rgba(255,255,255,0.28)", transition: "all 0.2s" }} />
+                  <button
+                    key={id}
+                    onClick={() => { if (id === "admin") { window.location.href = "/admin"; return; } setActiveTab(id); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 2px 5px", background: "none", border: "none", cursor: "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease" }}
+                  >
+                    {active && (
+                      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 32, height: 3, borderRadius: 3, background: `linear-gradient(90deg, ${color}cc, ${color})`, boxShadow: `0 0 8px ${color}88` }} />
+                    )}
+                    <div style={{
+                      width: 44, height: 38, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                      background: active ? `${color}20` : "transparent",
+                      boxShadow: active ? `0 0 16px ${color}22, inset 0 1px 0 ${color}18` : "none",
+                      transition: "all 0.22s ease",
+                      transform: active ? "scale(1.08)" : "scale(1)",
+                    }}>
+                      <NavIcon id={id} active={active} color={color} />
                     </div>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: active ? c : "rgba(255,255,255,0.28)", letterSpacing: "0.03em", transition: "all 0.2s", whiteSpace: "nowrap" }}>{label}</span>
+                    <span style={{ fontSize: 9, fontWeight: active ? 800 : 600, color: active ? color : "rgba(255,255,255,0.25)", letterSpacing: "0.02em", transition: "all 0.22s", whiteSpace: "nowrap" }}>{label}</span>
                   </button>
                 );
               })}
