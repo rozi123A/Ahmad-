@@ -148,12 +148,65 @@ import { useState, useEffect, useCallback } from "react";
       }, []);
 
       if (loading) return (
-        <div style={{ minHeight: "100vh", background: "#070711", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20 }}>
-          <div style={{ position: "relative" }}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", border: "3px solid rgba(139,92,246,0.2)", borderTopColor: "#8B5CF6", borderRightColor: "#FFD700", animation: "spin 1s linear infinite" }} />
-            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>✨</div>
+        <div style={{ minHeight: "100vh", background: "#060610", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
+          <style>{`
+            @keyframes spin { to { transform: rotate(360deg) } }
+            @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.12);opacity:0.85} }
+            @keyframes float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-10px)} }
+            @keyframes orbMove1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,30px)} }
+            @keyframes orbMove2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-40px)} }
+            @keyframes dotBounce { 0%,80%,100%{transform:scale(0.6);opacity:0.3} 40%{transform:scale(1.1);opacity:1} }
+            @keyframes gradientFlow { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+            @keyframes starTwinkle { 0%,100%{opacity:0;transform:scale(0) rotate(0deg)} 50%{opacity:1;transform:scale(1) rotate(20deg)} }
+          `}</style>
+
+          {/* Background orbs */}
+          <div style={{ position:"absolute", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.2),transparent 70%)", top:"-80px", right:"-60px", animation:"orbMove1 8s ease-in-out infinite", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(234,179,8,0.14),transparent 70%)", bottom:"-60px", left:"-40px", animation:"orbMove2 10s ease-in-out infinite", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)", top:"40%", left:"-50px", animation:"orbMove1 12s ease-in-out infinite reverse", pointerEvents:"none" }} />
+
+          {/* Star particles */}
+          {([
+            {top:"14%", left:"10%",  size:14, delay:"0s",   dur:"3.2s"},
+            {top:"20%", right:"13%", size:10, delay:"0.7s",  dur:"2.8s"},
+            {top:"65%", left:"7%",   size:12, delay:"1.3s",  dur:"3.8s"},
+            {top:"72%", right:"9%",  size:16, delay:"0.4s",  dur:"3.5s"},
+            {top:"42%", right:"4%",  size:8,  delay:"1.9s",  dur:"2.6s"},
+            {top:"33%", left:"4%",   size:10, delay:"2.1s",  dur:"3s"},
+          ] as {top?:string;left?:string;right?:string;bottom?:string;size:number;delay:string;dur:string}[]).map((s,i)=>(
+            <div key={i} style={{ position:"absolute", top:s.top, left:s.left, right:s.right, bottom:s.bottom, animation:`starTwinkle ${s.dur} ${s.delay} ease-in-out infinite`, pointerEvents:"none" }}>
+              ⭐
+            </div>
+          ))}
+
+          {/* Logo */}
+          <div style={{ position:"relative", marginBottom:36, animation:"float 3s ease-in-out infinite" }}>
+            <div style={{ position:"absolute", inset:-18, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.3),transparent 70%)", animation:"pulse 2.5s ease-in-out infinite" }} />
+            <div style={{ position:"absolute", inset:-8, width:116, height:116, borderRadius:"50%", border:"2.5px solid transparent", borderTopColor:"#8B5CF6", borderRightColor:"#FFD700", borderBottomColor:"rgba(139,92,246,0.15)", borderLeftColor:"rgba(255,215,0,0.15)", animation:"spin 2s linear infinite" }} />
+            <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(255,215,0,0.35)", borderBottomColor:"rgba(139,92,246,0.35)", animation:"spin 5s linear infinite reverse" }} />
+            <div style={{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(145deg,#1a0a3a,#0a0a20)", border:"1px solid rgba(139,92,246,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 50px rgba(109,40,217,0.35), 0 0 100px rgba(109,40,217,0.1), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
+              <span style={{ fontSize:46, animation:"pulse 2s ease-in-out infinite", display:"block", lineHeight:1 }}>⭐</span>
+            </div>
           </div>
-          <p style={{ color: "rgba(139,92,246,0.8)", fontSize: 13, fontWeight: 700, letterSpacing: "0.1em" }}>{t.loading}</p>
+
+          {/* App name */}
+          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#C4B5FD,#FFD700,#93C5FD)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
+            EarnStar
+          </h1>
+          <p style={{ fontSize:11, color:"rgba(255,255,255,0.22)", fontWeight:600, margin:0, letterSpacing:"0.22em", textTransform:"uppercase" }}>
+            اكسب نجوم Telegram
+          </p>
+
+          {/* Dots loader */}
+          <div style={{ display:"flex", gap:9, marginTop:36 }}>
+            {[0,1,2,3].map(i=>(
+              <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:i%2===0?"#8B5CF6":"#FFD700", animation:`dotBounce 1.4s ${i*0.2}s ease-in-out infinite` }} />
+            ))}
+          </div>
+
+          <p style={{ position:"absolute", bottom:28, fontSize:10, color:"rgba(255,255,255,0.12)", fontWeight:600, letterSpacing:"0.18em", textTransform:"uppercase", margin:0 }}>
+            Start Coin ✦ v2.0
+          </p>
         </div>
       );
 
