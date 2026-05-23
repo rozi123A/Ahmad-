@@ -119,10 +119,10 @@ import { useState, useRef, useCallback } from "react";
       if (phase !== "ready") return;
       setPhase("claimed");
       onClaim();
-      setTimeout(onClose, 300);
+      setTimeout(onClose, 400);
     }, [phase, onClaim, onClose]);
 
-    // ── LOADING: transparent so Monetag shows ──
+    // ── LOADING: transparent so Monetag ad renders underneath ──
     if (phase === "loading") {
       return (
         <div style={{ position:"fixed", inset:0, zIndex:10, background:"transparent", pointerEvents:"none" }}>
@@ -141,93 +141,76 @@ import { useState, useRef, useCallback } from "react";
       );
     }
 
-    // ── COUNTDOWN: ad is visible, small timer badge in top-right corner only ──
-    if (phase === "countdown") {
+    // ── COUNTDOWN / READY: transparent overlay — ad fully visible underneath ──
+    if (phase === "countdown" || phase === "ready" || phase === "claimed") {
+      const isReady = phase === "ready";
+      const isClaimed = phase === "claimed";
+
       return (
         <div style={{ position:"fixed", inset:0, zIndex:9999, background:"transparent", pointerEvents:"none" }}>
 
-          {/* small countdown badge — top-right corner */}
-          <div style={{
-            position:"absolute", top:16, right:16,
-            width:42, height:42, borderRadius:"50%",
-            background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)",
-            border:"2px solid rgba(255,255,255,0.2)",
-            display:"flex", alignItems:"center", justifyContent:"center",
-            boxShadow:"0 2px 12px rgba(0,0,0,0.5)",
-          }}>
-            <span style={{ color:"#fff", fontSize:16, fontWeight:900, fontVariantNumeric:"tabular-nums", lineHeight:1 }}>
-              {timeLeft}
-            </span>
-          </div>
-
-          {/* "استمر بدون مكافأة" — bottom floating */}
+          {/* Top-right badge: shows countdown number → transforms to ✕ when ready */}
           <button
-            onClick={onClose}
+            onClick={isReady ? handleClaim : undefined}
             style={{
-              position:"absolute", bottom:24, left:"50%", transform:"translateX(-50%)",
-              background:"rgba(0,0,0,0.65)", backdropFilter:"blur(10px)",
-              border:"1px solid rgba(255,255,255,0.12)", borderRadius:40,
-              color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:600,
-              padding:"11px 32px", cursor:"pointer", pointerEvents:"auto",
-              whiteSpace:"nowrap",
+              position:"absolute", top:16, right:16,
+              width:46, height:46, borderRadius:"50%", border:"none",
+              background: isClaimed
+                ? "rgba(22,163,74,0.85)"
+                : isReady
+                  ? "linear-gradient(135deg,#16a34a,#15803d)"
+                  : "rgba(0,0,0,0.72)",
+              backdropFilter:"blur(8px)",
+              outline: isReady ? "2px solid rgba(74,222,128,0.7)" : "2px solid rgba(255,255,255,0.18)",
+              color:"#fff",
+              fontWeight:900,
+              fontSize: isReady ? 22 : 17,
+              cursor: isReady ? "pointer" : "default",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow: isReady ? "0 0 20px rgba(22,163,74,0.6)" : "0 2px 12px rgba(0,0,0,0.5)",
+              pointerEvents:"auto",
+              transition:"background 0.3s, box-shadow 0.3s, font-size 0.2s",
+              animation: isReady ? "readyPop 0.35s ease-out, claimGlow 1.2s ease-in-out infinite 0.35s" : "none",
+              fontVariantNumeric:"tabular-nums",
+              lineHeight:1,
             }}
           >
-            استمر بدون مكافأة
+            {isClaimed ? "✅" : isReady ? "✕" : timeLeft}
           </button>
-        </div>
-      );
-    }
 
-    // ── READY: big X claim button floats over everything ──
-    if (phase === "ready" || phase === "claimed") {
-      return (
-        <div style={{
-          position:"fixed", inset:0, zIndex:9999,
-          display:"flex", alignItems:"center", justifyContent:"center",
-          background:"rgba(0,0,0,0.55)", backdropFilter:"blur(4px)",
-          pointerEvents:"auto",
-        }}>
-          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:20 }}>
-            <div style={{ fontSize:56, animation: phase==="ready" ? "readyBounce 0.5s ease-out" : "none" }}>🎁</div>
-            <p style={{ color:"#fff", fontSize:17, fontWeight:800, margin:0, textAlign:"center", textShadow:"0 2px 12px rgba(0,0,0,0.6)" }}>
-              مكافأتك جاهزة!
-            </p>
+          {/* "استمر بدون مكافأة" — bottom floating, only during countdown */}
+          {!isReady && !isClaimed && (
             <button
-              onClick={handleClaim}
-              disabled={phase==="claimed"}
+              onClick={onClose}
               style={{
-                width:72, height:72, borderRadius:"50%", border:"none",
-                background: phase==="claimed" ? "rgba(22,163,74,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)",
-                color:"#fff", fontWeight:900, fontSize:30,
-                cursor: phase==="claimed" ? "not-allowed" : "pointer",
-                display:"flex", alignItems:"center", justifyContent:"center",
-                boxShadow: phase==="claimed" ? "none" : "0 6px 40px rgba(22,163,74,0.6)",
-                animation: phase==="ready" ? "claimPulse 1.2s ease-in-out infinite" : "none",
-                transition:"transform 0.15s",
+                position:"absolute", bottom:24, left:"50%", transform:"translateX(-50%)",
+                background:"rgba(0,0,0,0.65)", backdropFilter:"blur(10px)",
+                border:"1px solid rgba(255,255,255,0.12)", borderRadius:40,
+                color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:600,
+                padding:"11px 32px", cursor:"pointer", pointerEvents:"auto",
+                whiteSpace:"nowrap",
               }}
             >
-              {phase==="claimed" ? "✅" : "✕"}
+              استمر بدون مكافأة
             </button>
-            <span style={{ color:"rgba(255,255,255,0.5)", fontSize:12 }}>
-              {phase==="claimed" ? "تم الاستلام!" : `اضغط لاستلام ${rewardLabel || "المكافأة"}`}
-            </span>
-          </div>
+          )}
+
           <style>{`
-            @keyframes claimPulse {
-              0%,100% { box-shadow: 0 6px 40px rgba(22,163,74,0.6); transform: scale(1); }
-              50%      { box-shadow: 0 6px 56px rgba(22,163,74,0.9); transform: scale(1.08); }
+            @keyframes readyPop {
+              0%  { transform: scale(0.7); }
+              60% { transform: scale(1.2); }
+              100%{ transform: scale(1); }
             }
-            @keyframes readyBounce {
-              0%  { transform: scale(0.4); opacity:0; }
-              70% { transform: scale(1.25); }
-              100%{ transform: scale(1);   opacity:1; }
+            @keyframes claimGlow {
+              0%,100% { box-shadow: 0 0 20px rgba(22,163,74,0.6); }
+              50%      { box-shadow: 0 0 36px rgba(22,163,74,0.95); }
             }
           `}</style>
         </div>
       );
     }
 
-    // ── IDLE / ERROR: show thumbnail card + start button ──
+    // ── IDLE / ERROR: thumbnail card + start button ──
     return (
       <div style={{
         position:"fixed", inset:0, zIndex:9999,
@@ -244,7 +227,6 @@ import { useState, useRef, useCallback } from "react";
           background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)",
           borderRadius:24, overflow:"hidden", boxShadow:"0 16px 60px rgba(0,0,0,0.5)",
         }}>
-          {/* Thumbnail */}
           <div onClick={phase==="idle" ? handleStartAd : undefined}
             style={{ position:"relative", width:"100%", height:300, overflow:"hidden", cursor: phase==="idle" ? "pointer" : "default" }}
           >
@@ -252,7 +234,6 @@ import { useState, useRef, useCallback } from "react";
             <div style={{ position:"absolute", bottom:0, left:0, right:0, height:60, background:"linear-gradient(to top,rgba(13,20,32,1),transparent)", pointerEvents:"none" }}/>
           </div>
 
-          {/* Buttons */}
           <div style={{ padding:"14px 14px 18px", display:"flex", flexDirection:"column", gap:10 }}>
             {phase==="idle" && (
               <button onClick={handleStartAd} style={{
