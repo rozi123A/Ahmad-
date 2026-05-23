@@ -248,36 +248,20 @@ import { useState, useRef, useCallback } from "react";
                 pointerEvents:"none",
               }}/>
 
-              {/* play button */}
-              <div style={{
-                position:"absolute", inset:0,
-                display:"flex", alignItems:"center", justifyContent:"center",
-                pointerEvents:"none",
-              }}>
-                <div style={{
-                  width:68, height:68, borderRadius:"50%",
-                  background:"rgba(0,0,0,0.55)", backdropFilter:"blur(6px)",
-                  border:"2.5px solid rgba(255,255,255,0.75)",
-                  display:"flex", alignItems:"center", justifyContent:"center",
-                  boxShadow:"0 0 30px rgba(255,255,255,0.25)",
-                  animation:"thumbPulse 2s ease-in-out infinite",
-                }}>
-                  <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
-                    <polygon points="6,3 20,12 6,21"/>
-                  </svg>
-                </div>
-              </div>
             </div>
           )}
 
-          {/* countdown state — show minimal info */}
+          {/* countdown state — small progress bar */}
           {phase==="countdown" && (
-            <div style={{
-              padding:"20px 14px 8px", textAlign:"center",
-            }}>
-              <p style={{ color:"rgba(255,255,255,0.5)", fontSize:14, margin:0 }}>
-                ⏳ انتظر {mm}:{ss} ثم استلم مكافأتك
-              </p>
+            <div style={{ padding:"16px 14px 4px" }}>
+              <div style={{ height:3, background:"rgba(255,255,255,0.06)", borderRadius:4, overflow:"hidden" }}>
+                <div style={{
+                  height:"100%", borderRadius:4,
+                  background:"linear-gradient(90deg,#6366f1,#0ea5e9)",
+                  width:`${Math.round((1 - timeLeft / seconds) * 100)}%`,
+                  transition:"width 1s linear",
+                }}/>
+              </div>
             </div>
           )}
 
@@ -313,12 +297,28 @@ import { useState, useRef, useCallback } from "react";
               <div style={{
                 width:"100%", height:58, borderRadius:16,
                 background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:12,
+                display:"flex", alignItems:"center", justifyContent:"center", gap:14,
               }}>
-                <span style={{ fontSize:22 }}>⏳</span>
-                <span style={{ color:"rgba(255,255,255,0.5)", fontSize:16, fontWeight:700 }}>
-                  انتظر {mm}:{ss}
-                </span>
+                {/* small circular countdown */}
+                <div style={{
+                  width:42, height:42, borderRadius:"50%", flexShrink:0,
+                  background:"rgba(99,102,241,0.15)",
+                  border:"2px solid rgba(99,102,241,0.5)",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  boxShadow:"0 0 12px rgba(99,102,241,0.3)",
+                }}>
+                  <span style={{ fontSize:13, fontWeight:900, color:"#818cf8", fontVariantNumeric:"tabular-nums", lineHeight:1 }}>
+                    {timeLeft}
+                  </span>
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                  <span style={{ color:"rgba(255,255,255,0.6)", fontSize:13, fontWeight:700 }}>
+                    ⏳ انتظر {mm}:{ss}
+                  </span>
+                  <span style={{ color:"rgba(255,255,255,0.25)", fontSize:10 }}>
+                    لاستلام مكافأتك
+                  </span>
+                </div>
               </div>
             )}
 
