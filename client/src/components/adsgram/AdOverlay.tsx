@@ -13,13 +13,8 @@ import { useState, useRef, useCallback } from "react";
 
   function getDailyThumbnail(): React.ReactNode {
     const dayIndex = Math.floor(Date.now() / 86_400_000) % 5;
-
     const thumbnails: React.ReactNode[] = [
-      <img
-        src="/ad-thumbnail.png"
-        alt="ad"
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-      />,
+      <img src="/ad-thumbnail.png" alt="ad" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />,
       <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
         <div style={{ fontSize:64 }}>₿</div>
         <p style={{ color:"#f59e0b", fontWeight:900, fontSize:26, margin:0, textAlign:"center", textShadow:"0 0 20px rgba(245,158,11,0.6)" }}>Earn Crypto Daily!</p>
@@ -45,7 +40,6 @@ import { useState, useRef, useCallback } from "react";
         <div style={{ background:"#22c55e", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>INSTALL NOW ↓</div>
       </div>,
     ];
-
     return thumbnails[dayIndex];
   }
 
@@ -128,7 +122,7 @@ import { useState, useRef, useCallback } from "react";
       setTimeout(onClose, 300);
     }, [phase, onClaim, onClose]);
 
-    // ── Loading: transparent overlay so Monetag ad renders on top ──
+    // ── LOADING: transparent so Monetag shows ──
     if (phase === "loading") {
       return (
         <div style={{ position:"fixed", inset:0, zIndex:10, background:"transparent", pointerEvents:"none" }}>
@@ -137,29 +131,44 @@ import { useState, useRef, useCallback } from "react";
             background:"rgba(0,0,0,0.85)", backdropFilter:"blur(12px)",
             border:"1px solid rgba(255,255,255,0.15)", borderRadius:50,
             padding:"10px 22px", display:"flex", alignItems:"center", gap:10,
-            pointerEvents:"auto", boxShadow:"0 4px 30px rgba(0,0,0,0.6)",
+            pointerEvents:"auto",
           }}>
-            <div style={{ width:18, height:18, border:"2px solid rgba(14,165,233,0.3)", borderTopColor:"#0ea5e9", borderRadius:"50%", animation:"spin 0.8s linear infinite", flexShrink:0 }}/>
+            <div style={{ width:18, height:18, border:"2px solid rgba(14,165,233,0.3)", borderTopColor:"#0ea5e9", borderRadius:"50%", animation:"adSpin 0.8s linear infinite", flexShrink:0 }}/>
             <span style={{ color:"#fff", fontSize:13, fontWeight:600 }}>جاري تحميل الإعلان...</span>
           </div>
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <style>{`@keyframes adSpin { to { transform: rotate(360deg); } }`}</style>
         </div>
       );
     }
 
-    // ── Countdown: completely hidden — timer runs silently in background ──
+    // ── COUNTDOWN: ad is visible, small timer badge in top-right corner only ──
     if (phase === "countdown") {
       return (
         <div style={{ position:"fixed", inset:0, zIndex:9999, background:"transparent", pointerEvents:"none" }}>
-          {/* "استمر بدون مكافأة" still accessible */}
+
+          {/* small countdown badge — top-right corner */}
+          <div style={{
+            position:"absolute", top:16, right:16,
+            width:42, height:42, borderRadius:"50%",
+            background:"rgba(0,0,0,0.75)", backdropFilter:"blur(8px)",
+            border:"2px solid rgba(255,255,255,0.2)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            boxShadow:"0 2px 12px rgba(0,0,0,0.5)",
+          }}>
+            <span style={{ color:"#fff", fontSize:16, fontWeight:900, fontVariantNumeric:"tabular-nums", lineHeight:1 }}>
+              {timeLeft}
+            </span>
+          </div>
+
+          {/* "استمر بدون مكافأة" — bottom floating */}
           <button
             onClick={onClose}
             style={{
               position:"absolute", bottom:24, left:"50%", transform:"translateX(-50%)",
-              background:"rgba(0,0,0,0.6)", backdropFilter:"blur(10px)",
-              border:"1px solid rgba(255,255,255,0.1)", borderRadius:40,
-              color:"rgba(255,255,255,0.35)", fontSize:12, fontWeight:600,
-              padding:"10px 28px", cursor:"pointer", pointerEvents:"auto",
+              background:"rgba(0,0,0,0.65)", backdropFilter:"blur(10px)",
+              border:"1px solid rgba(255,255,255,0.12)", borderRadius:40,
+              color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:600,
+              padding:"11px 32px", cursor:"pointer", pointerEvents:"auto",
               whiteSpace:"nowrap",
             }}
           >
@@ -169,6 +178,56 @@ import { useState, useRef, useCallback } from "react";
       );
     }
 
+    // ── READY: big X claim button floats over everything ──
+    if (phase === "ready" || phase === "claimed") {
+      return (
+        <div style={{
+          position:"fixed", inset:0, zIndex:9999,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          background:"rgba(0,0,0,0.55)", backdropFilter:"blur(4px)",
+          pointerEvents:"auto",
+        }}>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:20 }}>
+            <div style={{ fontSize:56, animation: phase==="ready" ? "readyBounce 0.5s ease-out" : "none" }}>🎁</div>
+            <p style={{ color:"#fff", fontSize:17, fontWeight:800, margin:0, textAlign:"center", textShadow:"0 2px 12px rgba(0,0,0,0.6)" }}>
+              مكافأتك جاهزة!
+            </p>
+            <button
+              onClick={handleClaim}
+              disabled={phase==="claimed"}
+              style={{
+                width:72, height:72, borderRadius:"50%", border:"none",
+                background: phase==="claimed" ? "rgba(22,163,74,0.4)" : "linear-gradient(135deg,#16a34a,#15803d)",
+                color:"#fff", fontWeight:900, fontSize:30,
+                cursor: phase==="claimed" ? "not-allowed" : "pointer",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                boxShadow: phase==="claimed" ? "none" : "0 6px 40px rgba(22,163,74,0.6)",
+                animation: phase==="ready" ? "claimPulse 1.2s ease-in-out infinite" : "none",
+                transition:"transform 0.15s",
+              }}
+            >
+              {phase==="claimed" ? "✅" : "✕"}
+            </button>
+            <span style={{ color:"rgba(255,255,255,0.5)", fontSize:12 }}>
+              {phase==="claimed" ? "تم الاستلام!" : `اضغط لاستلام ${rewardLabel || "المكافأة"}`}
+            </span>
+          </div>
+          <style>{`
+            @keyframes claimPulse {
+              0%,100% { box-shadow: 0 6px 40px rgba(22,163,74,0.6); transform: scale(1); }
+              50%      { box-shadow: 0 6px 56px rgba(22,163,74,0.9); transform: scale(1.08); }
+            }
+            @keyframes readyBounce {
+              0%  { transform: scale(0.4); opacity:0; }
+              70% { transform: scale(1.25); }
+              100%{ transform: scale(1);   opacity:1; }
+            }
+          `}</style>
+        </div>
+      );
+    }
+
+    // ── IDLE / ERROR: show thumbnail card + start button ──
     return (
       <div style={{
         position:"fixed", inset:0, zIndex:9999,
@@ -180,40 +239,20 @@ import { useState, useRef, useCallback } from "react";
         <div style={{ position:"absolute", top:-60, right:-60, width:200, height:200, borderRadius:"50%", background:"rgba(99,102,241,0.08)", pointerEvents:"none" }}/>
         <div style={{ position:"absolute", bottom:-80, left:-60, width:240, height:240, borderRadius:"50%", background:"rgba(16,185,129,0.06)", pointerEvents:"none" }}/>
 
-        {/* card */}
         <div style={{
           marginTop:60, width:"100%", maxWidth:420, flexShrink:0,
-          background:"rgba(255,255,255,0.04)",
-          border:"1px solid rgba(255,255,255,0.09)",
-          borderRadius:24, overflow:"hidden",
-          boxShadow:"0 16px 60px rgba(0,0,0,0.5)",
+          background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.09)",
+          borderRadius:24, overflow:"hidden", boxShadow:"0 16px 60px rgba(0,0,0,0.5)",
         }}>
+          {/* Thumbnail */}
+          <div onClick={phase==="idle" ? handleStartAd : undefined}
+            style={{ position:"relative", width:"100%", height:300, overflow:"hidden", cursor: phase==="idle" ? "pointer" : "default" }}
+          >
+            {dailyThumb.current}
+            <div style={{ position:"absolute", bottom:0, left:0, right:0, height:60, background:"linear-gradient(to top,rgba(13,20,32,1),transparent)", pointerEvents:"none" }}/>
+          </div>
 
-          {/* THUMBNAIL */}
-          {(phase==="idle" || phase==="error") && (
-            <div
-              onClick={handleStartAd}
-              style={{ position:"relative", width:"100%", height:300, overflow:"hidden", cursor:"pointer" }}
-            >
-              {dailyThumb.current}
-              <div style={{ position:"absolute", bottom:0, left:0, right:0, height:60, background:"linear-gradient(to top,rgba(13,20,32,1),transparent)", pointerEvents:"none" }}/>
-            </div>
-          )}
-
-          {/* Ready: big animated claim button */}
-          {(phase==="ready" || phase==="claimed") && (
-            <div style={{ padding:"32px 14px 8px", display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
-              <div style={{ fontSize:64, animation: phase==="ready" ? "readyBounce 0.6s ease-out" : "none" }}>🎁</div>
-              <p style={{ color:"#fff", fontSize:16, fontWeight:800, margin:0, textAlign:"center" }}>
-                مكافأتك جاهزة!
-              </p>
-              <p style={{ color:"rgba(255,255,255,0.4)", fontSize:12, margin:0 }}>
-                اضغط لاستلام {rewardLabel || "المكافأة"}
-              </p>
-            </div>
-          )}
-
-          {/* buttons */}
+          {/* Buttons */}
           <div style={{ padding:"14px 14px 18px", display:"flex", flexDirection:"column", gap:10 }}>
             {phase==="idle" && (
               <button onClick={handleStartAd} style={{
@@ -228,7 +267,6 @@ import { useState, useRef, useCallback } from "react";
                 ابدأ المشاهدة
               </button>
             )}
-
             {phase==="error" && (
               <button onClick={() => { setPhase("idle"); setTimeLeft(seconds); }} style={{
                 width:"100%", height:58, borderRadius:16, border:"none",
@@ -240,50 +278,21 @@ import { useState, useRef, useCallback } from "react";
                 حاول مجدداً
               </button>
             )}
-
-            {(phase==="ready" || phase==="claimed") && (
-              <button onClick={handleClaim} disabled={phase==="claimed"} style={{
-                width:"100%", height:62, borderRadius:18, border:"none",
-                background: phase==="claimed" ? "rgba(22,163,74,0.3)" : "linear-gradient(135deg,#16a34a,#15803d)",
-                color:"#fff", fontWeight:900, fontSize:18,
-                cursor: phase==="claimed" ? "not-allowed" : "pointer",
-                display:"flex", alignItems:"center", justifyContent:"center", gap:12,
-                boxShadow: phase==="claimed" ? "none" : "0 6px 32px rgba(22,163,74,0.5)",
-                animation: phase==="ready" ? "claimPulse 1.2s ease-in-out infinite" : "none",
-              }}>
-                <span style={{ fontSize:24 }}>{phase==="claimed" ? "✅" : "✕"}</span>
-                {phase==="claimed" ? "تم الاستلام!" : `استلم ${rewardLabel || "المكافأة"}`}
-              </button>
-            )}
-
-            {(phase==="idle" || phase==="error" || phase==="ready" || phase==="claimed") && (
-              <button onClick={onClose} style={{
-                width:"100%", height:42, borderRadius:12, border:"1px solid rgba(255,255,255,0.08)",
-                background:"transparent", color:"rgba(255,255,255,0.25)",
-                fontWeight:600, fontSize:13, cursor:"pointer",
-              }}>
-                استمر بدون مكافأة
-              </button>
-            )}
+            <button onClick={onClose} style={{
+              width:"100%", height:42, borderRadius:12, border:"1px solid rgba(255,255,255,0.08)",
+              background:"transparent", color:"rgba(255,255,255,0.25)",
+              fontWeight:600, fontSize:13, cursor:"pointer",
+            }}>
+              استمر بدون مكافأة
+            </button>
           </div>
         </div>
 
         <div style={{ height:20, flexShrink:0 }}/>
-
         <style>{`
-          @keyframes spin { to { transform: rotate(360deg); } }
           @keyframes startPulse {
             0%,100% { box-shadow: 0 4px 28px rgba(99,102,241,0.5); }
             50%      { box-shadow: 0 4px 40px rgba(99,102,241,0.85); }
-          }
-          @keyframes claimPulse {
-            0%,100% { box-shadow: 0 6px 32px rgba(22,163,74,0.5); transform: scale(1); }
-            50%      { box-shadow: 0 6px 48px rgba(22,163,74,0.8); transform: scale(1.02); }
-          }
-          @keyframes readyBounce {
-            0%   { transform: scale(0.5); opacity: 0; }
-            70%  { transform: scale(1.2); }
-            100% { transform: scale(1); opacity: 1; }
           }
         `}</style>
       </div>
