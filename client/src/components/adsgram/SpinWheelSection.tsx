@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gift, Sparkles, Tv2, X } from "lucide-react";
+import { Gift, Sparkles, Tv2, X, ShoppingCart, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";
@@ -96,12 +96,15 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   const [showAdOverlay,     setShowAdOverlay]     = useState(false);
   const [pendingToken,      setPendingToken]      = useState<string | null>(null);
   const [tokenLoading,      setTokenLoading]      = useState(false);
+  const [showBuyModal,      setShowBuyModal]      = useState(false);
+  const [buyLoading,        setBuyLoading]        = useState(false);
   const { toast } = useToast();
   const t = translations[lang];
 
   const spinMutation     = trpc.spin.perform.useMutation();
   const getTokenMutation = trpc.ads.getToken.useMutation();
   const claimMutation    = trpc.ads.claim.useMutation();
+  const buySpinsMutation = trpc.spin.buy.useMutation();
 
   useEffect(() => { setAdSpinsUsed(getAdSpinsUsed()); }, []);
   useEffect(() => { drawWheel(); }, [rotation]);
@@ -244,6 +247,38 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
 
   const adSpinsLeft = MAX_AD_SPINS - adSpinsUsed;
 
+  // Spin packages
+  const SPIN_PACKAGES = [
+    { qty: 1, price: 500,  label: "دورة واحدة",   badge: null,       color: "#6366f1" },
+    { qty: 3, price: 1200, label: "٣ دورات",       badge: "وفّر 20%", color: "#8B5CF6" },
+    { qty: 5, price: 1800, label: "٥ دورات",       badge: "🔥 الأفضل", color: "#EC4899" },
+  ];
+
+  const handleBuySpins = async (qty: number, price: number) => {
+    if (buyLoading) return;
+    if (user.balance < price) {
+      toast({ title: "رصيد غير كافٍ 😔", description: `تحتاج ${price} نقطة. رصيدك الحالي: ${user.balance} نقطة`, variant: "destructive" });
+      return;
+    }
+    setBuyLoading(true);
+    try {
+      const initData = (window as any).Telegram?.WebApp?.initData || "";
+      const res = await buySpinsMutation.mutateAsync({ telegramId: user.telegramId, initData, quantity: qty });
+      if (res.success) {
+        onReward({ balance: Number(res.balance), spinsLeft: Number(res.spinsLeft) });
+        setShowBuyModal(false);
+        setShowNoSpinsModal(false);
+        toast({ title: `🎡 تم شراء ${qty} دورة!`, description: `خُصم ${price} نقطة من رصيدك. العب الآن!` });
+      } else {
+        throw new Error((res as any).message || "فشلت العملية");
+      }
+    } catch (e: any) {
+      toast({ title: "خطأ", description: e?.message || "فشلت عملية الشراء", variant: "destructive" });
+    } finally {
+      setBuyLoading(false);
+    }
+  };
+
   return (
     <>
       {showAdOverlay && (
@@ -253,6 +288,83 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
           onClaim={handleAdClaim}
           onClose={() => { setShowAdOverlay(false); setPendingToken(null); onUnlock?.(); }}
         />
+      )}
+
+      {/* Buy Spins Modal */}
+      {showBuyModal && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.82)", backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: "20px",
+        }}>
+          <div style={{
+            background: "linear-gradient(145deg, #0f0c29, #1a1040)",
+            border: "1px solid rgba(139,92,246,0.5)",
+            borderRadius: 28, padding: "28px 20px", maxWidth: 360, width: "100%",
+            boxShadow: "0 24px 64px rgba(0,0,0,0.7), 0 0 50px rgba(139,92,246,0.2)",
+            position: "relative",
+          }}>
+            <button onClick={() => setShowBuyModal(false)} style={{
+              position: "absolute", top: 14, left: 14,
+              background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 10,
+              width: 32, height: 32, cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)",
+            }}>
+              <X size={16} />
+            </button>
+
+            <div style={{ textAlign: "center", marginBottom: 6 }}>
+              <div style={{ fontSize: 48, marginBottom: 4 }}>🛒</div>
+              <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: 0 }}>شراء دورات</h3>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
+                رصيدك الحالي: <span style={{ color: "#facc15", fontWeight: 800 }}>{user.balance.toLocaleString()} نقطة</span>
+              </p>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 18 }}>
+              {SPIN_PACKAGES.map((pkg) => {
+                const canAfford = user.balance >= pkg.price;
+                return (
+                  <button key={pkg.qty} onClick={() => handleBuySpins(pkg.qty, pkg.price)}
+                    disabled={!canAfford || buyLoading}
+                    style={{
+                      width: "100%", padding: "14px 16px", borderRadius: 16, border: "none",
+                      background: canAfford ? `linear-gradient(135deg, ${pkg.color}cc, ${pkg.color})` : "rgba(255,255,255,0.06)",
+                      cursor: canAfford && !buyLoading ? "pointer" : "not-allowed",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      boxShadow: canAfford ? `0 4px 20px ${pkg.color}44` : "none",
+                      opacity: buyLoading ? 0.7 : 1,
+                      transition: "all 0.2s",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ fontSize: 22 }}>{"🎡".repeat(Math.min(pkg.qty, 3))}</span>
+                      <div style={{ textAlign: "left" }}>
+                        <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{pkg.label}</div>
+                        {pkg.badge && (
+                          <div style={{ fontSize: 10, color: canAfford ? "#fde68a" : "rgba(255,255,255,0.3)", fontWeight: 700 }}>
+                            {pkg.badge}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ color: canAfford ? "#fde68a" : "rgba(255,255,255,0.3)", fontWeight: 900, fontSize: 15 }}>
+                        {pkg.price.toLocaleString()}
+                      </div>
+                      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10 }}>نقطة</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {buyLoading && (
+              <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 14 }}>
+                جاري المعالجة...
+              </p>
+            )}
+          </div>
+        </div>
       )}
 
       {/* No Spins Modal */}
@@ -289,7 +401,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               يمكنك الحصول على حتى <span style={{ color: "#EC4899", fontWeight: 800 }}>5 دورات مجانية</span> يومياً!
             </p>
 
-            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", marginBottom: 20 }}>
+            <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>إعلانات اليوم</span>
                 <span style={{ fontSize: 11, fontWeight: 900, color: "#EC4899" }}>{adSpinsUsed} / {MAX_AD_SPINS}</span>
@@ -303,19 +415,35 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               onClick={handleWatchSpinAdClick}
               disabled={adSpinsLeft <= 0 || tokenLoading}
               style={{
-                width: "100%", height: 56, borderRadius: 18, border: "none",
+                width: "100%", height: 52, borderRadius: 18, border: "none",
                 background: adSpinsLeft > 0 && !tokenLoading ? "linear-gradient(135deg, #7c3aed, #EC4899)" : "rgba(255,255,255,0.08)",
-                color: "#fff", fontSize: 16, fontWeight: 900,
+                color: "#fff", fontSize: 15, fontWeight: 900,
                 cursor: adSpinsLeft > 0 && !tokenLoading ? "pointer" : "not-allowed",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
                 boxShadow: adSpinsLeft > 0 && !tokenLoading ? "0 6px 24px rgba(139,92,246,0.45)" : "none",
+                marginBottom: 10,
               }}
             >
               <Tv2 size={20} />
               {tokenLoading ? "جاري التحميل..." : adSpinsLeft > 0 ? "شاهد إعلاناً واربح دورة 🎡" : "انتهت الإعلانات اليومية"}
             </button>
 
-            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center", marginTop: 14 }}>
+            {/* Buy Spins Button */}
+            <button
+              onClick={() => { setShowNoSpinsModal(false); setShowBuyModal(true); }}
+              style={{
+                width: "100%", height: 52, borderRadius: 18, border: "1px solid rgba(250,204,21,0.4)",
+                background: "rgba(250,204,21,0.08)",
+                color: "#facc15", fontSize: 15, fontWeight: 900,
+                cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              }}
+            >
+              <ShoppingCart size={18} />
+              اشترِ دورات بنقاطك
+            </button>
+
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center", marginTop: 12 }}>
               متبقي اليوم: {adSpinsLeft} من {MAX_AD_SPINS} إعلانات
             </p>
           </div>
@@ -384,6 +512,18 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               >
                 {isSpinning ? t.spinning : t.spin_btn}
               </button>
+              <button
+                onClick={() => setShowBuyModal(true)}
+                className="w-full h-10 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(250,204,21,0.08)",
+                  border: "1px solid rgba(250,204,21,0.25)",
+                  color: "#facc15", cursor: "pointer",
+                }}
+              >
+                <ShoppingCart size={15} />
+                اشترِ المزيد من الدورات بنقاطك
+              </button>
               <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">
                 {t.daily_spins_info}
               </p>
@@ -412,6 +552,18 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               >
                 <Tv2 className="h-5 w-5" />
                 {tokenLoading ? "جاري التحميل..." : adSpinsLeft > 0 ? t.watch_ad_earn_spin : "انتهت الإعلانات اليومية"}
+              </button>
+              <button
+                onClick={() => setShowBuyModal(true)}
+                className="w-full h-12 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: "rgba(250,204,21,0.08)",
+                  border: "1px solid rgba(250,204,21,0.3)",
+                  color: "#facc15", cursor: "pointer",
+                }}
+              >
+                <ShoppingCart size={16} />
+                اشترِ دورات بنقاطك
               </button>
             </div>
           )}
