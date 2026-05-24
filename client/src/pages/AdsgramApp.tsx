@@ -95,6 +95,10 @@ import { useState, useEffect, useCallback } from "react";
       const { toast } = useToast();
       const t = translations[lang];
       const getUserMutation = trpc.telegram.getUser.useMutation();
+    const checkMemberMutation = trpc.telegram.checkChannelMember.useMutation();
+    const [memberStatus, setMemberStatus] = useState<'checking' | 'not_member' | 'member'>('checking');
+    const [recheckLoading, setRecheckLoading] = useState(false);
+    const memberVerifiedRef = { current: false };
 
       const toggleLanguage = () => {
         const langs: Language[] = ["ar", "en", "ru"];
@@ -148,7 +152,62 @@ import { useState, useEffect, useCallback } from "react";
         } catch {}
       }, []);
 
-      if (loading) return (
+
+        if (memberStatus === 'not_member') return (
+          <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#060610 0%,#0d0820 50%,#060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Segoe UI', sans-serif", direction: "rtl" }}>
+            <style>{`
+              @keyframes pulse2 { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.85} }
+              @keyframes float2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+              @keyframes orbM { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,25px)} }
+              @keyframes spin2 { to{transform:rotate(360deg)} }
+            `}</style>
+
+            {/* Background orbs */}
+            <div style={{ position:"fixed", width:320, height:320, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.18),transparent 70%)", top:"-60px", right:"-40px", animation:"orbM 8s ease-in-out infinite", pointerEvents:"none" }} />
+            <div style={{ position:"fixed", width:260, height:260, borderRadius:"50%", background:"radial-gradient(circle,rgba(234,179,8,0.12),transparent 70%)", bottom:"-40px", left:"-30px", animation:"orbM 10s ease-in-out infinite reverse", pointerEvents:"none" }} />
+
+            {/* Lock icon */}
+            <div style={{ animation:"float2 3s ease-in-out infinite", marginBottom: 28, position:"relative" }}>
+              <div style={{ position:"absolute", inset:-16, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.25),transparent 70%)", animation:"pulse2 2.5s ease-in-out infinite" }} />
+              <div style={{ width:90, height:90, borderRadius:"50%", background:"linear-gradient(135deg,#7C3AED,#4F46E5)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:42, boxShadow:"0 0 40px rgba(124,58,237,0.4)" }}>
+                🔒
+              </div>
+            </div>
+
+            {/* Text */}
+            <h2 style={{ color:"#fff", fontSize:22, fontWeight:900, marginBottom:10, textAlign:"center" }}>
+              اشتراك إجباري
+            </h2>
+            <p style={{ color:"rgba(255,255,255,0.55)", fontSize:14, textAlign:"center", lineHeight:1.7, marginBottom:32, maxWidth:280 }}>
+              يجب عليك الاشتراك في قناتنا الرسمية للمتابعة واستخدام التطبيق
+            </p>
+
+            {/* Join button */}
+            <a
+              href="https://t.me/Scriylj"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, width:"100%", maxWidth:300, height:54, borderRadius:16, background:"linear-gradient(135deg,#7C3AED,#4F46E5)", color:"#fff", fontWeight:900, fontSize:16, textDecoration:"none", marginBottom:14, boxShadow:"0 6px 24px rgba(124,58,237,0.4)" }}
+            >
+              <span style={{ fontSize:20 }}>📢</span>
+              اشترك في القناة
+            </a>
+
+            {/* Verify button */}
+            <button
+              onClick={recheckMembership}
+              disabled={recheckLoading}
+              style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, width:"100%", maxWidth:300, height:50, borderRadius:16, background: recheckLoading ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.1)", color: recheckLoading ? "rgba(255,255,255,0.3)" : "#fff", fontWeight:700, fontSize:15, border:"1.5px solid rgba(255,255,255,0.12)", cursor: recheckLoading ? "not-allowed" : "pointer" }}
+            >
+              {recheckLoading
+                ? <><div style={{ width:18,height:18,border:"2.5px solid rgba(255,255,255,0.2)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin2 0.8s linear infinite" }} /> جارٍ التحقق...</>
+                : <><span>✅</span> لقد اشتركت — تحقق</>
+              }
+            </button>
+          </div>
+        );
+
+        if (loading) return (
         <div style={{ minHeight: "100vh", background: "#060610", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
           <style>{`
             @keyframes spin { to { transform: rotate(360deg) } }
