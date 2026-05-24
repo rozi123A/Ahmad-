@@ -18,9 +18,11 @@ interface WatchAdsSectionProps {
   user: UserData;
   lang: Language;
   onReward: (update?: { balance: number; todayAds: number; lastAdTime: number }) => void;
+  onLock?: () => void;
+  onUnlock?: () => void;
 }
 
-export default function WatchAdsSection({ user, lang, onReward }: WatchAdsSectionProps) {
+export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock }: WatchAdsSectionProps) {
   const [showAd,            setShowAd]            = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
   const [pendingToken,      setPendingToken]      = useState<string | null>(null);
@@ -63,6 +65,7 @@ export default function WatchAdsSection({ user, lang, onReward }: WatchAdsSectio
       const tokenData = await getTokenMutation.mutateAsync({ telegramId: user.telegramId, initData });
       if (!tokenData.success || !tokenData.token) throw new Error(tokenData.message || t.ad_error_desc);
       setPendingToken(tokenData.token);
+      onLock?.();
       setShowAd(true);
     } catch (e: any) {
       toast({ title: t.ad_error || "خطأ", description: e?.message || t.ad_error_desc, variant: "destructive" });
@@ -88,6 +91,7 @@ export default function WatchAdsSection({ user, lang, onReward }: WatchAdsSectio
       toast({ title: t.ad_error || "خطأ", description: error.message || t.ad_error_desc, variant: "destructive" });
     } finally {
       setPendingToken(null);
+      onUnlock?.();
     }
   };
 
@@ -100,7 +104,7 @@ export default function WatchAdsSection({ user, lang, onReward }: WatchAdsSectio
           seconds={15}
           rewardLabel={`+${user.adReward} ${t.points}`}
           onClaim={handleClaim}
-          onClose={() => { setShowAd(false); setPendingToken(null); }}
+          onClose={() => { setShowAd(false); setPendingToken(null); onUnlock?.(); }}
         />
       )}
 
