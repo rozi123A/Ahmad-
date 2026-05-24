@@ -141,7 +141,7 @@ export const appRouter = router({
           if (!verified || verified.id !== input.telegramId) return { isMember: false };
           const botToken = ENV.botToken;
           const channel = process.env.REQUIRED_CHANNEL || "@Scriylj";
-          if (!botToken) return { isMember: true };
+          if (!botToken) return { isMember: false };
           try {
             const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${encodeURIComponent(channel)}&user_id=${input.telegramId}`);
             const data = await res.json() as any;
@@ -149,7 +149,7 @@ export const appRouter = router({
             const isMember = ['member', 'administrator', 'creator'].includes(status);
             return { isMember, channel };
           } catch {
-            return { isMember: true, channel };
+            return { isMember: false, channel };
           }
         }),
 
