@@ -128,7 +128,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("adminSecret");
+    sessionStorage.removeItem("adminSecret");
     setAuthed(false);
     setSecret("");
   };
