@@ -499,9 +499,7 @@ export const appRouter = router({
 
         if (input.type === "spin") {
           updates.spinsLeft = currentSpins + 1;
-          // Also give points as a bonus
-          updates.balance = currentBalance + reward;
-          updates.totalEarned = currentTotalEarned + reward;
+          // Spin reward: extra spin only, no points
         } else {
           updates.balance = currentBalance + reward;
           updates.totalEarned = currentTotalEarned + reward;
@@ -512,7 +510,7 @@ export const appRouter = router({
         await createTransaction({
           telegramId: input.telegramId,
           type: "ad",
-          points: reward,
+          points: input.type === "spin" ? 0 : reward,
           metadata: JSON.stringify({ token: input.token, adType: input.type }),
         });
 
