@@ -12,6 +12,10 @@ const PUBLIC_URL =
 
 let isBotStarted = false;
 
+// Track last reminder send time — persists across keep-alive wakes
+let lastReminderSent: Date | null = null;
+const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
   try {
     const inactiveUsers = await getInactiveUsers(3, 50);
@@ -35,15 +39,43 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
           } : undefined
         );
         sent++;
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 1200));
       } catch (err: any) {
-        console.warn(`[Bot] Failed to notify user ${user.telegramId}:`, err?.message);
+        // 403 = user blocked bot — skip silently
+        if (err?.response?.error_code !== 403) {
+          console.warn(`[Bot] Failed to notify user ${user.telegramId}:`, err?.message);
+        }
       }
     }
     console.log(`[Bot] Sent inactivity reminders to ${sent}/${inactiveUsers.length} users`);
+    lastReminderSent = new Date();
   } catch (err) {
     console.error("[Bot] Error in sendInactivityReminders:", err);
   }
+}
+
+function scheduleReminders(bot: Telegraf) {
+  // Check every 30 minutes — resilient against Render free-tier sleep
+  // Runs immediately on start if overdue, then every 24h thereafter
+  setInterval(async () => {
+    const now = new Date();
+    const overdue =
+      lastReminderSent === null ||
+      now.getTime() - lastReminderSent.getTime() >= REMINDER_INTERVAL_MS;
+
+    if (overdue) {
+      console.log("[Bot] Running inactivity reminder check...");
+      await sendInactivityReminders(bot, WEBAPP_URL || "");
+    }
+  }, 30 * 60 * 1000); // every 30 min
+
+  // Also run once shortly after startup (5 min delay to let DB settle)
+  setTimeout(async () => {
+    if (lastReminderSent === null) {
+      console.log("[Bot] Running startup inactivity check...");
+      await sendInactivityReminders(bot, WEBAPP_URL || "");
+    }
+  }, 5 * 60 * 1000);
 }
 
 export async function startBot(app?: Express) {
@@ -60,13 +92,7 @@ export async function startBot(app?: Express) {
 
   const bot = new Telegraf(BOT_TOKEN);
 
-  setInterval(async () => {
-    const now = new Date();
-    if (now.getHours() === 10 && now.getMinutes() === 0) {
-      console.log("[Bot] Running daily inactivity check...");
-      await sendInactivityReminders(bot, WEBAPP_URL || "");
-    }
-  }, 60 * 1000);
+  scheduleReminders(bot);
 
   bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
@@ -74,7 +100,6 @@ export async function startBot(app?: Express) {
     const firstName = ctx.from.first_name || "";
     const lastName = ctx.from.last_name || "";
 
-    // Extract referral ID from start payload (e.g. /start ref_12345)
     const startPayload = ctx.payload || "";
     let referrerId: string | null = null;
     if (startPayload.startsWith("ref_")) {
@@ -86,7 +111,6 @@ export async function startBot(app?: Express) {
 
     try {
       let user = await getTelegramUser(telegramId);
-      const isNewUser = !user;
       if (!user) {
         user = await upsertTelegramUser({
           telegramId,
@@ -99,13 +123,9 @@ export async function startBot(app?: Express) {
         await createTransaction({ telegramId, type: "bonus", points: 0, metadata: JSON.stringify({ action: "registration" }) });
       }
 
-      // Referral logic is now handled in the Mini App (routers.ts) to ensure consistency.
-      // We only save the referrer ID in the start payload for the Mini App to read.
-
       const welcomeMessage = `مرحباً بك يا ${firstName}! 🚀\n\n🎮 العب الآن واربح النقاط!\n🚀 كلما لعبت أكثر ربحت أكثر.\n💰 اجمع النقاط واستبدلها بالجوائز.`;
 
       if (WEBAPP_URL) {
-        // Embed referral ID in URL so the Mini App can read it via ?ref=
         const appUrl = referrerId
           ? WEBAPP_URL.replace(/\/+$/, "") + "?ref=" + referrerId
           : WEBAPP_URL;
