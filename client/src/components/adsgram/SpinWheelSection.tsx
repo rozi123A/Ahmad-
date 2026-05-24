@@ -86,7 +86,7 @@ function playWinSound(ctx: AudioContext) {
   });
 }
 
-export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSectionProps) {
+export default function SpinWheelSection({ user, lang, onReward, onLock, onUnlock }: SpinWheelSectionProps) {
   const canvasRef    = useRef<HTMLCanvasElement>(null);
   const audioCtxRef  = useRef<AudioContext | null>(null);
   const [isSpinning,        setIsSpinning]        = useState(false);
