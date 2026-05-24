@@ -12,7 +12,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
   type Phase = "loading" | "countdown" | "ready" | "claimed";
 
   function getDailyThumbnail(): React.ReactNode {
-    const dayIndex = Math.floor(Date.now() / 86_400_000) % 5;
+    const dayIndex = Math.floor(Math.random() * 5);
     const thumbnails: React.ReactNode[] = [
       <img src="/ad-thumbnail.png" alt="ad" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />,
       <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
