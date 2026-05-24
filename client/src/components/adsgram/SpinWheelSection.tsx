@@ -207,7 +207,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
       });
       if (!data.success) {
         toast({ title: t.notice, description: data.message || t.spin_failed, variant: "destructive" });
-        setIsSpinning(false); return;
+        setIsSpinning(false); onUnlock?.(); return;
       }
 
       const idx = PRIZES.findIndex(p => p.value === data.prize);
@@ -228,6 +228,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
           const wonSpins   = data.spinsLeft !== undefined ? Number(data.spinsLeft) : Math.max(0, user.spinsLeft - 1);
           onReward({ balance: wonBalance, spinsLeft: wonSpins });
           setIsSpinning(false);
+          onUnlock?.();
           if (Number(wonSpins) === 0) {
             setTimeout(() => setShowNoSpinsModal(true), 1200);
           }
