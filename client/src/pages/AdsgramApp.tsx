@@ -89,6 +89,7 @@ import { useState, useEffect, useCallback } from "react";
       const [loading, setLoading] = useState(true);
       const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user">(null);
       const [activeTab, setActiveTab] = useState("home");
+      const [isNavLocked, setIsNavLocked] = useState(false);
       const [lang, setLang] = useState<Language>("ar");
     const [displayName, setDisplayName] = useState("");
       const { toast } = useToast();
@@ -412,7 +413,7 @@ import { useState, useEffect, useCallback } from "react";
                     { emoji: "📺", label: t.today_ads, value: Math.min(safeUser.todayAds, 50), color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", tab: "ads" },
                     { emoji: "🎡", label: t.spins, value: `${safeUser.spinsLeft}/5`, color: "#EC4899", bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", tab: "spin" },
                   ].map((s, i) => (
-                    <button key={i} onClick={() => setActiveTab(s.tab)} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left", transition: "transform 0.15s", width: "100%" }}>
+                    <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(s.tab); }} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left", transition: "transform 0.15s", width: "100%" }}>
                       <span style={{ fontSize: 26 }}>{s.emoji}</span>
                       <div>
                         <p style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 3 }}>{s.label}</p>
@@ -449,7 +450,7 @@ import { useState, useEffect, useCallback } from "react";
                     { emoji: "🎡", label: t.try_luck, sub: t.random_prize, color: "#EC4899", tab: "spin" },
                     { emoji: "👥", label: t.invite_friend, sub: t.extra_reward, color: "#3B82F6", tab: "friends" },
                   ].map((a, i, arr) => (
-                    <button key={i} onClick={() => setActiveTab(a.tab)} style={{ width: "100%", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer", color: "#fff", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                    <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(a.tab); }} style={{ width: "100%", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer", color: "#fff", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <span style={{ fontSize: 20, width: 28, textAlign: "center" }}>{a.emoji}</span>
                         <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.85)" }}>{a.label}</span>
@@ -484,7 +485,7 @@ import { useState, useEffect, useCallback } from "react";
                     {(t.earn_per_ad || "اكسب {reward} نقطة لكل إعلان تشاهده").replace("{reward}", String(safeUser.adReward))}
                   </p>
                 </div>
-                <WatchAdsSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} />
+                <WatchAdsSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} onLock={() => setIsNavLocked(true)} onUnlock={() => setIsNavLocked(false)} />
               </div>
             )}
 
@@ -495,7 +496,7 @@ import { useState, useEffect, useCallback } from "react";
                   <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#EC4899" }}>🎡 {t.spin_title}</h2>
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.spin_subtitle}</p>
                 </div>
-                <SpinWheelSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} onSwitchToAds={() => setActiveTab("ads")} />
+                <SpinWheelSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} onSwitchToAds={() => setActiveTab("ads")} onLock={() => setIsNavLocked(true)} onUnlock={() => setIsNavLocked(false)} />
               </div>
             )}
 
@@ -536,8 +537,8 @@ import { useState, useEffect, useCallback } from "react";
                 return (
                   <button
                     key={id}
-                    onClick={() => { if (id === "admin") { window.location.href = "/admin"; return; } setActiveTab(id); }}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 2px 5px", background: "none", border: "none", cursor: "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease" }}
+                    onClick={() => { if (isNavLocked) return; if (id === "admin") { window.location.href = "/admin"; return; } setActiveTab(id); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 2px 5px", background: "none", border: "none", cursor: isNavLocked && !active ? "not-allowed" : "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease", opacity: isNavLocked && !active ? 0.35 : 1 }}
                   >
                     {active && (
                       <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 32, height: 3, borderRadius: 3, background: `linear-gradient(90deg, ${color}cc, ${color})`, boxShadow: `0 0 8px ${color}88` }} />
