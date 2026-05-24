@@ -1,4 +1,19 @@
-import { randomInt } from "crypto";
+import { randomInt, timingSafeEqual } from "crypto";
+
+function safeCompareSecret(input: string, expected: string): boolean {
+  if (!expected || expected.length === 0) return false;
+  try {
+    const a = Buffer.from(input);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) {
+      timingSafeEqual(Buffer.alloc(b.length), b);
+      return false;
+    }
+    return timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -880,7 +895,7 @@ export const appRouter = router({
         .input(z.object({ secret: z.string() }))
         .mutation(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          const isValid = adminSecret.length > 0 && input.secret === adminSecret;
+          const isValid = safeCompareSecret(input.secret, adminSecret);
           return { success: isValid };
         }),
 
@@ -889,7 +904,7 @@ export const appRouter = router({
         .input(z.object({ secret: z.string() }))
         .query(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          if (!adminSecret || input.secret !== adminSecret) return { success: false, data: null };
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, data: null };
           const stats = await getAdminStats();
           return { success: true, data: stats };
         }),
@@ -899,7 +914,7 @@ export const appRouter = router({
         .input(z.object({ secret: z.string(), page: z.number().default(1) }))
         .query(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          if (!adminSecret || input.secret !== adminSecret) return { success: false, users: [] };
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, users: [] };
           const limit = 20;
           const offset = (input.page - 1) * limit;
           const users = await getAllTelegramUsersAdmin(limit, offset);
@@ -911,7 +926,7 @@ export const appRouter = router({
         .input(z.object({ secret: z.string(), status: z.string().optional() }))
         .query(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          if (!adminSecret || input.secret !== adminSecret) return { success: false, withdrawals: [] };
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, withdrawals: [] };
           const list = await getAllWithdrawals(input.status);
           return { success: true, withdrawals: list };
         }),
@@ -931,7 +946,7 @@ export const appRouter = router({
         .input(z.object({ secret: z.string(), telegramId: z.number(), ban: z.boolean() }))
         .mutation(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          if (!adminSecret || input.secret !== adminSecret) return { success: false, message: "غير مصرح" };
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, message: "غير مصرح" };
           await banTelegramUser(input.telegramId, input.ban);
           return { success: true };
         }),
@@ -945,7 +960,7 @@ export const appRouter = router({
         }))
         .mutation(async ({ input }) => {
           const adminSecret = process.env.ADMIN_SECRET || "";
-          if (!adminSecret || input.secret !== adminSecret) return { success: false, sent: 0, message: "غير مصرح" };
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, sent: 0, message: "غير مصرح" };
 
           const botToken = ENV.botToken;
           const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
@@ -1143,7 +1158,7 @@ export const appRouter = router({
           }))
           .mutation(async ({ input }) => {
             const adminSecret = process.env.ADMIN_SECRET || "";
-            if (!adminSecret || input.secret !== adminSecret) return { success: false };
+            if (!safeCompareSecret(input.secret, adminSecret)) return { success: false };
             const task = await createTask({
               name: input.name,
               description: input.description ?? null,
@@ -1161,7 +1176,7 @@ export const appRouter = router({
           .input(z.object({ secret: z.string() }))
           .query(async ({ input }) => {
             const adminSecret = process.env.ADMIN_SECRET || "";
-            if (!adminSecret || input.secret !== adminSecret) return { success: false, tasks: [] };
+            if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, tasks: [] };
             const list = await getAllTasks();
             return { success: true, tasks: list };
           }),
@@ -1171,7 +1186,7 @@ export const appRouter = router({
           .input(z.object({ secret: z.string(), taskId: z.number() }))
           .mutation(async ({ input }) => {
             const adminSecret = process.env.ADMIN_SECRET || "";
-            if (!adminSecret || input.secret !== adminSecret) return { success: false };
+            if (!safeCompareSecret(input.secret, adminSecret)) return { success: false };
             await deleteTask(input.taskId);
             return { success: true };
           }),
