@@ -17,7 +17,9 @@ interface SpinWheelSectionProps {
   user: UserData;
   lang: Language;
   onReward: (update?: { balance: number; spinsLeft: number; totalEarned?: number }) => void;
-  onSwitchToAds: () => void;
+  onSwitchToAds?: () => void;
+  onLock?: () => void;
+  onUnlock?: () => void;
 }
 
 const PRIZES = [
@@ -158,6 +160,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
       const tok = await getTokenMutation.mutateAsync({ telegramId: user.telegramId, initData, type: "spin" });
       if (!tok.success || !tok.token) throw new Error(tok.message || "فشل الحصول على التوكن");
       setPendingToken(tok.token);
+      onLock?.();
       setShowAdOverlay(true);
     } catch (e: any) {
       toast({ title: "خطأ", description: e?.message || "فشل تحميل الإعلان", variant: "destructive" });
@@ -185,12 +188,14 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
       toast({ title: "خطأ", description: e?.message || "فشل", variant: "destructive" });
     } finally {
       setPendingToken(null);
+      onUnlock?.();
     }
   };
 
   async function handleSpin() {
     if (isSpinning || Number(user.spinsLeft) <= 0) return;
     setIsSpinning(true);
+    onLock?.();
     if (!audioCtxRef.current) audioCtxRef.current = getAudioCtx();
     const actx = audioCtxRef.current;
     if (actx?.state === "suspended") await actx.resume();
@@ -232,6 +237,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
     } catch {
       toast({ title: t.error, description: t.spin_error, variant: "destructive" });
       setIsSpinning(false);
+      onUnlock?.();
     }
   }
 
@@ -244,7 +250,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
           seconds={15}
           rewardLabel="دورة إضافية 🎡"
           onClaim={handleAdClaim}
-          onClose={() => { setShowAdOverlay(false); setPendingToken(null); }}
+          onClose={() => { setShowAdOverlay(false); setPendingToken(null); onUnlock?.(); }}
         />
       )}
 
