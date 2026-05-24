@@ -195,7 +195,6 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
   async function handleSpin() {
     if (isSpinning || Number(user.spinsLeft) <= 0) return;
     setIsSpinning(true);
-    onLock?.();
     if (!audioCtxRef.current) audioCtxRef.current = getAudioCtx();
     const actx = audioCtxRef.current;
     if (actx?.state === "suspended") await actx.resume();
@@ -215,6 +214,7 @@ export default function SpinWheelSection({ user, lang, onReward }: SpinWheelSect
       const target = rotation + 8 * Math.PI * 2 + (-(idx * segAngle + segAngle / 2) - Math.PI / 2 - rotation % (Math.PI * 2));
       const dur = 4000, t0 = Date.now(), r0 = rotation;
 
+      onLock?.();
       if (actx) playSpinSound(actx, dur / 1000);
 
       const animate = () => {
