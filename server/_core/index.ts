@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -81,6 +82,24 @@ async function startServer() {
   // Body parser — 2mb limit to prevent DoS attacks
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
+
+  // Rate Limiting — global: 200 req/15min per IP
+  app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many requests, please try again later." },
+  }));
+
+  // Stricter rate limit for admin endpoints — 20 req/15min per IP
+  app.use("/api/trpc/admin", rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "Too many admin requests." },
+  }));
 
   // ── /ping — health check + keep-alive target ──
   app.get("/ping", (_req, res) => {
