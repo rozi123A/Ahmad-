@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
+import { notifyWithdrawReady } from "./bot";
 import { z } from "zod";
 import { getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks } from "./db";
@@ -515,10 +516,14 @@ export const appRouter = router({
         });
 
         // Always return balance — use computed value as fallback if upsert returned null
+        const claimBalance = Number(user?.balance ?? updates.balance);
+        if (input.type !== "spin") {
+          notifyWithdrawReady(input.telegramId, claimBalance).catch(() => {});
+        }
           return { 
             success: true, 
             reward, 
-            balance: user?.balance ?? updates.balance, 
+            balance: claimBalance, 
             spinsLeft: user?.spinsLeft ?? updates.spinsLeft 
           };
       }),
@@ -567,7 +572,48 @@ export const appRouter = router({
           metadata: JSON.stringify({ prize }),
         });
 
-        return { success: true, prize, balance: user?.balance ?? (currentBalance + prize), spinsLeft: user?.spinsLeft ?? Math.max(0, currentSpins - 1) };
+        const finalBalance = Number(user?.balance ?? (currentBalance + prize));
+        notifyWithdrawReady(input.telegramId, finalBalance).catch(() => {});
+
+        return { success: true, prize, balance: finalBalance, spinsLeft: user?.spinsLeft ?? Math.max(0, currentSpins - 1) };
+      }),
+
+    buy: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), quantity: z.number().min(1).max(10) }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
+
+        const user = await getTelegramUser(input.telegramId);
+        if (!user) return { success: false, message: "User not found" };
+        if (user.isBanned) return { success: false, message: "تم تعليق حسابك" };
+
+        // Pricing: 1 spin = 500 pts, 3 spins = 1200 pts, 5 spins = 1800 pts
+        const PRICES: Record<number, number> = { 1: 500, 3: 1200, 5: 1800 };
+        const cost = PRICES[input.quantity] ?? input.quantity * 500;
+        const currentBalance = Number(user.balance) || 0;
+        const currentSpins = Number(user.spinsLeft) || 0;
+
+        if (currentBalance < cost) return { success: false, message: "رصيدك غير كافٍ" };
+
+        const updatedUser = await upsertTelegramUser({
+          telegramId: input.telegramId,
+          balance: currentBalance - cost,
+          spinsLeft: currentSpins + input.quantity,
+        });
+
+        await createTransaction({
+          telegramId: input.telegramId,
+          type: "bonus",
+          points: -cost,
+          metadata: JSON.stringify({ action: "buy_spins", quantity: input.quantity, cost }),
+        });
+
+        return {
+          success: true,
+          balance: updatedUser?.balance ?? (currentBalance - cost),
+          spinsLeft: updatedUser?.spinsLeft ?? (currentSpins + input.quantity),
+        };
       }),
   }),
 
