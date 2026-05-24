@@ -134,7 +134,26 @@ export const appRouter = router({
   system: systemRouter,
   
   telegram: router({
-    getUser: publicProcedure
+    checkChannelMember: publicProcedure
+        .input(z.object({ telegramId: z.number(), initData: z.string() }))
+        .mutation(async ({ input }) => {
+          const verified = verifyTelegramWebApp(input.initData);
+          if (!verified || verified.id !== input.telegramId) return { isMember: false };
+          const botToken = ENV.botToken;
+          const channel = process.env.REQUIRED_CHANNEL || "@Scriylj";
+          if (!botToken) return { isMember: true };
+          try {
+            const res = await fetch(`https://api.telegram.org/bot${botToken}/getChatMember?chat_id=${encodeURIComponent(channel)}&user_id=${input.telegramId}`);
+            const data = await res.json() as any;
+            const status = data?.result?.status;
+            const isMember = ['member', 'administrator', 'creator'].includes(status);
+            return { isMember, channel };
+          } catch {
+            return { isMember: true, channel };
+          }
+        }),
+
+      getUser: publicProcedure
       .input(z.object({ 
         telegramId: z.number(), 
         initData: z.string(),
