@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
     import { ChevronRight, History } from "lucide-react";
     import { translations, type Language } from "@/lib/i18n";
     import WatchAdsSection from "@/components/adsgram/WatchAdsSection";
