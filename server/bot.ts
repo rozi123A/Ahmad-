@@ -83,24 +83,63 @@ export async function notifyWithdrawReady(telegramId: number, balance: number): 
     }
   }
 }
-export async function postCodeToChannel(code: string, reward: number, expiresInHours: number, maxUses: number): Promise<void> {
-  if (!BOT_TOKEN) return;
-  const channel = process.env.REQUIRED_CHANNEL;
-  if (!channel) {
-    console.error("[Bot] REQUIRED_CHANNEL is not set — cannot post code to channel");
-    return;
-  }
-  const webappUrl = (WEBAPP_URL || "").replace(/\/$/, "");
+function buildRandomCaption(code: string, reward: number, expiresInHours: number, maxUses: number): string {
+  const h = expiresInHours;
+  const timeLabel = h === 1 ? "1 Hour Only" : `${h} Hours Only`;
+  const timeShort = h === 1 ? "1 Hour" : `${h} Hours`;
+  const pts = reward.toLocaleString();
 
-  // Message format matching the channel style
-  const caption =
-    `⚡ *New Redeem Code is LIVE!* ⚡\n\n` +
+  const templates = [
+    // 1 — Original style (always clean)
+    `⚡ *New Redeem Code is LIVE\\!* ⚡\n\n` +
     `🎟 Code: \`${code}\`\n` +
-    `🎁 Reward: ${reward.toLocaleString()} Points\n` +
-    `⏳ Valid For: ${expiresInHours} Hour${expiresInHours > 1 ? "s" : ""} Only\n` +
+    `🎁 Reward: ${pts} Points\n` +
+    `⏳ Valid For: ${timeLabel}\n` +
     `👥 Limited To: ${maxUses} Users\n\n` +
-    `🔥 Time is running out — redeem your reward now before the code expires!\n` +
-    `🚀 Open the Mini App and claim it instantly 💎`;
+    `🔥 Time is running out — redeem your reward now before the code expires\\!\n` +
+    `🚀 Open the Mini App and claim it instantly 💎`,
+
+    // 2 — Alert style
+    `🚨 *EXCLUSIVE CODE DROP* 🚨\n` +
+    `━━━━━━━━━━━━━━━━\n` +
+    `🎫 Code: \`${code}\`\n` +
+    `💰 Reward: ${pts} Points\n` +
+    `⌛ Active For: ${timeShort}\n` +
+    `🎯 Only ${maxUses} Spots Left\\!\n` +
+    `━━━━━━━━━━━━━━━━\n` +
+    `⚡ First come, first served\\!\n` +
+    `👉 Claim before it's gone 🏆`,
+
+    // 3 — Premium style
+    `💎 *PREMIUM CODE JUST DROPPED* 💎\n\n` +
+    `🔑 Code: \`${code}\`\n` +
+    `🏆 Earn: ${pts} Points\n` +
+    `⏱ Valid: ${timeShort}\n` +
+    `🎯 Limited: ${maxUses} Users Only\n\n` +
+    `🌟 The fastest win — don't sleep on this\\!\n` +
+    `🚀 Open the Mini App and grab your reward 💰`,
+
+    // 4 — Fire style
+    `🔥 *HOT CODE ALERT* 🔥\n\n` +
+    `🎟 Code: \`${code}\`\n` +
+    `💎 Points: ${pts}\n` +
+    `⏳ Time Left: ${timeShort}\n` +
+    `👥 Max Users: ${maxUses}\n\n` +
+    `💥 Snap it before it's gone\\!\n` +
+    `✅ Tap & claim instantly in the Mini App 🚀`,
+  ];
+
+  const idx = Math.floor(Math.random() * templates.length);
+  return templates[idx];
+}
+
+export async function postCodeToChannel(code: string, reward: number, expiresInHours: number, maxUses: number): Promise<void> {
+  if (!BOT_TOKEN) throw new Error("BOT_TOKEN غير موجود — تحقق من متغيرات البيئة");
+  const channel = process.env.REQUIRED_CHANNEL;
+  if (!channel) throw new Error("REQUIRED_CHANNEL غير موجود — تحقق من متغيرات البيئة");
+
+  const webappUrl = (WEBAPP_URL || "").replace(/\/$/, "");
+  const caption = buildRandomCaption(code, reward, expiresInHours, maxUses);
 
   const replyMarkup = webappUrl
     ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", web_app: { url: webappUrl } }]] }
@@ -143,6 +182,7 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
     console.log(`[Bot] Code posted to channel: ${code}`);
   } catch (err: any) {
     console.error(`[Bot] Failed to post code to channel:`, err?.message);
+    throw err;
   }
 }
 
