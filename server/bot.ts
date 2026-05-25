@@ -89,21 +89,41 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
     return;
   }
   const webappUrl = WEBAPP_URL || "";
+  // Fixed banner image — always sent with every code post
+  const bannerUrl = webappUrl ? webappUrl.replace(/\/$/, "") + "/code-banner.png" : null;
+
+  const caption =
+    `🎁 *كود مكافأة جديد!*\n\n` +
+    `🔑 الكود: \`${code}\`\n` +
+    `🏆 المكافأة: ${reward.toLocaleString()} نقطة\n` +
+    `⏰ صالح لمدة: ${expiresInHours} ساعة\n` +
+    `👥 أقصى عدد مستخدمين: ${maxUses}\n\n` +
+    `🚀 استرد الآن من Mini App!`;
+
+  const replyMarkup = webappUrl
+    ? { inline_keyboard: [[{ text: "🎮 افتح التطبيق واسترد الكود", web_app: { url: webappUrl } }]] }
+    : undefined;
+
   try {
     const bot = new Telegraf(BOT_TOKEN);
-    await bot.telegram.sendMessage(
-      channel,
-      `🎁 *كود مكافأة جديد!*\n\n` +
-      `💰 الكود: \`${code}\`\n` +
-      `🏆 المكافأة: ${reward.toLocaleString()} نقطة\n` +
-      `⏰ صالح لمدة: ${expiresInHours} ساعة\n` +
-      `👥 أقصى عدد مستخدمين: ${maxUses}\n\n` +
-      `🚀 استرد الآن من Mini App!`,
-      {
+    if (bannerUrl) {
+      // Send photo with caption
+      await bot.telegram.sendPhoto(
+        channel,
+        bannerUrl,
+        {
+          caption,
+          parse_mode: "Markdown",
+          ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+        } as any
+      );
+    } else {
+      // Fallback: text only if no webapp URL
+      await bot.telegram.sendMessage(channel, caption, {
         parse_mode: "Markdown",
-        ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق واسترد الكود", web_app: { url: webappUrl } }]] } } : {}),
-      } as any
-    );
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+      } as any);
+    }
   } catch (err: any) {
     console.warn(`[Bot] Failed to post code to channel:`, err?.message);
   }
