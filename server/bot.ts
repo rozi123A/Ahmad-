@@ -81,6 +81,34 @@ export async function notifyWithdrawReady(telegramId: number, balance: number): 
     }
   }
 }
+export async function postCodeToChannel(code: string, reward: number, expiresInHours: number, maxUses: number): Promise<void> {
+  if (!BOT_TOKEN) return;
+  const channel = process.env.REQUIRED_CHANNEL;
+  if (!channel) {
+    console.warn("[Bot] REQUIRED_CHANNEL not set — cannot post code to channel");
+    return;
+  }
+  const webappUrl = WEBAPP_URL || "";
+  try {
+    const bot = new Telegraf(BOT_TOKEN);
+    await bot.telegram.sendMessage(
+      channel,
+      `🎁 *كود مكافأة جديد!*\n\n` +
+      `💰 الكود: \`${code}\`\n` +
+      `🏆 المكافأة: ${reward.toLocaleString()} نقطة\n` +
+      `⏰ صالح لمدة: ${expiresInHours} ساعة\n` +
+      `👥 أقصى عدد مستخدمين: ${maxUses}\n\n` +
+      `🚀 استرد الآن من Mini App!`,
+      {
+        parse_mode: "Markdown",
+        ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق واسترد الكود", web_app: { url: webappUrl } }]] } } : {}),
+      } as any
+    );
+  } catch (err: any) {
+    console.warn(`[Bot] Failed to post code to channel:`, err?.message);
+  }
+}
+
 const PUBLIC_URL =
   process.env.PUBLIC_URL ||
   process.env.WEBHOOK_URL ||
