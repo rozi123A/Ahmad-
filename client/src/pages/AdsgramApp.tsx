@@ -146,13 +146,25 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 }
               }
               try {
-               // Detect country from browser
+               // Detect country from browser (multiple fallback APIs)
               let userCountry: string | undefined;
               try {
-                const geoR = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+                // Try ip-api.com first (reliable, CORS-friendly)
+                const geoR = await fetch('https://ip-api.com/json/?fields=country,status', { signal: AbortSignal.timeout(5000) });
                 const geo = await geoR.json() as any;
-                if (geo?.country_name && !geo?.error) userCountry = geo.country_name;
+                if (geo?.status === 'success' && geo?.country) { userCountry = geo.country; }
               } catch { /* ignore */ }
+              if (!userCountry) {
+                try {
+                  // Fallback: ipinfo.io
+                  const geoR2 = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) });
+                  const geo2 = await geoR2.json() as any;
+                  if (geo2?.country) {
+                    const codeMap: Record<string,string> = { DZ:'الجزائر', MA:'المغرب', TN:'تونس', SA:'السعودية', EG:'مصر', IQ:'العراق', LB:'لبنان', JO:'الأردن', SY:'سوريا', YE:'اليمن', KW:'الكويت', AE:'الإمارات', QA:'قطر', BH:'البحرين', OM:'عمان', LY:'ليبيا', SD:'السودان', MR:'موريتانيا', SO:'الصومال', PS:'فلسطين', TR:'تركيا', IR:'إيران', PK:'باكستان', IN:'الهند', NG:'نيجيريا', RU:'روسيا', UA:'أوكرانيا', FR:'فرنسا', DE:'ألمانيا', GB:'بريطانيا', US:'أمريكا', ID:'إندونيسيا', PH:'الفلبين' };
+                    userCountry = codeMap[geo2.country] || geo2.country;
+                  }
+                } catch { /* ignore */ }
+              }
               const data = await getUserMutation.mutateAsync({
                   telegramId: telegramUser.id,
                   initData: initData || "",
