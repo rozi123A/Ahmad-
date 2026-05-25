@@ -92,6 +92,7 @@ export async function upsertTelegramUser(user: InsertTelegramUser) {
     if (user.firstName !== undefined) updateSet.firstName = user.firstName;
     if (user.lastName !== undefined) updateSet.lastName = user.lastName;
     if (user.photoUrl !== undefined) updateSet.photoUrl = user.photoUrl;
+    if (user.country !== undefined) updateSet.country = user.country;
 
     const safeDate = (val: any): string | null => {
       if (val === null || val === undefined) return null;
