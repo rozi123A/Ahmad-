@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Users, TrendingUp, Wallet, Send, Shield, BarChart3,
   Eye, EyeOff, RefreshCw, Ban, CheckCircle,
-  Megaphone, LogOut, MessageCircle, XCircle, Search, Bell
+  Megaphone, LogOut, MessageCircle, XCircle, Search, Bell, Gift, Trash2, Copy, Wand2
 } from "lucide-react";
 
 const fmtN = (n: number) => n?.toLocaleString() ?? "0";
@@ -53,7 +53,7 @@ export default function AdminDashboard() {
   const [showPass, setShowPass] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
-  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast">("stats");
+  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes">("stats");
   const [userPage, setUserPage] = useState(1);
   const [userSearch, setUserSearch] = useState("");
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -63,11 +63,23 @@ export default function AdminDashboard() {
   const [withdrawActionLoading, setWithdrawActionLoading] = useState<number | null>(null);
   const { toast } = useToast();
 
+  // Code form state
+  const [codeInput, setCodeInput] = useState("");
+  const [codeReward, setCodeReward] = useState(100);
+  const [codeMaxUses, setCodeMaxUses] = useState(100);
+  const [codeExpiry, setCodeExpiry] = useState(24);
+  const [codePostChannel, setCodePostChannel] = useState(true);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [deleteCodeLoading, setDeleteCodeLoading] = useState<number | null>(null);
+
   const verifyMut = trpc.admin.verify.useMutation();
   const broadcastMut = trpc.admin.broadcast.useMutation();
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
   const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
+  const createCodeMut = trpc.codes.create.useMutation();
+  const deleteCodeMut = trpc.codes.delete.useMutation();
+  const codesQ = trpc.codes.list.useQuery({ secret }, { enabled: authed && tab === "codes", refetchInterval: 10000 });
 
   // Auto-auth: try URL ?ak= param first, then Telegram identity, then saved session
   useEffect(() => {
@@ -256,11 +268,46 @@ export default function AdminDashboard() {
 
   /* ── DASHBOARD ── */
   const stats = statsQ.data?.data;
+  const generateCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const seg = (n: number) => Array.from({ length: n }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    setCodeInput(`${seg(4)}-${seg(4)}-${seg(4)}`);
+  };
+
+  const handleCreateCode = async () => {
+    if (!codeInput.trim() || codeReward < 1) return;
+    setCodeLoading(true);
+    try {
+      const res = await createCodeMut.mutateAsync({ secret, code: codeInput.trim(), reward: codeReward, maxUses: codeMaxUses, expiresInHours: codeExpiry, postToChannel: codePostChannel });
+      if (res.success) {
+        toast({ title: "✅ تم إنشاء الكود", description: `الكود: ${(res as any).code?.code}` });
+        setCodeInput("");
+        codesQ.refetch();
+      } else {
+        toast({ title: "❌ خطأ", description: (res as any).message || "فشل إنشاء الكود", variant: "destructive" });
+      }
+    } finally {
+      setCodeLoading(false);
+    }
+  };
+
+  const handleDeleteCode = async (id: number) => {
+    setDeleteCodeLoading(id);
+    try {
+      await deleteCodeMut.mutateAsync({ secret, id });
+      toast({ title: "🗑️ تم إلغاء الكود" });
+      codesQ.refetch();
+    } finally {
+      setDeleteCodeLoading(null);
+    }
+  };
+
   const TABS = [
     { id: "stats" as const, icon: <BarChart3 size={16} />, label: "الإحصائيات", emoji: "📊" },
     { id: "users" as const, icon: <Users size={16} />, label: "المستخدمون", emoji: "👥" },
     { id: "withdrawals" as const, icon: <Wallet size={16} />, label: "السحوبات", emoji: "💸" },
     { id: "broadcast" as const, icon: <Megaphone size={16} />, label: "الإشعارات", emoji: "📣" },
+    { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "🎁" },
   ];
 
   const filteredUsers = (usersQ.data?.users || []).filter((u: any) => {
@@ -605,6 +652,136 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </Card>
+          </div>
+        )}
+
+        {/* ── CODES TAB ── */}
+        {tab === "codes" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+            {/* Create Code */}
+            <Card>
+              <CardHead icon={<Gift size={16} />} title="إنشاء كود مكافأة جديد" color="#10B981" />
+              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* Code input + auto-generate */}
+                <div>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>الكود</p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      value={codeInput}
+                      onChange={e => setCodeInput(e.target.value.toUpperCase())}
+                      placeholder="مثال: GIFT-2024-EARN"
+                      style={{ flex: 1, borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 14, outline: "none", fontFamily: "monospace", letterSpacing: "0.05em" }}
+                    />
+                    <button onClick={generateCode} style={{ height: 42, padding: "0 14px", borderRadius: 12, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.1)", color: "#34D399", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+                      <Wand2 size={13} /> توليد
+                    </button>
+                  </div>
+                </div>
+
+                {/* Reward + MaxUses row */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>المكافأة (نقطة)</p>
+                    <input type="number" value={codeReward} onChange={e => setCodeReward(Number(e.target.value))} min={1} style={{ width: "100%", borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>أقصى عدد مستخدمين</p>
+                    <input type="number" value={codeMaxUses} onChange={e => setCodeMaxUses(Number(e.target.value))} min={1} style={{ width: "100%", borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                </div>
+
+                {/* Expiry */}
+                <div>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>مدة الصلاحية (ساعات)</p>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {[1, 3, 6, 12, 24, 48, 72].map(h => (
+                      <button key={h} onClick={() => setCodeExpiry(h)} style={{ padding: "6px 14px", borderRadius: 10, border: `1px solid ${codeExpiry === h ? "rgba(16,185,129,0.5)" : "rgba(255,255,255,0.08)"}`, background: codeExpiry === h ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)", color: codeExpiry === h ? "#34D399" : "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 12, cursor: "pointer" }}>
+                        {h}س
+                      </button>
+                    ))}
+                    <input type="number" value={codeExpiry} onChange={e => setCodeExpiry(Number(e.target.value))} min={1} style={{ width: 70, borderRadius: 10, padding: "6px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 12, outline: "none", textAlign: "center" }} />
+                  </div>
+                </div>
+
+                {/* Post to channel toggle */}
+                <button onClick={() => setCodePostChannel(!codePostChannel)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", borderRadius: 14, border: `1px solid ${codePostChannel ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.08)"}`, background: codePostChannel ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", cursor: "pointer", textAlign: "right" }}>
+                  <div style={{ width: 36, height: 20, borderRadius: 10, background: codePostChannel ? "#10B981" : "rgba(255,255,255,0.15)", position: "relative", flexShrink: 0, transition: "background 0.2s" }}>
+                    <div style={{ position: "absolute", top: 2, left: codePostChannel ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: codePostChannel ? "#34D399" : "rgba(255,255,255,0.5)", margin: 0 }}>📢 نشر في القناة</p>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>إرسال الكود تلقائياً لقناة البوت</p>
+                  </div>
+                </button>
+
+                {/* Preview */}
+                {codeInput.trim() && (
+                  <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 14, padding: 14 }}>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>معاينة رسالة القناة</p>
+                    <p style={{ fontSize: 12, color: "#E2E8F0", lineHeight: 2, margin: 0, direction: "rtl", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+                      {`🎁 كود مكافأة جديد!\n\n💰 الكود: ${codeInput.trim()}\n🏆 المكافأة: ${codeReward.toLocaleString()} نقطة\n⏰ صالح لمدة: ${codeExpiry} ساعة\n👥 أقصى عدد مستخدمين: ${codeMaxUses}\n\n🚀 استرد الآن من Mini App!`}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={handleCreateCode}
+                  disabled={codeLoading || !codeInput.trim()}
+                  style={{ height: 52, borderRadius: 16, border: "none", background: codeInput.trim() ? "linear-gradient(135deg,#10B981,#059669)" : "rgba(255,255,255,0.05)", color: codeInput.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 14, cursor: codeInput.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: codeInput.trim() ? "0 6px 24px rgba(16,185,129,0.3)" : "none" }}
+                >
+                  {codeLoading ? <div style={{ width: 20, height: 20, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Gift size={18} />}
+                  {codeLoading ? "جاري الإنشاء..." : "🎁 إنشاء الكود" + (codePostChannel ? " ونشره في القناة" : "")}
+                </button>
+              </div>
+            </Card>
+
+            {/* Active Codes List */}
+            <Card>
+              <CardHead icon={<Gift size={16} />} title={`الأكواد النشطة (${(codesQ.data?.codes || []).filter((c: any) => c.isActive && new Date() < new Date(c.expiresAt)).length})`} color="#F59E0B" />
+              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
+                {codesQ.isLoading && <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)" }}>جاري التحميل...</div>}
+                {!codesQ.isLoading && (codesQ.data?.codes || []).length === 0 && (
+                  <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.2)", fontSize: 13 }}>لا توجد أكواد بعد</div>
+                )}
+                {(codesQ.data?.codes || []).map((c: any) => {
+                  const expired = new Date() > new Date(c.expiresAt);
+                  const full = c.usedCount >= c.maxUses;
+                  const inactive = !c.isActive || expired || full;
+                  const pct = Math.round((c.usedCount / c.maxUses) * 100);
+                  return (
+                    <div key={c.id} style={{ background: inactive ? "rgba(255,255,255,0.01)" : "rgba(16,185,129,0.04)", border: `1px solid ${inactive ? "rgba(255,255,255,0.06)" : "rgba(16,185,129,0.2)"}`, borderRadius: 14, padding: "12px 14px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.3)" : "#34D399", letterSpacing: "0.05em" }}>{c.code}</span>
+                          <button onClick={() => navigator.clipboard?.writeText(c.code)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2 }}><Copy size={12} /></button>
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: inactive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)", color: inactive ? "#FCA5A5" : "#34D399" }}>
+                            {!c.isActive ? "ملغي" : expired ? "منتهي" : full ? "مكتمل" : "نشط"}
+                          </span>
+                        </div>
+                        {!inactive && (
+                          <button onClick={() => handleDeleteCode(c.id)} disabled={deleteCodeLoading === c.id} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#FCA5A5", flexShrink: 0 }}>
+                            {deleteCodeLoading === c.id ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={12} />}
+                          </button>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", gap: 16, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                        <span>🏆 {c.reward.toLocaleString()} نقطة</span>
+                        <span>👥 {c.usedCount}/{c.maxUses}</span>
+                        <span>⏰ {new Date(c.expiresAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      </div>
+                      {!inactive && (
+                        <div style={{ marginTop: 8, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: pct > 80 ? "#EF4444" : "#10B981", borderRadius: 2, transition: "width 0.3s" }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
           </div>
         )}
 
