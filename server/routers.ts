@@ -168,17 +168,7 @@ export const appRouter = router({
 
         let user = await getTelegramUser(input.telegramId);
 
-        let detectedCountry: string | undefined;
-        if (!user?.country) {
-          try {
-            const ip = ((ctx.req.headers['x-forwarded-for'] as string) || '').split(',')[0]?.trim() || (ctx.req as any).ip || '';
-            if (ip && ip !== '127.0.0.1' && ip !== '::1') {
-              const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
-              const geo = await geoRes.json() as any;
-              if (geo?.country_name && !geo?.error) detectedCountry = geo.country_name;
-            }
-          } catch { /* ignore */ }
-        }
+               const detectedCountry = (!user?.country && input.country) ? input.country : undefined;
         const now = new Date();
 
         if (!user) {
