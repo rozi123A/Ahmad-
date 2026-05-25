@@ -146,26 +146,33 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 }
               }
               try {
-               // Detect country from browser (multiple fallback APIs)
+               // Detect country from browser locale (no external API needed)
               let userCountry: string | undefined;
               try {
-                // Try ip-api.com first (reliable, CORS-friendly)
-                const geoR = await fetch('https://ip-api.com/json/?fields=country,status', { signal: AbortSignal.timeout(5000) });
-                const geo = await geoR.json() as any;
-                if (geo?.status === 'success' && geo?.country) { userCountry = geo.country; }
+                const locale = navigator.language || navigator.languages?.[0] || '';
+                const tgLang = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || '';
+                const langSource = locale || tgLang || '';
+                // Extract region from locale like "ar-DZ" → "DZ", or use language code
+                const regionCode = langSource.includes('-') ? langSource.split('-')[1]?.toUpperCase() : langSource.toUpperCase();
+                const langCode = langSource.split('-')[0]?.toLowerCase();
+                const countryByRegion: Record<string,string> = {
+                  DZ:'الجزائر',MA:'المغرب',TN:'تونس',SA:'السعودية',EG:'مصر',IQ:'العراق',
+                  LB:'لبنان',JO:'الأردن',SY:'سوريا',YE:'اليمن',KW:'الكويت',AE:'الإمارات',
+                  QA:'قطر',BH:'البحرين',OM:'عمان',LY:'ليبيا',SD:'السودان',SO:'الصومال',
+                  PS:'فلسطين',TR:'Türkiye',RU:'Россия',UA:'Україна',FR:'France',
+                  DE:'Deutschland',GB:'United Kingdom',US:'United States',IN:'India',
+                  PK:'Pakistan',ID:'Indonesia',PH:'Philippines',NG:'Nigeria',BR:'Brasil',
+                  MX:'México',IT:'Italia',ES:'España',CN:'中国',JP:'日本',KR:'한국',
+                  IR:'ایران',ET:'Ethiopia',CD:'Congo',TZ:'Tanzania',KE:'Kenya'
+                };
+                const countryByLang: Record<string,string> = {
+                  ar:'العربية',ru:'Россия',uk:'Україна',tr:'Türkiye',fa:'ایران',
+                  id:'Indonesia',fr:'France',de:'Deutschland',es:'España',pt:'Brasil',
+                  zh:'中国',ja:'日本',ko:'한국',hi:'India',bn:'Bangladesh'
+                };
+                userCountry = countryByRegion[regionCode] || countryByLang[langCode] || regionCode || langCode || undefined;
               } catch { /* ignore */ }
-              if (!userCountry) {
-                try {
-                  // Fallback: ipinfo.io
-                  const geoR2 = await fetch('https://ipinfo.io/json', { signal: AbortSignal.timeout(5000) });
-                  const geo2 = await geoR2.json() as any;
-                  if (geo2?.country) {
-                    const codeMap: Record<string,string> = { DZ:'الجزائر', MA:'المغرب', TN:'تونس', SA:'السعودية', EG:'مصر', IQ:'العراق', LB:'لبنان', JO:'الأردن', SY:'سوريا', YE:'اليمن', KW:'الكويت', AE:'الإمارات', QA:'قطر', BH:'البحرين', OM:'عمان', LY:'ليبيا', SD:'السودان', MR:'موريتانيا', SO:'الصومال', PS:'فلسطين', TR:'تركيا', IR:'إيران', PK:'باكستان', IN:'الهند', NG:'نيجيريا', RU:'روسيا', UA:'أوكرانيا', FR:'فرنسا', DE:'ألمانيا', GB:'بريطانيا', US:'أمريكا', ID:'إندونيسيا', PH:'الفلبين' };
-                    userCountry = codeMap[geo2.country] || geo2.country;
-                  }
-                } catch { /* ignore */ }
-              }
-              const data = await getUserMutation.mutateAsync({
+  const data = await getUserMutation.mutateAsync({
                   telegramId: telegramUser.id,
                   initData: initData || "",
                   referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
