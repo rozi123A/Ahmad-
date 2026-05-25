@@ -5,6 +5,7 @@ import {
   InsertUser, users, telegramUsers, transactions, withdrawals,
   adTokens, settings, InsertTelegramUser, InsertTransaction,
   InsertWithdrawal, tasks, userTasks, type Task, type InsertTask, type UserTask,
+  redeemCodes, redeemCodeUses, type RedeemCode,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -23,6 +24,8 @@ export async function getDb() {
       // Auto-migration: add country column if missing
       try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`); } catch (_) {}
       try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMP`); } catch (_) {}
+      try { await _pool.query(`CREATE TABLE IF NOT EXISTS redeem_codes (id serial primary key, code varchar(50) not null unique, reward integer not null, max_uses integer not null default 100, used_count integer not null default 0, expires_at timestamp not null, is_active boolean not null default true, created_at timestamp not null default now())`); } catch (_) {}
+      try { await _pool.query(`CREATE TABLE IF NOT EXISTS redeem_code_uses (id serial primary key, code_id integer not null, telegram_id bigint not null, redeemed_at timestamp not null default now(), unique(code_id, telegram_id))`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -702,4 +705,47 @@ export async function initDb() {
     if (!db) return [];
     return db.select().from(tasks).orderBy(tasks.id);
   }
-  
+
+// ── Redeem Codes ──────────────────────────────────────────────────────────
+
+export async function createRedeemCode(code: string, reward: number, maxUses: number, expiresAt: Date): Promise<RedeemCode> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const rows = await db.insert(redeemCodes).values({ code: code.toUpperCase(), reward, maxUses, expiresAt }).returning();
+  return rows[0];
+}
+
+export async function getAllRedeemCodes(): Promise<RedeemCode[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(redeemCodes).orderBy(desc(redeemCodes.createdAt));
+}
+
+export async function getRedeemCodeByCode(code: string): Promise<RedeemCode | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(redeemCodes).where(eq(redeemCodes.code, code.toUpperCase())).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function hasUserRedeemedCode(codeId: number, telegramId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select().from(redeemCodeUses).where(and(eq(redeemCodeUses.codeId, codeId), eq(redeemCodeUses.telegramId, telegramId))).limit(1);
+  return rows.length > 0;
+}
+
+export async function recordRedeemCodeUse(codeId: number, telegramId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await Promise.all([
+    db.insert(redeemCodeUses).values({ codeId, telegramId }),
+    db.update(redeemCodes).set({ usedCount: sql`${redeemCodes.usedCount} + 1` }).where(eq(redeemCodes.id, codeId)),
+  ]);
+}
+
+export async function deactivateRedeemCode(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(redeemCodes).set({ isActive: false }).where(eq(redeemCodes.id, id));
+}
