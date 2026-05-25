@@ -11,6 +11,47 @@ const WITHDRAW_THRESHOLD = 10000;
 // Track which users already received the withdrawal notification this session
 const notifiedWithdraw = new Set<number>();
 
+// Track which users received the "near withdrawal" notification this session
+const notifiedNearWithdraw = new Set<number>();
+
+export async function notifyNearWithdraw(telegramId: number, balance: number): Promise<void> {
+  if (!BOT_TOKEN) return;
+  if (notifiedNearWithdraw.has(telegramId)) return;
+
+  try {
+    const minWithdraw = Number(await getSetting("minWithdraw", 10000));
+    const threshold = minWithdraw * 0.8;
+
+    // Only notify when between 80% and 100% of minWithdraw
+    if (balance < threshold || balance >= minWithdraw) return;
+
+    notifiedNearWithdraw.add(telegramId);
+
+    const remaining = minWithdraw - balance;
+    const webappUrl = WEBAPP_URL || "";
+
+    const bot = new Telegraf(BOT_TOKEN);
+    await bot.telegram.sendMessage(
+      telegramId,
+      `🔥 أنت قريب جداً من السحب!\n\n` +
+      `💰 رصيدك: ${balance.toLocaleString()} نقطة\n` +
+      `🎯 لم يبق إلا ${remaining.toLocaleString()} نقطة للوصول!\n\n` +
+      `العب أكثر واسحب نجومك قريباً ⭐`,
+      webappUrl ? {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🎮 العب الآن وأكمل الهدف!", web_app: { url: webappUrl } }]
+          ]
+        }
+      } : undefined
+    );
+  } catch (err: any) {
+    if (err?.response?.error_code !== 403) {
+      console.warn(`[Bot] Failed to send near-withdraw notification to ${telegramId}:`, err?.message);
+    }
+  }
+}
+
 export async function notifyWithdrawReady(telegramId: number, balance: number): Promise<void> {
   if (!BOT_TOKEN) return;
   if (notifiedWithdraw.has(telegramId)) return;
