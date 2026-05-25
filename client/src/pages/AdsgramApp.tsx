@@ -44,6 +44,66 @@ import { useState, useEffect, useCallback, useRef } from "react";
       isBanned: false,
     };
 
+    function RedeemCodeBox({ telegramId, lang, onReward }: { telegramId: number; lang: Language; onReward: (balance: number) => void }) {
+      const initData = typeof window !== "undefined" ? (window as any).Telegram?.WebApp?.initData || "" : "";
+      const [code, setCode] = useState("");
+      const [loading, setLoading] = useState(false);
+      const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
+      const { toast } = useToast();
+      const redeemMut = trpc.codes.redeem.useMutation();
+
+      const handleRedeem = async () => {
+        if (!code.trim() || loading) return;
+        setLoading(true);
+        setMsg(null);
+        try {
+          const res = await redeemMut.mutateAsync({ telegramId, initData, code: code.trim() });
+          if (res.success) {
+            setMsg({ text: res.message || "تم الاسترداد!", ok: true });
+            setCode("");
+            if (res.balance) onReward(res.balance);
+          } else {
+            setMsg({ text: res.message || "خطأ", ok: false });
+          }
+        } catch {
+          setMsg({ text: "حدث خطأ، حاول مجدداً", ok: false });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 20, overflow: "hidden" }}>
+          <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(16,185,129,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(16,185,129,0.07)" }}>
+            <span style={{ fontSize: 15 }}>🎁</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.1em" }}>استرداد كود مكافأة</span>
+          </div>
+          <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={code}
+                onChange={e => { setCode(e.target.value.toUpperCase()); setMsg(null); }}
+                onKeyDown={e => e.key === "Enter" && handleRedeem()}
+                placeholder="أدخل الكود هنا..."
+                style={{ flex: 1, borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(16,185,129,0.2)", color: "#fff", fontSize: 13, outline: "none", fontFamily: "monospace", letterSpacing: "0.05em" }}
+              />
+              <button
+                onClick={handleRedeem}
+                disabled={!code.trim() || loading}
+                style={{ height: 42, padding: "0 18px", borderRadius: 12, border: "none", background: code.trim() ? "linear-gradient(135deg,#10B981,#059669)" : "rgba(255,255,255,0.05)", color: code.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 13, cursor: code.trim() ? "pointer" : "not-allowed", flexShrink: 0 }}>
+                {loading ? "..." : "استرداد"}
+              </button>
+            </div>
+            {msg && (
+              <p style={{ fontSize: 12, fontWeight: 700, color: msg.ok ? "#34D399" : "#FCA5A5", margin: 0, textAlign: "center", padding: "6px 0" }}>
+                {msg.text}
+              </p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     function ActivityLog({ telegramId, lang }: { telegramId: number; lang: Language }) {
       const initData = typeof window !== "undefined" ? (window as any).Telegram?.WebApp?.initData || "" : "";
       const { data: transactions, isLoading } = trpc.telegram.getTransactions.useQuery({ telegramId, initData: initData }, { enabled: !!initData });
@@ -570,6 +630,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
                     </button>
                   ))}
                 </div>
+
+                {/* Redeem Code */}
+                <RedeemCodeBox telegramId={safeUser.telegramId} lang={lang} onReward={(bal) => setUser(prev => prev ? { ...prev, balance: bal } : prev)} />
 
                 {/* Daily Gift */}
                 <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 20, overflow: "hidden" }}>
