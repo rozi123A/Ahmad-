@@ -20,6 +20,8 @@ export async function getDb() {
         max: 10,
       });
       _db = drizzle(_pool);
+      // Auto-migration: add country column if missing
+      try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
