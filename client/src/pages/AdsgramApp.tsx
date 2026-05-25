@@ -98,7 +98,7 @@ import { useState, useEffect, useCallback } from "react";
     const checkMemberMutation = trpc.telegram.checkChannelMember.useMutation();
     const [memberStatus, setMemberStatus] = useState<'checking' | 'not_member' | 'member'>('checking');
     const [recheckLoading, setRecheckLoading] = useState(false);
-    const memberVerifiedRef = { current: false };
+    const memberVerifiedRef = useRef(false);
 
       const toggleLanguage = () => {
         const langs: Language[] = ["ar", "en", "ru"];
@@ -125,8 +125,28 @@ import { useState, useEffect, useCallback } from "react";
               || new URLSearchParams(window.location.search).get('ref') || undefined;
             if (!telegramUser) { setErrorType("no_user"); setLoading(false); return; }
             setDisplayName(telegramUser.first_name || telegramUser.username || "");
-            try {
-              const data = await getUserMutation.mutateAsync({
+              // ✅ Membership check
+              if (!memberVerifiedRef.current) {
+                try {
+                  const memberResult = await checkMemberMutation.mutateAsync({
+                    telegramId: telegramUser.id,
+                    initData: initData || "",
+                  });
+                  if (!memberResult.isMember) {
+                    setMemberStatus('not_member');
+                    setLoading(false);
+                    return;
+                  }
+                  memberVerifiedRef.current = true;
+                  setMemberStatus('member');
+                } catch {
+                  setMemberStatus('not_member');
+                  setLoading(false);
+                  return;
+                }
+              }
+              try {
+                const data = await getUserMutation.mutateAsync({
                 telegramId: telegramUser.id,
                 initData: initData || "",
                 referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
@@ -184,7 +204,7 @@ import { useState, useEffect, useCallback } from "react";
 
             {/* Join button */}
             <a
-              href="https://t.me/Scriylj"
+              href="https://t.me/Earn130"
               target="_blank"
               rel="noopener noreferrer"
               style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, width:"100%", maxWidth:300, height:54, borderRadius:16, background:"linear-gradient(135deg,#7C3AED,#4F46E5)", color:"#fff", fontWeight:900, fontSize:16, textDecoration:"none", marginBottom:14, boxShadow:"0 6px 24px rgba(124,58,237,0.4)" }}
