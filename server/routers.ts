@@ -18,10 +18,11 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { notifyWithdrawReady, notifyNearWithdraw } from "./bot";
+import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel } from "./bot";
 import { z } from "zod";
 import { getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
-  getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks } from "./db";
+  getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
+  createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode } from "./db";
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import { ENV } from "./_core/env";
@@ -1257,5 +1258,89 @@ export const appRouter = router({
           return { success: true, rows, myRank };
         }),
     }),
+
+  codes: router({
+
+    // Admin: create a new redeem code (optionally post to channel)
+    create: publicProcedure
+      .input(z.object({
+        secret: z.string(),
+        code: z.string().min(4).max(50),
+        reward: z.number().int().positive(),
+        maxUses: z.number().int().positive().default(100),
+        expiresInHours: z.number().int().positive().default(24),
+        postToChannel: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        const adminSecret = process.env.ADMIN_SECRET || "";
+        if (!adminSecret || input.secret !== adminSecret) return { success: false, message: "غير مصرح" };
+        const expiresAt = new Date(Date.now() + input.expiresInHours * 60 * 60 * 1000);
+        try {
+          const created = await createRedeemCode(input.code, input.reward, input.maxUses, expiresAt);
+          if (input.postToChannel) {
+            postCodeToChannel(created.code, input.reward, input.expiresInHours, input.maxUses).catch(() => {});
+          }
+          return { success: true, code: created };
+        } catch (err: any) {
+          if (err?.message?.includes("unique") || err?.code === "23505") {
+            return { success: false, message: "الكود موجود مسبقاً، جرّب كوداً مختلفاً" };
+          }
+          return { success: false, message: "خطأ في إنشاء الكود" };
+        }
+      }),
+
+    // Admin: list all codes
+    list: publicProcedure
+      .input(z.object({ secret: z.string() }))
+      .query(async ({ input }) => {
+        const adminSecret = process.env.ADMIN_SECRET || "";
+        if (!adminSecret || input.secret !== adminSecret) return { success: false, codes: [] };
+        const codes = await getAllRedeemCodes();
+        return { success: true, codes };
+      }),
+
+    // Admin: deactivate a code
+    delete: publicProcedure
+      .input(z.object({ secret: z.string(), id: z.number() }))
+      .mutation(async ({ input }) => {
+        const adminSecret = process.env.ADMIN_SECRET || "";
+        if (!adminSecret || input.secret !== adminSecret) return { success: false };
+        await deactivateRedeemCode(input.id);
+        return { success: true };
+      }),
+
+    // User: redeem a code
+    redeem: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), code: z.string() }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "غير مصرح" };
+
+        const rc = await getRedeemCodeByCode(input.code.trim());
+        if (!rc) return { success: false, message: "❌ الكود غير موجود" };
+        if (!rc.isActive) return { success: false, message: "❌ هذا الكود غير نشط" };
+        if (new Date() > new Date(rc.expiresAt)) return { success: false, message: "⏰ انتهت صلاحية الكود" };
+        if (rc.usedCount >= rc.maxUses) return { success: false, message: "👥 اكتمل عدد المستخدمين لهذا الكود" };
+
+        const alreadyUsed = await hasUserRedeemedCode(rc.id, input.telegramId);
+        if (alreadyUsed) return { success: false, message: "✋ استخدمت هذا الكود من قبل" };
+
+        const user = await getTelegramUser(input.telegramId);
+        if (!user) return { success: false, message: "المستخدم غير موجود" };
+
+        const newBalance = Number(user.balance) + rc.reward;
+        await Promise.all([
+          upsertTelegramUser({ ...user, balance: newBalance, totalEarned: Number(user.totalEarned) + rc.reward }),
+          createTransaction({ telegramId: input.telegramId, type: "redeem_code", points: rc.reward, metadata: JSON.stringify({ code: rc.code }) }),
+          recordRedeemCodeUse(rc.id, input.telegramId),
+        ]);
+
+        if (rc.usedCount + 1 >= rc.maxUses) {
+          deactivateRedeemCode(rc.id).catch(() => {});
+        }
+
+        return { success: true, message: `🎉 تهانينا! ربحت ${rc.reward.toLocaleString()} نقطة`, reward: rc.reward, balance: newBalance };
+      }),
+  }),
 
   });
