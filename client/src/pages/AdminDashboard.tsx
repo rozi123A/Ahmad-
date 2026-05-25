@@ -84,11 +84,16 @@ export default function AdminDashboard() {
       }).catch(() => false);
 
     const tryAutoAuth = async () => {
-      // URL param auth removed for security
+      // 1. Try saved secret from localStorage
+      const saved = localStorage.getItem("adminSecret");
+      if (saved) {
+        const ok = await tryVerify(saved);
+        if (ok) return;
+        // saved secret is wrong/expired — remove it
+        localStorage.removeItem("adminSecret");
+      }
 
-      
-
-      // 3. Try Telegram identity via tRPC client (correct format)
+      // 2. Try Telegram identity via tRPC client
       try {
         const tg = (window as any)?.Telegram?.WebApp;
         if (tg?.initData && tg?.initDataUnsafe?.user?.id) {
@@ -96,7 +101,10 @@ export default function AdminDashboard() {
             telegramId: tg.initDataUnsafe.user.id,
             initData: tg.initData,
           });
-          if (res?.secret) await tryVerify(res.secret);
+          if (res?.secret) {
+            const ok = await tryVerify(res.secret);
+            if (ok) localStorage.setItem("adminSecret", res.secret);
+          }
         }
       } catch {}
     };
@@ -114,7 +122,7 @@ export default function AdminDashboard() {
     try {
       const res = await verifyMut.mutateAsync({ secret });
       if (res.success) {
-        
+        localStorage.setItem("adminSecret", secret);
         setAuthed(true);
         toast({ title: "✅ تم الدخول", description: "مرحباً بك في لوحة التحكم" });
       } else {
@@ -128,6 +136,7 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem("adminSecret");
     sessionStorage.removeItem("adminSecret");
     setAuthed(false);
     setSecret("");
