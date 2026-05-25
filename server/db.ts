@@ -1,4 +1,4 @@
-import { eq, and, desc, lt, count, sum, sql, gte } from "drizzle-orm";
+import { eq, and, desc, lt, count, sum, sql, gte, or, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -22,6 +22,7 @@ export async function getDb() {
       _db = drizzle(_pool);
       // Auto-migration: add country column if missing
       try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS country VARCHAR(100)`); } catch (_) {}
+      try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_reminded_at TIMESTAMP`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -299,18 +300,38 @@ export async function getReferralStats(telegramId: number) {
   }
 }
 
-export async function getInactiveUsers(daysSinceLastActivity: number = 3, limit: number = 50) {
+export async function getInactiveUsers(daysSinceLastActivity: number = 3, limit: number = 200) {
   const db = await getDb();
   if (!db) return [];
   try {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysSinceLastActivity);
+    const activityCutoff = new Date();
+    activityCutoff.setDate(activityCutoff.getDate() - daysSinceLastActivity);
+    const reminderCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
     return await db.select().from(telegramUsers)
-      .where(and(lt(telegramUsers.updatedAt, cutoffDate), eq(telegramUsers.isBanned, false)))
+      .where(and(
+        lt(telegramUsers.updatedAt, activityCutoff),
+        eq(telegramUsers.isBanned, false),
+        or(
+          isNull(telegramUsers.lastRemindedAt),
+          lt(telegramUsers.lastRemindedAt, reminderCutoff)
+        )
+      ))
       .limit(limit);
   } catch (error) {
     console.error("[Database] Failed to get inactive users:", error);
     return [];
+  }
+}
+
+export async function updateLastReminded(telegramId: number) {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(telegramUsers)
+      .set({ lastRemindedAt: new Date() })
+      .where(eq(telegramUsers.telegramId, telegramId));
+  } catch (error) {
+    console.error("[Database] Failed to update lastRemindedAt:", error);
   }
 }
 
