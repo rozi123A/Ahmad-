@@ -33,7 +33,8 @@ export const telegramUsers = pgTable("telegram_users", {
   referredBy: bigint("referred_by", { mode: "number" }),
   referralCode: varchar("referral_code", { length: 32 }).unique(),
   isBanned: boolean("is_banned").default(false).notNull(),
-    country: varchar("country", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  lastRemindedAt: timestamp("last_reminded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
