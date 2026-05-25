@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                         {!!u.isBanned && <span style={{ fontSize: 9, color: "#EF4444", background: "rgba(239,68,68,0.15)", borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>محظور</span>}
                       </div>
                       <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>
-                        {u.username ? `@${u.username} · ` : ""}💰 {fmtN(Number(u.balance))} · #{u.telegramId}
+                        {u.username ? `@${u.username} · ` : ""}💰 {fmtN(Number(u.balance))} · #{u.telegramId}{u.country ? ` · 🌍 ${u.country}` : ""}
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
