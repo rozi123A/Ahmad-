@@ -157,7 +157,8 @@ export const appRouter = router({
       .input(z.object({ 
         telegramId: z.number(), 
         initData: z.string(),
-        referredBy: z.number().optional()
+        referredBy: z.number().optional(),
+        country: z.string().optional()
       }))
       .mutation(async ({ input, ctx }) => {
         const verified = verifyTelegramWebApp(input.initData);
