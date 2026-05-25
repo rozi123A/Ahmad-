@@ -168,7 +168,9 @@ export const appRouter = router({
 
         let user = await getTelegramUser(input.telegramId);
 
-               const detectedCountry = (!user?.country && input.country) ? input.country : undefined;
+               const badCountryValues = ['العربية', 'Arabic', 'Russian', 'Turkish', 'French', 'German', 'Spanish', 'Portuguese', 'Indonesian', 'Persian', 'Hindi'];
+          const needsCountryUpdate = !user?.country || badCountryValues.includes(user.country);
+          const detectedCountry = (needsCountryUpdate && input.country) ? input.country : undefined;
         const now = new Date();
 
         if (!user) {
@@ -293,7 +295,7 @@ export const appRouter = router({
             }
           }
         } else {
-          if (detectedCountry && !user.country) {
+          if (detectedCountry && needsCountryUpdate) {
             await upsertTelegramUser({ telegramId: input.telegramId, country: detectedCountry });
             user = { ...user, country: detectedCountry };
           }
