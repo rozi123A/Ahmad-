@@ -1,6 +1,6 @@
 import { Telegraf, Markup } from "telegraf";
 import type { Express } from "express";
-import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions } from "./db";
+import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions, getSetting, setSetting, updateLastReminded } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
@@ -48,13 +48,12 @@ const PUBLIC_URL =
 
 let isBotStarted = false;
 
-// Track last reminder send time — persists across keep-alive wakes
-let lastReminderSent: Date | null = null;
 const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const REMINDER_SETTING_KEY = "last_reminder_sent";
 
 async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
   try {
-    const inactiveUsers = await getInactiveUsers(3, 50);
+    const inactiveUsers = await getInactiveUsers(3, 200);
     let sent = 0;
     for (const user of inactiveUsers) {
       try {
@@ -74,6 +73,7 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
             }
           } : undefined
         );
+        await updateLastReminded(user.telegramId);
         sent++;
         await new Promise(r => setTimeout(r, 1200));
       } catch (err: any) {
@@ -84,33 +84,34 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
       }
     }
     console.log(`[Bot] Sent inactivity reminders to ${sent}/${inactiveUsers.length} users`);
-    lastReminderSent = new Date();
+    await setSetting(REMINDER_SETTING_KEY, new Date().toISOString());
   } catch (err) {
     console.error("[Bot] Error in sendInactivityReminders:", err);
   }
 }
 
 function scheduleReminders(bot: Telegraf) {
-  // Check every 30 minutes — resilient against Render free-tier sleep
-  // Runs immediately on start if overdue, then every 24h thereafter
-  setInterval(async () => {
-    const now = new Date();
-    const overdue =
-      lastReminderSent === null ||
-      now.getTime() - lastReminderSent.getTime() >= REMINDER_INTERVAL_MS;
-
-    if (overdue) {
-      console.log("[Bot] Running inactivity reminder check...");
-      await sendInactivityReminders(bot, WEBAPP_URL || "");
+  const check = async () => {
+    try {
+      const lastSentStr = await getSetting(REMINDER_SETTING_KEY, null);
+      const lastSent = lastSentStr ? new Date(lastSentStr as string) : null;
+      const overdue = !lastSent || Date.now() - lastSent.getTime() >= REMINDER_INTERVAL_MS;
+      if (overdue) {
+        console.log("[Bot] Running inactivity reminder check...");
+        await sendInactivityReminders(bot, WEBAPP_URL || "");
+      }
+    } catch (err) {
+      console.error("[Bot] scheduleReminders check error:", err);
     }
-  }, 30 * 60 * 1000); // every 30 min
+  };
 
-  // Also run once shortly after startup (5 min delay to let DB settle)
-  setTimeout(async () => {
-    if (lastReminderSent === null) {
-      console.log("[Bot] Running startup inactivity check...");
-      await sendInactivityReminders(bot, WEBAPP_URL || "");
-    }
+  // Check every 30 minutes — resilient against restarts and Render free-tier sleep
+  setInterval(check, 30 * 60 * 1000);
+
+  // Run 5 minutes after startup to let DB settle
+  setTimeout(() => {
+    console.log("[Bot] Running startup inactivity check...");
+    check();
   }, 5 * 60 * 1000);
 }
 
