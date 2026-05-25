@@ -1307,6 +1307,27 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Admin: post an existing active code to Telegram channel
+    postToChannel: publicProcedure
+      .input(z.object({
+        secret: z.string(),
+        code: z.string(),
+        reward: z.number(),
+        maxUses: z.number(),
+        expiresAt: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const adminSecret = process.env.ADMIN_SECRET || "";
+        if (!adminSecret || input.secret !== adminSecret) return { success: false, message: "غير مصرح" };
+        const hoursLeft = Math.max(1, Math.ceil((new Date(input.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+        try {
+          await postCodeToChannel(input.code, input.reward, hoursLeft, input.maxUses);
+          return { success: true };
+        } catch (err: any) {
+          return { success: false, message: err?.message || "فشل الإرسال للقناة" };
+        }
+      }),
+
     // User: redeem a code
     redeem: publicProcedure
       .input(z.object({ telegramId: z.number(), initData: z.string(), code: z.string() }))
