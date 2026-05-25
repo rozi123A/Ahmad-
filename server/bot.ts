@@ -90,13 +90,13 @@ function buildRandomCaption(code: string, reward: number, expiresInHours: number
   const pts = reward.toLocaleString();
 
   const templates = [
-    // 1 — Original style (always clean)
-    `⚡ *New Redeem Code is LIVE\\!* ⚡\n\n` +
+    // 1 — Original style
+    `⚡ *New Redeem Code is LIVE!* ⚡\n\n` +
     `🎟 Code: \`${code}\`\n` +
     `🎁 Reward: ${pts} Points\n` +
     `⏳ Valid For: ${timeLabel}\n` +
     `👥 Limited To: ${maxUses} Users\n\n` +
-    `🔥 Time is running out — redeem your reward now before the code expires\\!\n` +
+    `🔥 Time is running out — redeem your reward now before the code expires!\n` +
     `🚀 Open the Mini App and claim it instantly 💎`,
 
     // 2 — Alert style
@@ -105,9 +105,9 @@ function buildRandomCaption(code: string, reward: number, expiresInHours: number
     `🎫 Code: \`${code}\`\n` +
     `💰 Reward: ${pts} Points\n` +
     `⌛ Active For: ${timeShort}\n` +
-    `🎯 Only ${maxUses} Spots Left\\!\n` +
+    `🎯 Only ${maxUses} Spots Left!\n` +
     `━━━━━━━━━━━━━━━━\n` +
-    `⚡ First come, first served\\!\n` +
+    `⚡ First come, first served!\n` +
     `👉 Claim before it's gone 🏆`,
 
     // 3 — Premium style
@@ -116,7 +116,7 @@ function buildRandomCaption(code: string, reward: number, expiresInHours: number
     `🏆 Earn: ${pts} Points\n` +
     `⏱ Valid: ${timeShort}\n` +
     `🎯 Limited: ${maxUses} Users Only\n\n` +
-    `🌟 The fastest win — don't sleep on this\\!\n` +
+    `🌟 The fastest win — don't sleep on this!\n` +
     `🚀 Open the Mini App and grab your reward 💰`,
 
     // 4 — Fire style
@@ -125,7 +125,7 @@ function buildRandomCaption(code: string, reward: number, expiresInHours: number
     `💎 Points: ${pts}\n` +
     `⏳ Time Left: ${timeShort}\n` +
     `👥 Max Users: ${maxUses}\n\n` +
-    `💥 Snap it before it's gone\\!\n` +
+    `💥 Snap it before it's gone!\n` +
     `✅ Tap & claim instantly in the Mini App 🚀`,
   ];
 
