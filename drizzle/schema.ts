@@ -119,4 +119,27 @@ export type InsertSetting = typeof settings.$inferInsert;
 
   export type UserTask = typeof userTasks.$inferSelect;
   export type InsertUserTask = typeof userTasks.$inferInsert;
-  
+
+export const redeemCodes = pgTable("redeem_codes", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 50 }).notNull().unique(),
+  reward: integer("reward").notNull(),
+  maxUses: integer("max_uses").notNull().default(100),
+  usedCount: integer("used_count").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type RedeemCode = typeof redeemCodes.$inferSelect;
+export type InsertRedeemCode = typeof redeemCodes.$inferInsert;
+
+export const redeemCodeUses = pgTable("redeem_code_uses", {
+  id: serial("id").primaryKey(),
+  codeId: integer("code_id").notNull(),
+  telegramId: bigint("telegram_id", { mode: "number" }).notNull(),
+  redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
+});
+
+export type RedeemCodeUse = typeof redeemCodeUses.$inferSelect;
+export type InsertRedeemCodeUse = typeof redeemCodeUses.$inferInsert;
