@@ -1,5 +1,7 @@
 import { Telegraf, Markup } from "telegraf";
 import type { Express } from "express";
+import fs from "fs";
+import path from "path";
 import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions, getSetting, setSetting, updateLastReminded } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -85,47 +87,62 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
   if (!BOT_TOKEN) return;
   const channel = process.env.REQUIRED_CHANNEL;
   if (!channel) {
-    console.warn("[Bot] REQUIRED_CHANNEL not set — cannot post code to channel");
+    console.error("[Bot] REQUIRED_CHANNEL is not set — cannot post code to channel");
     return;
   }
-  const webappUrl = WEBAPP_URL || "";
-  // Fixed banner image — always sent with every code post
-  const bannerUrl = webappUrl ? webappUrl.replace(/\/$/, "") + "/code-banner.png" : null;
+  const webappUrl = (WEBAPP_URL || "").replace(/\/$/, "");
 
+  // Message format matching the channel style
   const caption =
-    `🎁 *كود مكافأة جديد!*\n\n` +
-    `🔑 الكود: \`${code}\`\n` +
-    `🏆 المكافأة: ${reward.toLocaleString()} نقطة\n` +
-    `⏰ صالح لمدة: ${expiresInHours} ساعة\n` +
-    `👥 أقصى عدد مستخدمين: ${maxUses}\n\n` +
-    `🚀 استرد الآن من Mini App!`;
+    `⚡ *New Redeem Code is LIVE!* ⚡\n\n` +
+    `🎟 Code: \`${code}\`\n` +
+    `🎁 Reward: ${reward.toLocaleString()} Points\n` +
+    `⏳ Valid For: ${expiresInHours} Hour${expiresInHours > 1 ? "s" : ""} Only\n` +
+    `👥 Limited To: ${maxUses} Users\n\n` +
+    `🔥 Time is running out — redeem your reward now before the code expires!\n` +
+    `🚀 Open the Mini App and claim it instantly 💎`;
 
   const replyMarkup = webappUrl
-    ? { inline_keyboard: [[{ text: "🎮 افتح التطبيق واسترد الكود", web_app: { url: webappUrl } }]] }
+    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", web_app: { url: webappUrl } }]] }
     : undefined;
+
+  // Try to load the banner image from filesystem (works in both dev & prod)
+  const bannerPaths = [
+    path.join(process.cwd(), "dist/public/code-banner.png"),
+    path.join(process.cwd(), "client/public/code-banner.png"),
+  ];
+  let bannerBuffer: Buffer | null = null;
+  for (const p of bannerPaths) {
+    if (fs.existsSync(p)) {
+      bannerBuffer = fs.readFileSync(p);
+      break;
+    }
+  }
 
   try {
     const bot = new Telegraf(BOT_TOKEN);
-    if (bannerUrl) {
-      // Send photo with caption
-      await bot.telegram.sendPhoto(
+    if (bannerBuffer) {
+      // Send photo (buffer) with caption — works without public URL
+      await (bot.telegram as any).sendPhoto(
         channel,
-        bannerUrl,
+        { source: bannerBuffer },
         {
           caption,
           parse_mode: "Markdown",
           ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
-        } as any
+        }
       );
     } else {
-      // Fallback: text only if no webapp URL
-      await bot.telegram.sendMessage(channel, caption, {
+      // Fallback: text-only if image not found
+      console.warn("[Bot] code-banner.png not found — sending text-only");
+      await (bot.telegram as any).sendMessage(channel, caption, {
         parse_mode: "Markdown",
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
-      } as any);
+      });
     }
+    console.log(`[Bot] Code posted to channel: ${code}`);
   } catch (err: any) {
-    console.warn(`[Bot] Failed to post code to channel:`, err?.message);
+    console.error(`[Bot] Failed to post code to channel:`, err?.message);
   }
 }
 
