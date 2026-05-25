@@ -94,6 +94,8 @@ export default function AdminDashboard() {
   const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
   const createCodeMut = trpc.codes.create.useMutation();
   const deleteCodeMut = trpc.codes.delete.useMutation();
+  const postToChannelMut = trpc.codes.postToChannel.useMutation();
+  const [sendingToChannel, setSendingToChannel] = useState<number | null>(null);
   const codesQ = trpc.codes.list.useQuery({ secret }, { enabled: authed && tab === "codes", refetchInterval: 3000 });
 
   // Auto-auth: try URL ?ak= param first, then Telegram identity, then saved session
@@ -753,25 +755,132 @@ export default function AdminDashboard() {
             </Card>
 
             {/* Active Codes List */}
-            <Card>
-              <CardHead icon={<Gift size={16} />} title={`الأكواد النشطة (${(codesQ.data?.codes || []).filter((c: any) => c.isActive && new Date() < new Date(c.expiresAt)).length})`} color="#F59E0B" />
-              <div style={{ padding: 18, display: "flex", flexDirection: "column", gap: 10 }}>
-                {codesQ.isLoading && <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.3)" }}>جاري التحميل...</div>}
+            <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid rgba(255,255,255,0.07)", background: "linear-gradient(145deg,rgba(15,15,30,0.95),rgba(10,10,20,0.98))" }}>
+              {/* Header */}
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(245,158,11,0.06)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ color: "#F59E0B" }}><Gift size={16} /></span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.08em" }}>سجل الأكواد</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: "rgba(16,185,129,0.12)", color: "#34D399", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    {(codesQ.data?.codes || []).filter((c: any) => c.isActive && new Date() < new Date(c.expiresAt) && c.usedCount < c.maxUses).length} نشط
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    {(codesQ.data?.codes || []).length} إجمالي
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+                {codesQ.isLoading && <div style={{ textAlign: "center", padding: 24, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>جاري التحميل...</div>}
                 {!codesQ.isLoading && (codesQ.data?.codes || []).length === 0 && (
-                  <div style={{ textAlign: "center", padding: 20, color: "rgba(255,255,255,0.2)", fontSize: 13 }}>لا توجد أكواد بعد</div>
+                  <div style={{ textAlign: "center", padding: 30, color: "rgba(255,255,255,0.2)", fontSize: 13 }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
+                    لا توجد أكواد بعد
+                  </div>
                 )}
                 {(codesQ.data?.codes || []).map((c: any) => {
                   const expired = new Date() > new Date(c.expiresAt);
                   const full = c.usedCount >= c.maxUses;
                   const inactive = !c.isActive || expired || full;
-                  const pct = Math.round((c.usedCount / c.maxUses) * 100);
+                  const pct = Math.min(100, Math.round((c.usedCount / c.maxUses) * 100));
+                  const barColor = inactive ? "rgba(255,255,255,0.12)" : pct >= 100 ? "#EF4444" : pct > 70 ? "#F59E0B" : "#10B981";
+                  const statusLabel = !c.isActive ? "ملغي" : expired ? "منتهي" : full ? "مكتمل" : "نشط";
+                  const statusColor = !c.isActive ? { bg: "rgba(239,68,68,0.12)", border: "rgba(239,68,68,0.25)", text: "#FCA5A5" }
+                    : expired ? { bg: "rgba(156,163,175,0.1)", border: "rgba(156,163,175,0.2)", text: "#9CA3AF" }
+                    : full ? { bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.25)", text: "#FCD34D" }
+                    : { bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)", text: "#34D399" };
+
                   return (
-                    <div key={c.id} style={{ background: inactive ? "rgba(255,255,255,0.01)" : "rgba(16,185,129,0.04)", border: `1px solid ${inactive ? "rgba(255,255,255,0.06)" : "rgba(16,185,129,0.2)"}`, borderRadius: 14, padding: "12px 14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.3)" : "#34D399", letterSpacing: "0.05em" }}>{c.code}</span>
-                          <button onClick={() => navigator.clipboard?.writeText(c.code)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2 }} title="نسخ الكود فقط"><Copy size={12} /></button>
-                          {!inactive && (
+                    <div key={c.id} style={{
+                      borderRadius: 16,
+                      border: `1px solid ${inactive ? "rgba(255,255,255,0.06)" : "rgba(16,185,129,0.18)"}`,
+                      background: inactive
+                        ? "rgba(255,255,255,0.015)"
+                        : "linear-gradient(135deg,rgba(16,185,129,0.06),rgba(5,150,105,0.03))",
+                      overflow: "hidden",
+                      boxShadow: inactive ? "none" : "0 2px 16px rgba(16,185,129,0.06)",
+                    }}>
+                      {/* Top bar — active glow line */}
+                      {!inactive && <div style={{ height: 2, background: "linear-gradient(90deg,transparent,#10B981,transparent)" }} />}
+
+                      <div style={{ padding: "12px 14px" }}>
+                        {/* Row 1: Code + status + delete */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.28)" : "#6EE7B7", letterSpacing: "0.08em" }}>{c.code}</span>
+                            <button
+                              onClick={() => navigator.clipboard?.writeText(c.code).then(() => toast({ title: "تم نسخ الكود" }))}
+                              style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", padding: "2px 4px", borderRadius: 4 }}
+                              title="نسخ الكود"
+                            ><Copy size={11} /></button>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontSize: 10, fontWeight: 800, padding: "3px 9px", borderRadius: 7, background: statusColor.bg, color: statusColor.text, border: `1px solid ${statusColor.border}` }}>
+                              {statusLabel}
+                            </span>
+                            {!inactive && (
+                              <button
+                                onClick={() => handleDeleteCode(c.id)}
+                                disabled={deleteCodeLoading === c.id}
+                                style={{ width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.07)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#FCA5A5" }}
+                              >
+                                {deleteCodeLoading === c.id
+                                  ? <div style={{ width: 10, height: 10, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                                  : <Trash2 size={11} />}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Row 2: Reward + Expiry */}
+                        <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.15)" }}>
+                            <span style={{ fontSize: 11 }}>🏆</span>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: "#FCD34D" }}>{c.reward.toLocaleString()}</span>
+                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>نقطة</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.15)" }}>
+                            <span style={{ fontSize: 11 }}>⏰</span>
+                            <span style={{ fontSize: 10, color: "#A5B4FC" }}>
+                              {new Date(c.expiresAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Row 3: Redemption progress */}
+                        <div style={{ marginBottom: !inactive ? 10 : 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>📊 الاستردادات</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.3)" : barColor }}>{c.usedCount}</span>
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>/</span>
+                              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{c.maxUses}</span>
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", marginRight: 2 }}>مستخدم</span>
+                            </div>
+                          </div>
+                          <div style={{ height: 7, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                            <div style={{
+                              height: "100%",
+                              width: `${pct}%`,
+                              background: inactive
+                                ? "rgba(255,255,255,0.12)"
+                                : `linear-gradient(90deg,${barColor},${barColor}cc)`,
+                              borderRadius: 4,
+                              transition: "width 0.5s ease",
+                              boxShadow: inactive ? "none" : `0 0 8px ${barColor}66`,
+                            }} />
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 3 }}>
+                            <span style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", fontWeight: 700 }}>{pct}% مُسترد</span>
+                          </div>
+                        </div>
+
+                        {/* Row 4: Action buttons (only for active codes) */}
+                        {!inactive && (
+                          <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                            {/* Copy Message */}
                             <button
                               onClick={() => {
                                 const msg = buildCodeMessage(c.code, c.reward, c.maxUses, c.expiresAt);
@@ -779,52 +888,59 @@ export default function AdminDashboard() {
                                   toast({ title: "✅ تم نسخ الرسالة", description: "الصقها في قناتك مباشرة" })
                                 );
                               }}
-                              style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)", cursor: "pointer", color: "#60A5FA", fontSize: 10, fontWeight: 700 }}
-                              title="نسخ الرسالة الجاهزة للقناة"
+                              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 36, borderRadius: 10, border: "1px solid rgba(99,102,241,0.3)", background: "rgba(99,102,241,0.1)", cursor: "pointer", color: "#A5B4FC", fontSize: 11, fontWeight: 700 }}
                             >
-                              <Copy size={10} /> Copy Msg
+                              <Copy size={12} /> نسخ الرسالة
                             </button>
-                          )}
-                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: inactive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)", color: inactive ? "#FCA5A5" : "#34D399" }}>
-                            {!c.isActive ? "ملغي" : expired ? "منتهي" : full ? "مكتمل" : "نشط"}
-                          </span>
-                        </div>
-                        {!inactive && (
-                          <button onClick={() => handleDeleteCode(c.id)} disabled={deleteCodeLoading === c.id} style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "#FCA5A5", flexShrink: 0 }}>
-                            {deleteCodeLoading === c.id ? <div style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Trash2 size={12} />}
-                          </button>
+
+                            {/* Send to Telegram Channel */}
+                            <button
+                              onClick={async () => {
+                                setSendingToChannel(c.id);
+                                try {
+                                  const res = await postToChannelMut.mutateAsync({
+                                    secret,
+                                    code: c.code,
+                                    reward: c.reward,
+                                    maxUses: c.maxUses,
+                                    expiresAt: c.expiresAt,
+                                  });
+                                  if (res.success) {
+                                    toast({ title: "✅ تم الإرسال للقناة!", description: `تم نشر كود ${c.code} بنجاح` });
+                                  } else {
+                                    toast({ title: "❌ فشل الإرسال", description: res.message || "تحقق من إعدادات البوت" });
+                                  }
+                                } catch {
+                                  toast({ title: "❌ خطأ في الاتصال", description: "حاول مجدداً" });
+                                } finally {
+                                  setSendingToChannel(null);
+                                }
+                              }}
+                              disabled={sendingToChannel === c.id}
+                              style={{
+                                flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                                height: 36, borderRadius: 10,
+                                border: "1px solid rgba(0,136,204,0.4)",
+                                background: sendingToChannel === c.id
+                                  ? "rgba(0,136,204,0.05)"
+                                  : "linear-gradient(135deg,rgba(0,136,204,0.2),rgba(0,136,204,0.1))",
+                                cursor: sendingToChannel === c.id ? "not-allowed" : "pointer",
+                                color: "#38BDF8", fontSize: 11, fontWeight: 800,
+                                boxShadow: sendingToChannel === c.id ? "none" : "0 2px 10px rgba(0,136,204,0.15)",
+                              }}
+                            >
+                              {sendingToChannel === c.id
+                                ? <><div style={{ width: 12, height: 12, border: "2px solid rgba(56,189,248,0.3)", borderTopColor: "#38BDF8", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> جاري الإرسال...</>
+                                : <><Send size={12} /> إرسال للقناة</>}
+                            </button>
+                          </div>
                         )}
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
-                        <div style={{ display: "flex", gap: 12 }}>
-                          <span>🏆 {c.reward.toLocaleString()} نقطة</span>
-                          <span>⏰ {new Date(c.expiresAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5, background: inactive ? "rgba(255,255,255,0.04)" : "rgba(16,185,129,0.1)", border: `1px solid ${inactive ? "rgba(255,255,255,0.08)" : "rgba(16,185,129,0.25)"}`, borderRadius: 8, padding: "3px 8px" }}>
-                          <span style={{ fontSize: 12 }}>🎟</span>
-                          <span style={{ fontWeight: 800, fontSize: 12, color: inactive ? "rgba(255,255,255,0.35)" : "#34D399" }}>
-                            {c.usedCount}
-                          </span>
-                          <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}>/</span>
-                          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{c.maxUses}</span>
-                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginRight: 2 }}>استرداد</span>
-                        </div>
-                      </div>
-                      <div style={{ marginTop: 8 }}>
-                        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: inactive ? "rgba(255,255,255,0.15)" : pct >= 100 ? "#EF4444" : pct > 70 ? "#F59E0B" : "#10B981", borderRadius: 3, transition: "width 0.4s ease" }} />
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 9, color: "rgba(255,255,255,0.2)" }}>
-                          <span>0</span>
-                          <span style={{ color: pct > 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)", fontWeight: 700 }}>{pct}% مُسترد</span>
-                          <span>{c.maxUses}</span>
-                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            </Card>
+            </div>
 
           </div>
         )}
