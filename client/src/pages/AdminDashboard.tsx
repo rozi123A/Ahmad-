@@ -14,6 +14,21 @@ const fmtDate = (d: string) =>
     hour: "2-digit", minute: "2-digit",
   });
 
+// Build the professional channel message for a code
+function buildCodeMessage(code: string, reward: number, maxUses: number, expiresAt: string): string {
+  const hoursLeft = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+  const timeLabel = hoursLeft === 1 ? "1 Hour Only" : `${hoursLeft} Hours Only`;
+  return [
+    "⚡ New Redeem Code is LIVE! ⚡",
+    `🎟 Code: ${code}`,
+    `🎁 Reward: ${reward.toLocaleString()} Points`,
+    `⏳ Valid For: ${timeLabel}`,
+    `👥 Limited To: ${maxUses} Users`,
+    "🔥 Time is running out — redeem your reward now before the code expires!",
+    "🚀 Open the Mini App and claim it instantly 💎",
+  ].join("\n");
+}
+
 const SPINNER = (
   <div style={{ width: 28, height: 28, border: "3px solid rgba(139,92,246,0.3)", borderTopColor: "#8B5CF6", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
 );
@@ -755,7 +770,21 @@ export default function AdminDashboard() {
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ fontFamily: "monospace", fontSize: 14, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.3)" : "#34D399", letterSpacing: "0.05em" }}>{c.code}</span>
-                          <button onClick={() => navigator.clipboard?.writeText(c.code)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2 }}><Copy size={12} /></button>
+                          <button onClick={() => navigator.clipboard?.writeText(c.code)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2 }} title="نسخ الكود فقط"><Copy size={12} /></button>
+                          {!inactive && (
+                            <button
+                              onClick={() => {
+                                const msg = buildCodeMessage(c.code, c.reward, c.maxUses, c.expiresAt);
+                                navigator.clipboard?.writeText(msg).then(() =>
+                                  toast({ title: "✅ تم نسخ الرسالة", description: "الصقها في قناتك مباشرة" })
+                                );
+                              }}
+                              style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", borderRadius: 6, border: "1px solid rgba(59,130,246,0.3)", background: "rgba(59,130,246,0.1)", cursor: "pointer", color: "#60A5FA", fontSize: 10, fontWeight: 700 }}
+                              title="نسخ الرسالة الجاهزة للقناة"
+                            >
+                              <Copy size={10} /> Copy Msg
+                            </button>
+                          )}
                           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, background: inactive ? "rgba(239,68,68,0.1)" : "rgba(16,185,129,0.15)", color: inactive ? "#FCA5A5" : "#34D399" }}>
                             {!c.isActive ? "ملغي" : expired ? "منتهي" : full ? "مكتمل" : "نشط"}
                           </span>
