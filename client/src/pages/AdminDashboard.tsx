@@ -14,19 +14,66 @@ const fmtDate = (d: string) =>
     hour: "2-digit", minute: "2-digit",
   });
 
-// Build the professional channel message for a code
+// Build a random professional channel message for a code
 function buildCodeMessage(code: string, reward: number, maxUses: number, expiresAt: string): string {
   const hoursLeft = Math.max(1, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
   const timeLabel = hoursLeft === 1 ? "1 Hour Only" : `${hoursLeft} Hours Only`;
-  return [
-    "⚡ New Redeem Code is LIVE! ⚡",
-    `🎟 Code: ${code}`,
-    `🎁 Reward: ${reward.toLocaleString()} Points`,
-    `⏳ Valid For: ${timeLabel}`,
-    `👥 Limited To: ${maxUses} Users`,
-    "🔥 Time is running out — redeem your reward now before the code expires!",
-    "🚀 Open the Mini App and claim it instantly 💎",
-  ].join("\n");
+  const timeShort = hoursLeft === 1 ? "1 Hour" : `${hoursLeft} Hours`;
+  const pts = reward.toLocaleString();
+
+  const templates = [
+    // 1 — Original clean style
+    [
+      "⚡ New Redeem Code is LIVE! ⚡",
+      "",
+      `🎟 Code: ${code}`,
+      `🎁 Reward: ${pts} Points`,
+      `⏳ Valid For: ${timeLabel}`,
+      `👥 Limited To: ${maxUses} Users`,
+      "",
+      "🔥 Time is running out — redeem your reward now before the code expires!",
+      "🚀 Open the Mini App and claim it instantly 💎",
+    ],
+    // 2 — Alert style
+    [
+      "🚨 EXCLUSIVE CODE DROP 🚨",
+      "━━━━━━━━━━━━━━━━",
+      `🎫 Code: ${code}`,
+      `💰 Reward: ${pts} Points`,
+      `⌛ Active For: ${timeShort}`,
+      `🎯 Only ${maxUses} Spots Left!`,
+      "━━━━━━━━━━━━━━━━",
+      "⚡ First come, first served!",
+      "👉 Claim before it's gone 🏆",
+    ],
+    // 3 — Premium style
+    [
+      "💎 PREMIUM CODE JUST DROPPED 💎",
+      "",
+      `🔑 Code: ${code}`,
+      `🏆 Earn: ${pts} Points`,
+      `⏱ Valid: ${timeShort}`,
+      `🎯 Limited: ${maxUses} Users Only`,
+      "",
+      "🌟 The fastest win — don't sleep on this!",
+      "🚀 Open the Mini App and grab your reward 💰",
+    ],
+    // 4 — Fire style
+    [
+      "🔥 HOT CODE ALERT 🔥",
+      "",
+      `🎟 Code: ${code}`,
+      `💎 Points: ${pts}`,
+      `⏳ Time Left: ${timeShort}`,
+      `👥 Max Users: ${maxUses}`,
+      "",
+      "💥 Snap it before it's gone!",
+      "✅ Tap & claim instantly in the Mini App 🚀",
+    ],
+  ];
+
+  const idx = Math.floor(Math.random() * templates.length);
+  return templates[idx].join("\n");
 }
 
 const SPINNER = (
