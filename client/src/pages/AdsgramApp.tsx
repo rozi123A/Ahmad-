@@ -146,31 +146,48 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 }
               }
               try {
-               // Detect country from browser locale (no external API needed)
+               // Detect country from device timezone (most accurate, no API needed)
               let userCountry: string | undefined;
               try {
-                const locale = navigator.language || navigator.languages?.[0] || '';
-                const tgLang = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.language_code || '';
-                const langSource = locale || tgLang || '';
-                // Extract region from locale like "ar-DZ" → "DZ", or use language code
-                const regionCode = langSource.includes('-') ? langSource.split('-')[1]?.toUpperCase() : langSource.toUpperCase();
-                const langCode = langSource.split('-')[0]?.toLowerCase();
-                const countryByRegion: Record<string,string> = {
-                  DZ:'الجزائر',MA:'المغرب',TN:'تونس',SA:'السعودية',EG:'مصر',IQ:'العراق',
-                  LB:'لبنان',JO:'الأردن',SY:'سوريا',YE:'اليمن',KW:'الكويت',AE:'الإمارات',
-                  QA:'قطر',BH:'البحرين',OM:'عمان',LY:'ليبيا',SD:'السودان',SO:'الصومال',
-                  PS:'فلسطين',TR:'Türkiye',RU:'Россия',UA:'Україна',FR:'France',
-                  DE:'Deutschland',GB:'United Kingdom',US:'United States',IN:'India',
-                  PK:'Pakistan',ID:'Indonesia',PH:'Philippines',NG:'Nigeria',BR:'Brasil',
-                  MX:'México',IT:'Italia',ES:'España',CN:'中国',JP:'日本',KR:'한국',
-                  IR:'ایران',ET:'Ethiopia',CD:'Congo',TZ:'Tanzania',KE:'Kenya'
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                const tzMap: Record<string,string> = {
+                  'Africa/Algiers':'الجزائر','Africa/Tunis':'تونس','Africa/Casablanca':'المغرب',
+                  'Africa/Tripoli':'ليبيا','Africa/Cairo':'مصر','Africa/Khartoum':'السودان',
+                  'Africa/Mogadishu':'الصومال','Africa/Nouakchott':'موريتانيا',
+                  'Asia/Riyadh':'السعودية','Asia/Dubai':'الإمارات','Asia/Kuwait':'الكويت',
+                  'Asia/Qatar':'قطر','Asia/Bahrain':'البحرين','Asia/Muscat':'عمان',
+                  'Asia/Baghdad':'العراق','Asia/Beirut':'لبنان','Asia/Damascus':'سوريا',
+                  'Asia/Amman':'الأردن','Asia/Gaza':'فلسطين','Asia/Hebron':'فلسطين',
+                  'Asia/Aden':'اليمن','Asia/Sanaa':'اليمن',
+                  'Asia/Tehran':'إيران','Asia/Istanbul':'تركيا','Asia/Kabul':'أفغانستان',
+                  'Asia/Karachi':'باكستان','Asia/Kolkata':'الهند','Asia/Dhaka':'بنغلاديش',
+                  'Asia/Jakarta':'إندونيسيا','Asia/Manila':'الفلبين','Asia/Shanghai':'الصين',
+                  'Asia/Tokyo':'اليابان','Asia/Seoul':'كوريا الجنوبية',
+                  'Europe/Moscow':'روسيا','Europe/Kiev':'أوكرانيا','Europe/London':'بريطانيا',
+                  'Europe/Paris':'فرنسا','Europe/Berlin':'ألمانيا','Europe/Rome':'إيطاليا',
+                  'Europe/Madrid':'إسبانيا','Europe/Amsterdam':'هولندا','Europe/Stockholm':'السويد',
+                  'America/New_York':'أمريكا','America/Los_Angeles':'أمريكا','America/Chicago':'أمريكا',
+                  'America/Sao_Paulo':'البرازيل','America/Mexico_City':'المكسيك',
+                  'Africa/Lagos':'نيجيريا','Africa/Nairobi':'كينيا','Africa/Addis_Ababa':'إثيوبيا',
+                  'Africa/Johannesburg':'جنوب أفريقيا','Africa/Accra':'غانا',
+                  'Australia/Sydney':'أستراليا','Pacific/Auckland':'نيوزيلندا',
                 };
-                const countryByLang: Record<string,string> = {
-                  ar:'العربية',ru:'Россия',uk:'Україна',tr:'Türkiye',fa:'ایران',
-                  id:'Indonesia',fr:'France',de:'Deutschland',es:'España',pt:'Brasil',
-                  zh:'中国',ja:'日本',ko:'한국',hi:'India',bn:'Bangladesh'
-                };
-                userCountry = countryByRegion[regionCode] || countryByLang[langCode] || regionCode || langCode || undefined;
+                if (tz && tzMap[tz]) {
+                  userCountry = tzMap[tz];
+                } else if (tz) {
+                  // Fallback: extract region from timezone like "Africa/Algiers" → "Algiers"
+                  const parts = tz.split('/');
+                  userCountry = parts[parts.length - 1]?.replace(/_/g, ' ') || undefined;
+                }
+                // Second fallback: use locale region code if timezone didn't give a result
+                if (!userCountry) {
+                  const locale = navigator.language || '';
+                  if (locale.includes('-')) {
+                    const regionCode = locale.split('-')[1]?.toUpperCase();
+                    const regionMap: Record<string,string> = { DZ:'الجزائر',MA:'المغرب',TN:'تونس',SA:'السعودية',EG:'مصر',IQ:'العراق',LB:'لبنان',JO:'الأردن',AE:'الإمارات',QA:'قطر',KW:'الكويت',BH:'البحرين',OM:'عمان',SY:'سوريا',YE:'اليمن',LY:'ليبيا',SD:'السودان',PS:'فلسطين',RU:'روسيا',US:'أمريكا',GB:'بريطانيا',FR:'فرنسا',DE:'ألمانيا',TR:'تركيا',IN:'الهند',PK:'باكستان' };
+                    userCountry = regionMap[regionCode] || regionCode;
+                  }
+                }
               } catch { /* ignore */ }
   const data = await getUserMutation.mutateAsync({
                   telegramId: telegramUser.id,
