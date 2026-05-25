@@ -146,11 +146,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 }
               }
               try {
-                const data = await getUserMutation.mutateAsync({
-                telegramId: telegramUser.id,
-                initData: initData || "",
-                referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
-              }).catch(() => ({ success: false, user: null }));
+               // Detect country from browser
+              let userCountry: string | undefined;
+              try {
+                const geoR = await fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(4000) });
+                const geo = await geoR.json() as any;
+                if (geo?.country_name && !geo?.error) userCountry = geo.country_name;
+              } catch { /* ignore */ }
+              const data = await getUserMutation.mutateAsync({
+                  telegramId: telegramUser.id,
+                  initData: initData || "",
+                  referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
+                  country: userCountry,
+                }).catch(() => ({ success: false, user: null }));
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });
             } catch { setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id }); }
