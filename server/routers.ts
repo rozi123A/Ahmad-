@@ -72,13 +72,10 @@ function verifyTelegramWebApp(initData: string) {
     let userData: any = null;
     try { userData = JSON.parse(userRaw); } catch { return null; }
 
-    // Strict validation: BOT_TOKEN is required for security in production
+    // BOT_TOKEN is required in ALL environments — no bypass
     if (!botToken) {
-      if (process.env.NODE_ENV === "production") {
-        console.error("[Auth] Security Error: BOT_TOKEN missing in production!");
-        return null;
-      }
-      return userData; // Allow in development for testing
+      console.error("[Auth] Security Error: BOT_TOKEN is required for authentication!");
+      return null;
     }
 
     const dataCheckString = Array.from(urlParams.entries())
@@ -937,12 +934,13 @@ export const appRouter = router({
         .input(z.object({ telegramId: z.number(), initData: z.string() }))
         .mutation(async ({ input }) => {
           const verified = verifyTelegramWebApp(input.initData);
-          if (!verified || verified.id !== input.telegramId) return { success: false, secret: '' };
+          if (!verified || verified.id !== input.telegramId) return { success: false };
           const adminId = ENV.adminTelegramId;
-          if (!adminId || adminId !== input.telegramId) return { success: false, secret: '' };
+          if (!adminId || adminId !== input.telegramId) return { success: false };
           const adminSecret = process.env.ADMIN_SECRET || '';
-          if (!adminSecret) return { success: false, secret: '' };
-          return { success: true, secret: adminSecret };
+          if (!adminSecret) return { success: false };
+          // Never transmit ADMIN_SECRET over network — client uses admin.verify separately
+          return { success: true };
         }),
 
       // Verify admin access — checks secret against env
@@ -991,8 +989,8 @@ export const appRouter = router({
       .input(z.object({ adminId: z.number(), targetId: z.number(), initData: z.string() }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
-        const ADMIN_IDS = [5279238199];
-        if (!verified || !ADMIN_IDS.includes(input.adminId)) return { success: false, message: "غير مصرح" };
+        const envAdminId = ENV.adminTelegramId;
+        if (!verified || !envAdminId || envAdminId !== input.adminId) return { success: false, message: "غير مصرح" };
         await banTelegramUser(input.targetId, false);
         return { success: true, message: `تم رفع الحظر عن ${input.targetId}` };
       }),
