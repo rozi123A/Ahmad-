@@ -159,13 +159,25 @@ export const appRouter = router({
         initData: z.string(),
         referredBy: z.number().optional()
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) {
           return { success: false, message: "Invalid Telegram data" };
         }
 
         let user = await getTelegramUser(input.telegramId);
+
+        let detectedCountry: string | undefined;
+        if (!user?.country) {
+          try {
+            const ip = ((ctx.req.headers['x-forwarded-for'] as string) || '').split(',')[0]?.trim() || (ctx.req as any).ip || '';
+            if (ip && ip !== '127.0.0.1' && ip !== '::1') {
+              const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3000) });
+              const geo = await geoRes.json() as any;
+              if (geo?.country_name && !geo?.error) detectedCountry = geo.country_name;
+            }
+          } catch { /* ignore */ }
+        }
         const now = new Date();
 
         if (!user) {
@@ -290,6 +302,10 @@ export const appRouter = router({
             }
           }
         } else {
+          if (detectedCountry && !user.country) {
+            await upsertTelegramUser({ telegramId: input.telegramId, country: detectedCountry });
+            user = { ...user, country: detectedCountry };
+          }
           // ── Process referral for existing users who haven't been credited yet ──
           if (input.referredBy && input.referredBy !== input.telegramId) {
             const existingTxs = await getTransactions(input.telegramId, 100);
