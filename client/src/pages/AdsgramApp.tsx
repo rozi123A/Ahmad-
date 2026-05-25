@@ -159,7 +159,32 @@ import { useState, useEffect, useCallback, useRef } from "react";
         finally { setLoading(false); }
       };
 
-      const refreshUser = useCallback(async (partialUpdate?: Partial<UserData>) => {
+      const recheckMembership = async () => {
+          if (typeof window === "undefined" || !window.Telegram?.WebApp) return;
+          const tg = window.Telegram.WebApp;
+          const telegramUser = tg.initDataUnsafe?.user;
+          if (!telegramUser) return;
+          setRecheckLoading(true);
+          try {
+            const memberResult = await checkMemberMutation.mutateAsync({
+              telegramId: telegramUser.id,
+              initData: tg.initData || "",
+            });
+            if (memberResult.isMember) {
+              memberVerifiedRef.current = true;
+              setMemberStatus('member');
+              await initializeTelegramApp();
+            } else {
+              setMemberStatus('not_member');
+            }
+          } catch {
+            setMemberStatus('not_member');
+          } finally {
+            setRecheckLoading(false);
+          }
+        };
+
+        const refreshUser = useCallback(async (partialUpdate?: Partial<UserData>) => {
         if (partialUpdate) setUser(prev => prev ? { ...prev, ...partialUpdate } : prev);
         try {
           if (typeof window !== "undefined" && window.Telegram?.WebApp) {
