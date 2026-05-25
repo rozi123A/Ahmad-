@@ -185,6 +185,22 @@ export default function AdminDashboard() {
     else window.open(url, "_blank");
   };
 
+  const openSendStars = (telegramId: number, username?: string) => {
+    const tg = (window as any)?.Telegram?.WebApp;
+    // Opens the user profile — admin can tap ⋮ → Send Stars from there
+    const url = username ? `https://t.me/${username}` : `tg://user?id=${telegramId}`;
+    if (tg?.openTelegramLink) tg.openTelegramLink(url);
+    else window.open(url, "_blank");
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `✅ تم النسخ`, description: label });
+    }).catch(() => {
+      toast({ title: "⚠️ فشل النسخ", description: "يدوياً: " + text, variant: "destructive" });
+    });
+  };
+
 
 
   /* ── LOGIN ── */
@@ -380,6 +396,26 @@ export default function AdminDashboard() {
         {/* ── WITHDRAWALS TAB ── */}
         {tab === "withdrawals" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* How-to guide */}
+            <div style={{ background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.2)", borderRadius: 16, padding: "14px 16px" }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#FFD700", marginBottom: 10 }}>⭐ كيف ترسل Stars يدوياً — 3 خطوات</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {[
+                  ["1️⃣", "اضغط زر", "⭐ أرسل Stars", "لفتح ملف المستخدم في تيليجرام"],
+                  ["2️⃣", "في ملفه اضغط", "⋮ النقاط الثلاث", "ثم اختر «Send Stars» وأدخل العدد"],
+                  ["3️⃣", "ارجع هنا واضغط", "✅ تأكيد الإرسال", "لتغيير الحالة إلى «تمت الموافقة»"],
+                ].map(([num, pre, bold, post]) => (
+                  <div key={num as string} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 14 }}>{num}</span>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", margin: 0 }}>
+                      {pre} <span style={{ color: "#FFD700", fontWeight: 800 }}>{bold}</span> {post}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div style={{ display: "flex", gap: 8 }}>
               {([["pending","⏳ معلقة"],["approved","✅ موافق"],["rejected","❌ مرفوضة"]] as const).map(([v, l]) => (
                 <button key={v} onClick={() => setWithdrawFilter(v)} style={{ flex: 1, height: 40, borderRadius: 12, border: `1px solid ${withdrawFilter === v ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.08)"}`, background: withdrawFilter === v ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.03)", color: withdrawFilter === v ? "#A78BFA" : "rgba(255,255,255,0.4)", fontWeight: 800, fontSize: 11, cursor: "pointer" }}>{l}</button>
@@ -394,35 +430,81 @@ export default function AdminDashboard() {
                   <p style={{ textAlign: "center", color: "rgba(255,255,255,0.3)", padding: 24 }}>لا توجد طلبات</p>
                 ) : withdrawQ.data.withdrawals.map((w: any) => (
                   <div key={w.id} style={{ padding: 14, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)", borderRadius: 16 }}>
+
+                    {/* Header: name + stars amount */}
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 800, color: "#E2E8F0", marginBottom: 2 }}>{w.firstName ? `${w.firstName}${w.lastName ? " " + w.lastName : ""}` : `#${w.telegramId}`}</p>
-                        {w.username && <p style={{ fontSize: 11, color: "#60A5FA", marginBottom: 2 }}>@{w.username}</p>}
-                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>{fmtDate(w.createdAt)}</p>
+                        {w.username && (
+                          <button
+                            onClick={() => copyToClipboard(w.username, `@${w.username} — تم النسخ`)}
+                            style={{ fontSize: 11, color: "#60A5FA", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "2px 8px", cursor: "pointer", marginBottom: 2, fontWeight: 700 }}
+                          >
+                            @{w.username} 📋
+                          </button>
+                        )}
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{fmtDate(w.createdAt)}</p>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700" }}>⭐ {fmtN(Number(w.stars))}</p>
-                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>{fmtN(Number(w.amount))} نقطة</p>
+                        <button
+                          onClick={() => copyToClipboard(String(w.stars), `${w.stars} Stars — تم النسخ`)}
+                          style={{ fontSize: 20, fontWeight: 900, color: "#FFD700", background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.25)", borderRadius: 10, padding: "4px 10px", cursor: "pointer", display: "block", marginBottom: 4 }}
+                        >
+                          ⭐ {fmtN(Number(w.stars))}
+                        </button>
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>{fmtN(Number(w.amount))} نقطة</p>
                       </div>
                     </div>
+
+                    {/* Status + ID */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: w.status === "pending" ? "rgba(245,158,11,0.15)" : w.status === "approved" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: w.status === "pending" ? "#FCD34D" : w.status === "approved" ? "#34D399" : "#FCA5A5" }}>
-                        {w.status === "pending" ? "⏳ معلق" : w.status === "approved" ? "✅ موافق" : "❌ مرفوض"}
+                        {w.status === "pending" ? "⏳ معلق" : w.status === "approved" ? "✅ تم الإرسال" : "❌ مرفوض"}
                       </span>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)" }}>ID: {w.telegramId}</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => openTelegramChat(w.telegramId, w.username)} style={{ flex: 1, height: 38, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", fontWeight: 700, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                        <MessageCircle size={13} /> راسله
+                      <button
+                        onClick={() => copyToClipboard(String(w.telegramId), `ID: ${w.telegramId} — تم النسخ`)}
+                        style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "3px 8px", cursor: "pointer" }}
+                      >
+                        ID: {w.telegramId} 📋
                       </button>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      {/* ⭐ Send Stars — opens profile */}
+                      <button
+                        onClick={() => openSendStars(w.telegramId, w.username)}
+                        style={{ flex: 2, height: 42, borderRadius: 10, border: "1px solid rgba(255,215,0,0.4)", background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                      >
+                        ⭐ أرسل {fmtN(Number(w.stars))} Stars
+                      </button>
+
+                      {/* Chat button */}
+                      <button
+                        onClick={() => openTelegramChat(w.telegramId, w.username)}
+                        style={{ width: 42, height: 42, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                      >
+                        <MessageCircle size={15} />
+                      </button>
+
                       {w.status === "pending" && (
                         <>
-                          <button onClick={() => handleWithdrawAction(w.id, "approved")} disabled={withdrawActionLoading === w.id} style={{ flex: 1, height: 38, borderRadius: 10, border: "none", background: "rgba(16,185,129,0.2)", color: "#34D399", fontWeight: 800, fontSize: 11, cursor: withdrawActionLoading === w.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                            {withdrawActionLoading === w.id ? <div style={{ width: 14, height: 14, border: "2px solid rgba(52,211,153,0.3)", borderTopColor: "#34D399", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <CheckCircle size={13} />}
-                            موافقة ✅
+                          <button
+                            onClick={() => handleWithdrawAction(w.id, "approved")}
+                            disabled={withdrawActionLoading === w.id}
+                            style={{ flex: 1, height: 42, borderRadius: 10, border: "none", background: "rgba(16,185,129,0.2)", color: "#34D399", fontWeight: 800, fontSize: 11, cursor: withdrawActionLoading === w.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                          >
+                            {withdrawActionLoading === w.id
+                              ? <div style={{ width: 14, height: 14, border: "2px solid rgba(52,211,153,0.3)", borderTopColor: "#34D399", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                              : <CheckCircle size={13} />}
+                            تأكيد
                           </button>
-                          <button onClick={() => handleWithdrawAction(w.id, "rejected", "رفض من الأدمن")} disabled={withdrawActionLoading === w.id} style={{ flex: 1, height: 38, borderRadius: 10, border: "none", background: "rgba(239,68,68,0.15)", color: "#FCA5A5", fontWeight: 800, fontSize: 11, cursor: withdrawActionLoading === w.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                            <XCircle size={13} /> رفض ❌
+                          <button
+                            onClick={() => handleWithdrawAction(w.id, "rejected", "رفض من الأدمن")}
+                            disabled={withdrawActionLoading === w.id}
+                            style={{ width: 42, height: 42, borderRadius: 10, border: "none", background: "rgba(239,68,68,0.15)", color: "#FCA5A5", fontWeight: 800, fontSize: 11, cursor: withdrawActionLoading === w.id ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                          >
+                            <XCircle size={15} />
                           </button>
                         </>
                       )}
