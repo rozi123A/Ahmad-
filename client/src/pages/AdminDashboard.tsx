@@ -94,7 +94,7 @@ export default function AdminDashboard() {
   const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
   const createCodeMut = trpc.codes.create.useMutation();
   const deleteCodeMut = trpc.codes.delete.useMutation();
-  const codesQ = trpc.codes.list.useQuery({ secret }, { enabled: authed && tab === "codes", refetchInterval: 10000 });
+  const codesQ = trpc.codes.list.useQuery({ secret }, { enabled: authed && tab === "codes", refetchInterval: 3000 });
 
   // Auto-auth: try URL ?ak= param first, then Telegram identity, then saved session
   useEffect(() => {
@@ -795,16 +795,31 @@ export default function AdminDashboard() {
                           </button>
                         )}
                       </div>
-                      <div style={{ display: "flex", gap: 16, fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
-                        <span>🏆 {c.reward.toLocaleString()} نقطة</span>
-                        <span>👥 {c.usedCount}/{c.maxUses}</span>
-                        <span>⏰ {new Date(c.expiresAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                      </div>
-                      {!inactive && (
-                        <div style={{ marginTop: 8, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: pct > 80 ? "#EF4444" : "#10B981", borderRadius: 2, transition: "width 0.3s" }} />
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: "rgba(255,255,255,0.4)" }}>
+                        <div style={{ display: "flex", gap: 12 }}>
+                          <span>🏆 {c.reward.toLocaleString()} نقطة</span>
+                          <span>⏰ {new Date(c.expiresAt).toLocaleDateString("ar-EG", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
-                      )}
+                        <div style={{ display: "flex", alignItems: "center", gap: 5, background: inactive ? "rgba(255,255,255,0.04)" : "rgba(16,185,129,0.1)", border: `1px solid ${inactive ? "rgba(255,255,255,0.08)" : "rgba(16,185,129,0.25)"}`, borderRadius: 8, padding: "3px 8px" }}>
+                          <span style={{ fontSize: 12 }}>🎟</span>
+                          <span style={{ fontWeight: 800, fontSize: 12, color: inactive ? "rgba(255,255,255,0.35)" : "#34D399" }}>
+                            {c.usedCount}
+                          </span>
+                          <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 11 }}>/</span>
+                          <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{c.maxUses}</span>
+                          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginRight: 2 }}>استرداد</span>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${pct}%`, background: inactive ? "rgba(255,255,255,0.15)" : pct >= 100 ? "#EF4444" : pct > 70 ? "#F59E0B" : "#10B981", borderRadius: 3, transition: "width 0.4s ease" }} />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 3, fontSize: 9, color: "rgba(255,255,255,0.2)" }}>
+                          <span>0</span>
+                          <span style={{ color: pct > 0 ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.15)", fontWeight: 700 }}>{pct}% مُسترد</span>
+                          <span>{c.maxUses}</span>
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
