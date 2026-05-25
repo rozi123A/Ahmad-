@@ -18,7 +18,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { notifyWithdrawReady } from "./bot";
+import { notifyWithdrawReady, notifyNearWithdraw } from "./bot";
 import { z } from "zod";
 import { getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks } from "./db";
@@ -562,6 +562,7 @@ export const appRouter = router({
         const claimBalance = Number(user?.balance ?? updates.balance);
         if (input.type !== "spin") {
           notifyWithdrawReady(input.telegramId, claimBalance).catch(() => {});
+          notifyNearWithdraw(input.telegramId, claimBalance).catch(() => {});
         }
           return { 
             success: true, 
@@ -617,6 +618,7 @@ export const appRouter = router({
 
         const finalBalance = Number(user?.balance ?? (currentBalance + prize));
         notifyWithdrawReady(input.telegramId, finalBalance).catch(() => {});
+        notifyNearWithdraw(input.telegramId, finalBalance).catch(() => {});
 
         return { success: true, prize, balance: finalBalance, spinsLeft: user?.spinsLeft ?? Math.max(0, currentSpins - 1) };
       }),
@@ -891,12 +893,36 @@ export const appRouter = router({
         // Notify user via bot
         const botToken = ENV.botToken;
         if (botToken) {
-          const pendingList = await getPendingWithdrawals();
-          const allList = pendingList; // simplified — we already updated it
-          const emoji = input.status === "approved" ? "✅" : "❌";
-          const statusText = input.status === "approved" ? "تمت الموافقة على طلبك" : "تم رفض طلبك";
-          // We stored telegramId in withdrawal, get it from pending list before update or pass it separately
-          // For simplicity, the note can include user ID info
+          const allW = await getAllWithdrawals();
+          const w = allW.find((p: any) => p.id === input.withdrawalId);
+          if (w) {
+            const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+            const msg = input.status === "approved"
+              ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
+                `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
+                `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+              : `❌ *تم رفض طلب السحب*\n\n` +
+                `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
+                `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
+                `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
+                `تواصل مع الدعم إذا كان لديك استفسار.`;
+            const body: any = {
+              chat_id: w.telegramId,
+              text: msg,
+              parse_mode: "Markdown",
+            };
+            if (webappUrl) {
+              body.reply_markup = JSON.stringify({
+                inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]],
+              });
+            }
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }).catch(() => {});
+          }
         }
 
         return { success: true, message: `تم ${input.status === "approved" ? "الموافقة" : "رفض"} الطلب بنجاح` };
