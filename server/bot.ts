@@ -6,6 +6,7 @@ import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransactio
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
+const BOT_USERNAME = process.env.TELEGRAM_BOT || process.env.VITE_BOT_USER_NAME || process.env.BOT_USERNAME || "";
 
 // Minimum points to trigger withdrawal notification
 const WITHDRAW_THRESHOLD = 10000;
@@ -141,8 +142,11 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
   const webappUrl = (WEBAPP_URL || "").replace(/\/$/, "");
   const caption = buildRandomCaption(code, reward, expiresInHours, maxUses);
 
-  const replyMarkup = webappUrl
-    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", url: webappUrl }]] }
+  const miniAppLink = BOT_USERNAME
+    ? `https://t.me/${BOT_USERNAME}?startapp`
+    : webappUrl;
+  const replyMarkup = miniAppLink
+    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", url: miniAppLink }]] }
     : undefined;
 
   // Try to load the banner image from filesystem (works in both dev & prod)
