@@ -950,15 +950,16 @@ export default function AdminDashboard() {
                                     code: c.code,
                                     reward: c.reward,
                                     maxUses: c.maxUses,
-                                    expiresAt: c.expiresAt,
+                                    expiresAt: new Date(c.expiresAt).toISOString(),
                                   });
                                   if (res.success) {
                                     toast({ title: "✅ تم الإرسال للقناة!", description: `تم نشر كود ${c.code} بنجاح` });
                                   } else {
                                     toast({ title: "❌ فشل الإرسال", description: res.message || "تحقق من إعدادات البوت" });
                                   }
-                                } catch {
-                                  toast({ title: "❌ خطأ في الاتصال", description: "حاول مجدداً" });
+                                } catch (err: any) {
+                                  const msg = err?.message || err?.data?.message || "تحقق من BOT_TOKEN و REQUIRED_CHANNEL";
+                                  toast({ title: "❌ خطأ في الإرسال", description: msg });
                                 } finally {
                                   setSendingToChannel(null);
                                 }
