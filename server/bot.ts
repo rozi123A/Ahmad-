@@ -142,7 +142,7 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
   const caption = buildRandomCaption(code, reward, expiresInHours, maxUses);
 
   const replyMarkup = webappUrl
-    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", web_app: { url: webappUrl } }]] }
+    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", url: webappUrl }]] }
     : undefined;
 
   // Try to load the banner image from filesystem (works in both dev & prod)
