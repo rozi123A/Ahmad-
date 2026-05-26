@@ -2,7 +2,7 @@ import { Telegraf, Markup } from "telegraf";
 import type { Express } from "express";
 import fs from "fs";
 import path from "path";
-import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions, getSetting, setSetting, updateLastReminded } from "./db";
+import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions, getSetting, updateLastReminded } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL;
@@ -210,8 +210,7 @@ const PUBLIC_URL =
 
 let isBotStarted = false;
 
-const REMINDER_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const REMINDER_SETTING_KEY = "last_reminder_sent";
+// Per-user 24h cooldown is handled in getInactiveUsers via lastRemindedAt
 
 async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
   try {
@@ -246,7 +245,7 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
       }
     }
     console.log(`[Bot] Sent inactivity reminders to ${sent}/${inactiveUsers.length} users`);
-    await setSetting(REMINDER_SETTING_KEY, new Date().toISOString());
+    // Per-user cooldown already saved via updateLastReminded above
   } catch (err) {
     console.error("[Bot] Error in sendInactivityReminders:", err);
   }
@@ -255,13 +254,9 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
 function scheduleReminders(bot: Telegraf) {
   const check = async () => {
     try {
-      const lastSentStr = await getSetting(REMINDER_SETTING_KEY, null);
-      const lastSent = lastSentStr ? new Date(lastSentStr as string) : null;
-      const overdue = !lastSent || Date.now() - lastSent.getTime() >= REMINDER_INTERVAL_MS;
-      if (overdue) {
-        console.log("[Bot] Running inactivity reminder check...");
-        await sendInactivityReminders(bot, WEBAPP_URL || "");
-      }
+      // No global lock — per-user lastRemindedAt (24h cooldown) prevents spam
+      console.log("[Bot] Running inactivity reminder check...");
+      await sendInactivityReminders(bot, WEBAPP_URL || "");
     } catch (err) {
       console.error("[Bot] scheduleReminders check error:", err);
     }
@@ -270,11 +265,11 @@ function scheduleReminders(bot: Telegraf) {
   // Check every 30 minutes — resilient against restarts and Render free-tier sleep
   setInterval(check, 30 * 60 * 1000);
 
-  // Run 5 minutes after startup to let DB settle
+  // Run 1 minute after startup to let DB settle (reduced from 5 min)
   setTimeout(() => {
     console.log("[Bot] Running startup inactivity check...");
     check();
-  }, 5 * 60 * 1000);
+  }, 60 * 1000);
 }
 
 export async function startBot(app?: Express) {
