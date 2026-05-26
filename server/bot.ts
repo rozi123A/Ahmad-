@@ -146,7 +146,7 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
     ? `https://t.me/${BOT_USERNAME}?startapp`
     : webappUrl;
   const replyMarkup = miniAppLink
-    ? { inline_keyboard: [[{ text: "🚀 Open Mini App & Claim Now", url: miniAppLink }]] }
+    ? { inline_keyboard: [[{ text: "⚡️ OPEN & CLAIM YOUR REWARD ⚡️", url: miniAppLink }]] }
     : undefined;
 
   // Try to load the banner image from filesystem (works in both dev & prod)
