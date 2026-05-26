@@ -298,6 +298,7 @@ export async function startBot(app?: Express) {
 
     try {
       let user = await getTelegramUser(telegramId);
+      const isNewUser = !user;
       if (!user) {
         user = await upsertTelegramUser({
           telegramId,
@@ -308,6 +309,16 @@ export async function startBot(app?: Express) {
           referredBy: referrerId ? parseInt(referrerId) : undefined,
         }) || null;
         await createTransaction({ telegramId, type: "bonus", points: 0, metadata: JSON.stringify({ action: "registration" }) });
+
+        // 🔔 إشعار الأدمن بمستخدم جديد
+        const adminId = Number(process.env.ADMIN_TELEGRAM_ID || "0");
+        if (adminId) {
+          const displayName = [firstName, lastName].filter(Boolean).join(" ");
+          const usernameStr = username ? ` (@${username})` : "";
+          const refStr = referrerId ? `\n👥 جاء عن طريق دعوة` : "";
+          const notifMsg = `🆕 مستخدم جديد انضم!\n\n👤 الاسم: ${displayName}${usernameStr}\n🆔 ID: ${telegramId}${refStr}`;
+          try { await bot.telegram.sendMessage(adminId, notifMsg); } catch (_) { /* لا تعطّل التسجيل إذا فشل الإشعار */ }
+        }
       }
 
       const welcomeMessage = `مرحباً بك يا ${firstName}! 🚀\n\n🎮 العب الآن واربح النقاط!\n🚀 كلما لعبت أكثر ربحت أكثر.\n💰 اجمع النقاط واستبدلها بالجوائز.`;
