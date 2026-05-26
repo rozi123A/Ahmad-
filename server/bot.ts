@@ -164,9 +164,10 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
 
   try {
     const bot = new Telegraf(BOT_TOKEN);
+    let sentMsg: any;
     if (bannerBuffer) {
       // Send photo (buffer) with caption — works without public URL
-      await (bot.telegram as any).sendPhoto(
+      sentMsg = await (bot.telegram as any).sendPhoto(
         channel,
         { source: bannerBuffer },
         {
@@ -178,11 +179,22 @@ export async function postCodeToChannel(code: string, reward: number, expiresInH
     } else {
       // Fallback: text-only if image not found
       console.warn("[Bot] code-banner.png not found — sending text-only");
-      await (bot.telegram as any).sendMessage(channel, caption, {
+      sentMsg = await (bot.telegram as any).sendMessage(channel, caption, {
         parse_mode: "Markdown",
         ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       });
     }
+
+    // 📌 تثبيت الرسالة تلقائياً في أعلى القناة
+    if (sentMsg?.message_id) {
+      try {
+        await bot.telegram.pinChatMessage(channel, sentMsg.message_id, { disable_notification: true });
+        console.log(`[Bot] Message pinned in channel: ${sentMsg.message_id}`);
+      } catch (pinErr: any) {
+        console.warn(`[Bot] Could not pin message (check bot is admin with pin permission):`, pinErr?.message);
+      }
+    }
+
     console.log(`[Bot] Code posted to channel: ${code}`);
   } catch (err: any) {
     console.error(`[Bot] Failed to post code to channel:`, err?.message);
