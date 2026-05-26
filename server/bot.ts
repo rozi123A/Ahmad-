@@ -214,7 +214,7 @@ let isBotStarted = false;
 
 async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
   try {
-    const inactiveUsers = await getInactiveUsers(3, 200);
+    const inactiveUsers = await getInactiveUsers(1, 200);
     let sent = 0;
     for (const user of inactiveUsers) {
       try {
