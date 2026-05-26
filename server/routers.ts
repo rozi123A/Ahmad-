@@ -1314,12 +1314,12 @@ export const appRouter = router({
         code: z.string(),
         reward: z.number(),
         maxUses: z.number(),
-        expiresAt: z.string(),
+        expiresAt: z.union([z.string(), z.date()]).transform(v => new Date(v)),
       }))
       .mutation(async ({ input }) => {
         const adminSecret = process.env.ADMIN_SECRET || "";
         if (!adminSecret || input.secret !== adminSecret) return { success: false, message: "غير مصرح" };
-        const hoursLeft = Math.max(1, Math.ceil((new Date(input.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60)));
+        const hoursLeft = Math.max(1, Math.ceil((input.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60)));
         try {
           await postCodeToChannel(input.code, input.reward, hoursLeft, input.maxUses);
           return { success: true };
