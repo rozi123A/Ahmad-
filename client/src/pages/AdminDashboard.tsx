@@ -137,6 +137,7 @@ export default function AdminDashboard() {
   const verifyMut = trpc.admin.verify.useMutation();
   const broadcastMut = trpc.admin.broadcast.useMutation();
   const updateWithdrawMut = trpc.admin.adminUpdate.useMutation();
+  const sendUserChatLinkMut = trpc.admin.sendUserChatLink.useMutation();
   const banMut = trpc.admin.banUser.useMutation();
   const autoAuthMut = trpc.admin.adminAutoAuth.useMutation();
   const createCodeMut = trpc.codes.create.useMutation();
@@ -263,19 +264,34 @@ export default function AdminDashboard() {
     }
   };
 
-  const openTelegramChat = (telegramId: number, username?: string) => {
+  const openTelegramChat = async (telegramId: number, username?: string, firstName?: string, lastName?: string) => {
     const tg = (window as any)?.Telegram?.WebApp;
     if (username) {
-      // With username — openTelegramLink accepts https://t.me/ links
+      // Has username — openTelegramLink works for https://t.me/ links
       const url = `https://t.me/${username}`;
       if (tg?.openTelegramLink) tg.openTelegramLink(url);
       else window.open(url, "_blank");
     } else {
-      // No username — use tg://openmessage deep link to open direct chat by user_id
-      // openLink (not openTelegramLink) supports tg:// deep links
-      const deepLink = `tg://openmessage?user_id=${telegramId}`;
-      if (tg?.openLink) tg.openLink(deepLink);
-      else window.location.href = deepLink;
+      // No username — ask the bot to send the admin a native Telegram message
+      // with a tg://openmessage button (works in native Telegram, not in WebApp webview)
+      try {
+        const res = await sendUserChatLinkMut.mutateAsync({
+          secret,
+          targetTelegramId: telegramId,
+          firstName,
+          lastName,
+        });
+        if (res.success) {
+          toast({
+            title: "📨 تم الإرسال",
+            description: "افتح تيليجرام العادي — وصلتك رسالة من البوت تحتوي زر فتح المحادثة",
+          });
+        } else {
+          toast({ title: "خطأ", description: (res as any).message || "فشل الإرسال", variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "خطأ", description: "تعذر الاتصال بالسيرفر", variant: "destructive" });
+      }
     }
   };
 
@@ -513,7 +529,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => openTelegramChat(u.telegramId, u.username)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><MessageCircle size={14} /></button>
+                      <button onClick={() => openTelegramChat(u.telegramId, u.username, u.firstName, u.lastName)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><MessageCircle size={14} /></button>
                       <button onClick={() => handleBan(u.telegramId, !u.isBanned)} style={{ height: 34, borderRadius: 10, border: "none", background: !!u.isBanned ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)", color: !!u.isBanned ? "#34D399" : "#FCA5A5", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 10px", display: "flex", alignItems: "center", gap: 5 }}>
                         {!!u.isBanned ? <CheckCircle size={13} /> : <Ban size={13} />}
                         {!!u.isBanned ? "رفع" : "حظر"}
@@ -619,7 +635,7 @@ export default function AdminDashboard() {
 
                       {/* Chat button */}
                       <button
-                        onClick={() => openTelegramChat(w.telegramId, w.username)}
+                        onClick={() => openTelegramChat(w.telegramId, w.username, w.firstName, w.lastName)}
                         style={{ width: 42, height: 42, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
                         <MessageCircle size={15} />
