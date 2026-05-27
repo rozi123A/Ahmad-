@@ -448,3 +448,62 @@ export async function startBot(app?: Express) {
   process.once("SIGINT", () => stopBot("SIGINT"));
   process.once("SIGTERM", () => stopBot("SIGTERM"));
 }
+
+// ── إرسال نجوم تلقائياً عبر sendGift (Bot API 8.3+) ──────────────────────
+export async function sendStarsGift(
+  botToken: string,
+  telegramId: number,
+  starsCount: number
+): Promise<{ success: boolean; sent: number; error?: string }> {
+  try {
+    // جلب الهدايا المتاحة من تيليغرام
+    const giftsRes = await fetch(`https://api.telegram.org/bot${botToken}/getAvailableGifts`);
+    const giftsData = (await giftsRes.json()) as any;
+
+    if (!giftsData.ok || !Array.isArray(giftsData.result?.gifts)) {
+      return { success: false, sent: 0, error: giftsData.description || 'لا توجد هدايا متاحة' };
+    }
+
+    // تصفية هدايا النجوم وترتيبها تنازلياً
+    const starGifts: Array<{ id: string; star_count: number }> = giftsData.result.gifts
+      .filter((g: any) => typeof g.star_count === 'number' && g.star_count > 0)
+      .sort((a: any, b: any) => b.star_count - a.star_count);
+
+    if (starGifts.length === 0) {
+      return { success: false, sent: 0, error: 'لا تتوفر هدايا نجوم في المتجر حالياً' };
+    }
+
+    let remaining = starsCount;
+    let totalSent = 0;
+
+    // خوارزمية جشعة: إرسال أكبر هدية ممكنة أولاً
+    for (const gift of starGifts) {
+      while (remaining >= gift.star_count) {
+        const sendRes = await fetch(`https://api.telegram.org/bot${botToken}/sendGift`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: telegramId, gift_id: gift.id }),
+        });
+        const sendData = (await sendRes.json()) as any;
+        if (!sendData.ok) {
+          return {
+            success: totalSent > 0,
+            sent: totalSent,
+            error: sendData.description || 'فشل إرسال الهدية — تحقق من رصيد النجوم في البوت',
+          };
+        }
+        totalSent += gift.star_count;
+        remaining -= gift.star_count;
+      }
+    }
+
+    if (totalSent === 0) {
+      return { success: false, sent: 0, error: 'لا توجد هدايا بهذا الحجم — حجم الهدية الأدنى أكبر من المطلوب' };
+    }
+
+    return { success: true, sent: totalSent };
+  } catch (err: any) {
+    return { success: false, sent: 0, error: err?.message || 'خطأ غير متوقع أثناء إرسال النجوم' };
+  }
+}
+
