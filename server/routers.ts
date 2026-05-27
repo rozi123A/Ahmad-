@@ -20,7 +20,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel } from "./bot";
 import { z } from "zod";
-import { getDb, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
+import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode } from "./db";
 import { eq } from "drizzle-orm";
@@ -762,46 +762,69 @@ export const appRouter = router({
           return { success: false, message: `الحد الأدنى للسحب هو 10,000 نقطة (= 10 نجوم)` };
         }
 
-        const db = await getDb();
-        if (!db) return { success: false, message: "قاعدة البيانات غير متوفرة" };
+        const pool = await getPool();
+        if (!pool) return { success: false, message: "قاعدة البيانات غير متوفرة" };
 
+        // Ensure withdrawals table exists with all required columns
         try {
-          await db.transaction(async (tx) => {
-            // 1. Re-verify balance inside transaction
-            const [latestUser] = await tx.select().from(telegramUsers).where(eq(telegramUsers.telegramId, input.telegramId)).limit(1);
-            if (!latestUser || Number(latestUser.balance) < input.amount) {
-              throw new Error("رصيدك غير كافٍ أو حدث خطأ في المزامنة");
-            }
+          await pool.query(`
+            CREATE TABLE IF NOT EXISTS withdrawals (
+              id serial PRIMARY KEY,
+              telegram_id bigint NOT NULL,
+              amount bigint NOT NULL,
+              stars integer NOT NULL,
+              method varchar(50) DEFAULT 'telegram_stars',
+              status text NOT NULL DEFAULT 'pending',
+              processed_at timestamp,
+              note text,
+              created_at timestamp NOT NULL DEFAULT NOW(),
+              updated_at timestamp NOT NULL DEFAULT NOW()
+            )
+          `);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS updated_at timestamp NOT NULL DEFAULT NOW()`);
+        } catch (_) {}
 
-            // 2. Deduct balance
-            await tx.update(telegramUsers)
-              .set({ 
-                balance: Number(latestUser.balance) - input.amount,
-                updatedAt: new Date() 
-              })
-              .where(eq(telegramUsers.telegramId, input.telegramId));
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
 
-            // 3. Create withdrawal record
-            await tx.insert(withdrawals).values({
-              telegramId: input.telegramId,
-              amount: input.amount,
-              stars,
-              method: "telegram_stars",
-              status: "pending",
-              updatedAt: new Date(),
-            });
+          // 1. Re-verify balance inside transaction
+          const userRes = await client.query(
+            "SELECT balance FROM telegram_users WHERE telegram_id = $1 FOR UPDATE",
+            [input.telegramId]
+          );
+          if (!userRes.rows[0]) throw new Error("المستخدم غير موجود في قاعدة البيانات");
+          const currentBal = Number(userRes.rows[0].balance);
+          if (currentBal < input.amount) throw new Error("رصيدك غير كافٍ أو حدث خطأ في المزامنة");
 
-            // 4. Create transaction record
-            await tx.insert(transactions).values({
-              telegramId: input.telegramId,
-              type: "withdraw",
-              points: -input.amount,
-              metadata: JSON.stringify({ stars, status: "pending" }),
-            });
-          });
+          // 2. Deduct balance
+          await client.query(
+            "UPDATE telegram_users SET balance = balance - $1, updated_at = NOW() WHERE telegram_id = $2",
+            [input.amount, input.telegramId]
+          );
+
+          // 3. Create withdrawal record
+          await client.query(
+            `INSERT INTO withdrawals (telegram_id, amount, stars, method, status, updated_at)
+             VALUES ($1, $2, $3, $4, 'pending', NOW())`,
+            [input.telegramId, input.amount, stars, "telegram_stars"]
+          );
+
+          // 4. Create transaction record
+          await client.query(
+            `INSERT INTO transactions (telegram_id, type, points, metadata)
+             VALUES ($1, 'withdraw', $2, $3)`,
+            [input.telegramId, -input.amount, JSON.stringify({ stars, status: "pending" })]
+          );
+
+          await client.query("COMMIT");
         } catch (error: any) {
+          await client.query("ROLLBACK").catch(() => {});
           console.error("[Withdraw] Transaction failed:", error);
-          return { success: false, message: error.message || "فشلت عملية السحب، يرجى المحاولة لاحقاً" };
+          const realMsg = error.detail || error.message || "فشلت عملية السحب، يرجى المحاولة لاحقاً";
+          return { success: false, message: realMsg };
+        } finally {
+          client.release();
         }
 
         // Notify admin via Telegram Bot API
