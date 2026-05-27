@@ -272,10 +272,26 @@ export default function AdminDashboard() {
 
   const openSendStars = (telegramId: number, username?: string) => {
     const tg = (window as any)?.Telegram?.WebApp;
-    // Opens the user profile — admin can tap ⋮ → Send Stars from there
-    const url = username ? `https://t.me/${username}` : `tg://user?id=${telegramId}`;
-    if (tg?.openTelegramLink) tg.openTelegramLink(url);
-    else window.open(url, "_blank");
+    if (username) {
+      // Has username — openTelegramLink accepts https://t.me/ links
+      const url = `https://t.me/${username}`;
+      if (tg?.openTelegramLink) tg.openTelegramLink(url);
+      else window.open(url, "_blank");
+    } else {
+      // No username — tg:// deep link only works via window.open, not openTelegramLink
+      const deepLink = `tg://user?id=${telegramId}`;
+      // Try native deep link first, fall back to copying ID
+      try {
+        window.open(deepLink, "_blank");
+      } catch {
+        navigator.clipboard.writeText(String(telegramId)).catch(() => {});
+      }
+      // Also copy stars count hint
+      toast({
+        title: "📋 فتح ملف المستخدم",
+        description: `ID: ${telegramId} — ابحث عنه في تيليجرام يدوياً وأرسل Stars`,
+      });
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
