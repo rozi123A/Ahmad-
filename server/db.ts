@@ -33,6 +33,9 @@ export async function getDb() {
       try { await _pool.query(`CREATE TABLE IF NOT EXISTS redeem_code_uses (id serial primary key, code_id integer not null, telegram_id bigint not null, redeemed_at timestamp not null default now(), unique(code_id, telegram_id))`); } catch (_) {}
       try { await _pool.query(`CREATE TABLE IF NOT EXISTS withdrawals (id serial primary key, telegram_id bigint not null, amount bigint not null, stars integer not null, method varchar(50) default 'telegram_stars', status text not null default 'pending', processed_at timestamp, note text, created_at timestamp not null default now(), updated_at timestamp not null default now())`); } catch (_) {}
       try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW()`); } catch (_) {}
+      try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS method VARCHAR(50) DEFAULT 'telegram_stars'`); } catch (_) {}
+      try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS note TEXT`); } catch (_) {}
+      try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
