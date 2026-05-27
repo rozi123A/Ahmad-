@@ -306,10 +306,30 @@ export async function startBot(app?: Express) {
         return;
       }
       try {
-        const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=1`);
-        const d = (await r.json()) as any;
-        const bal = d?.result?.amount ?? 0;
-        await ctx.reply(`⭐ رصيد البوت: ${bal} نجمة\n\nلشحن النجوم: /topup <العدد>\nمثال: /topup 100`);
+        // Paginate all transactions to compute real balance
+        let offset = 0;
+        let received = 0;
+        let sent = 0;
+        let pages = 0;
+        while (pages < 20) {
+          const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=100&offset=${offset}`);
+          const d = (await r.json()) as any;
+          if (!d.ok || !d.result?.transactions?.length) break;
+          for (const tx of d.result.transactions) {
+            if (tx.receiver) { sent += (tx.amount || 0); }
+            else { received += (tx.amount || 0); }
+          }
+          if (d.result.transactions.length < 100) break;
+          offset += 100;
+          pages++;
+        }
+        const balance = received - sent;
+        await ctx.reply(
+          `⭐ رصيد البوت الحالي: ${balance} نجمة\n\n` +
+          `📥 مستلم: ${received} نجمة\n` +
+          `📤 مُرسل: ${sent} نجمة\n\n` +
+          `لشحن النجوم: /topup <العدد>\nمثال: /topup 100`
+        );
       } catch (e: any) {
         await ctx.reply("❌ خطأ: " + (e?.message || "تعذّر الاتصال")).catch(() => {});
       }
