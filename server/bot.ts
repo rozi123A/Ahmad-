@@ -294,6 +294,12 @@ export async function startBot(app?: Express) {
     const fromId = ctx.from?.id;
     const ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
 
+    // /ping — تشخيص: يعمل لأي شخص بدون شروط
+    if (text === "/ping" || text.startsWith("/ping ")) {
+      await ctx.reply(`🏓 pong!\nID: ${fromId}\nAdmin: ${ADMIN_ID}\nMatch: ${fromId === ADMIN_ID}`).catch(() => {});
+      return;
+    }
+
     if (text === "/botbalance" || text.startsWith("/botbalance ")) {
       if (fromId !== ADMIN_ID) {
         await ctx.reply("❌ غير مصرح. ID الخاص بك: " + fromId).catch(() => {});
