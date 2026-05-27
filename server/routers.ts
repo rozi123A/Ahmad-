@@ -18,7 +18,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel } from "./bot";
+import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel, sendStarsGift } from "./bot";
 import { z } from "zod";
 import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
@@ -917,18 +917,33 @@ export const appRouter = router({
           input.note
         );
 
-        // Notify user via bot
+        // Notify user via bot + auto-send stars on approval
         const botToken = ENV.botToken;
         if (botToken) {
           const allW = await getAllWithdrawals();
           const w = allW.find((p: any) => p.id === input.withdrawalId);
           if (w) {
             const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+
+            // ── إرسال النجوم تلقائياً عند الموافقة ──
+            let starsResult: { success: boolean; sent: number; error?: string } = { success: false, sent: 0 };
+            if (input.status === "approved") {
+              starsResult = await sendStarsGift(botToken, Number(w.telegramId), Number(w.stars)).catch((e) => ({
+                success: false, sent: 0, error: e?.message || "خطأ غير متوقع"
+              }));
+            }
+
             const msg = input.status === "approved"
-              ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
-                `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
-                `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+              ? starsResult.success
+                ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
+                  `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
+                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+                : `✅ *تمت الموافقة على طلب السحب*\n\n` +
+                  `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} Stars* قيد المعالجة\n` +
+                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                  `⚠️ ${starsResult.error || "سيتم الإرسال يدوياً من الإدارة خلال 24 ساعة"}\n\n` +
+                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
               : `❌ *تم رفض طلب السحب*\n\n` +
                 `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
                 `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
@@ -1161,15 +1176,30 @@ export const appRouter = router({
             [input.status, input.note || null, input.withdrawalId]
           );
 
-          // Notify user via Telegram bot
+          // Notify user via Telegram bot + auto-send stars on approval
           const botToken = ENV.botToken;
           const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+
+          // ── إرسال النجوم تلقائياً عند الموافقة ──
+          let starsResult2: { success: boolean; sent: number; error?: string } = { success: false, sent: 0 };
+          if (input.status === "approved" && botToken && w) {
+            starsResult2 = await sendStarsGift(botToken, Number(w.telegram_id), Number(w.stars)).catch((e) => ({
+              success: false, sent: 0, error: e?.message || "خطأ غير متوقع"
+            }));
+          }
+
           if (botToken && w) {
             const msg = input.status === "approved"
-              ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
-                `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
-                `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+              ? starsResult2.success
+                ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
+                  `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
+                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+                : `✅ *تمت الموافقة على طلب السحب*\n\n` +
+                  `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} Stars* قيد المعالجة\n` +
+                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                  `⚠️ ${starsResult2.error || "سيتم الإرسال يدوياً من الإدارة خلال 24 ساعة"}\n\n` +
+                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
               : `❌ *تم رفض طلب السحب*\n\n` +
                 `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
                 `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
