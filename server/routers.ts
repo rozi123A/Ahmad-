@@ -1081,8 +1081,77 @@ export const appRouter = router({
           }
           return { success: true, sent, total: users.length };
         }),
+
+      // Approve or reject a withdrawal (secret-based auth)
+      adminUpdate: publicProcedure
+        .input(z.object({
+          secret: z.string(),
+          withdrawalId: z.number(),
+          status: z.enum(["approved", "rejected"]),
+          note: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const adminSecret = process.env.ADMIN_SECRET || "";
+          if (!safeCompareSecret(input.secret, adminSecret)) {
+            return { success: false, message: "غير مصرح" };
+          }
+
+          const pool = await getPool();
+          if (!pool) return { success: false, message: "قاعدة البيانات غير متوفرة" };
+
+          // Fetch the withdrawal record
+          const wRes = await pool.query(
+            "SELECT * FROM withdrawals WHERE id = $1 LIMIT 1",
+            [input.withdrawalId]
+          );
+          const w = wRes.rows[0];
+          if (!w) return { success: false, message: "الطلب غير موجود" };
+
+          // If rejecting a pending withdrawal → restore user balance
+          if (input.status === "rejected" && w.status === "pending") {
+            await pool.query(
+              "UPDATE telegram_users SET balance = balance + $1, updated_at = NOW() WHERE telegram_id = $2",
+              [Number(w.amount), Number(w.telegram_id)]
+            );
+          }
+
+          // Update withdrawal status
+          await pool.query(
+            `UPDATE withdrawals SET status = $1, processed_at = NOW(), note = $2 WHERE id = $3`,
+            [input.status, input.note || null, input.withdrawalId]
+          );
+
+          // Notify user via Telegram bot
+          const botToken = ENV.botToken;
+          const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+          if (botToken && w) {
+            const msg = input.status === "approved"
+              ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
+                `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
+                `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+              : `❌ *تم رفض طلب السحب*\n\n` +
+                `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
+                `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
+                `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
+                `تواصل مع الدعم إذا كان لديك استفسار.`;
+            const body: any = { chat_id: Number(w.telegram_id), text: msg, parse_mode: "Markdown" };
+            if (webappUrl) {
+              body.reply_markup = JSON.stringify({
+                inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]],
+              });
+            }
+            fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }).catch(() => {});
+          }
+
+          return { success: true, message: `تم ${input.status === "approved" ? "الموافقة على" : "رفض"} الطلب بنجاح` };
+        }),
     }),
-  
+
 
       // ── Tasks Router ────────────────────────────────────────────────────
       tasks: router({
