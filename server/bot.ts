@@ -318,7 +318,7 @@ export async function startBot(app?: Express) {
         await createTransaction({ telegramId, type: "bonus", points: 0, metadata: JSON.stringify({ action: "registration" }) });
 
         // 🔔 إشعار الأدمن بمستخدم جديد
-        const adminId = Number(process.env.ADMIN_TELEGRAM_ID || "0");
+        const adminId = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
         if (adminId) {
           const displayName = [firstName, lastName].filter(Boolean).join(" ");
           const usernameStr = username ? ` (@${username})` : "";
@@ -351,7 +351,7 @@ export async function startBot(app?: Express) {
     }
   });
 
-  const ADMIN_TELEGRAM_ID = Number(process.env.ADMIN_TELEGRAM_ID || "0");
+  const ADMIN_TELEGRAM_ID = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
 
   bot.command("admin", async (ctx) => {
     const ak = process.env.ADMIN_SECRET ? encodeURIComponent(process.env.ADMIN_SECRET) : '';
@@ -376,7 +376,10 @@ export async function startBot(app?: Express) {
 
   // /botbalance — يعرض رصيد النجوم الحالي في البوت
   bot.command("botbalance", async (ctx) => {
-    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) return;
+    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) {
+      await ctx.reply("❌ غير مصرح | ID: " + ctx.from?.id + " expected: " + ADMIN_TELEGRAM_ID);
+      return;
+    }
     try {
       const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=1`);
       const data = (await res.json()) as any;
@@ -393,7 +396,10 @@ export async function startBot(app?: Express) {
 
   // /topup <amount> — ينشئ رابط دفع لشحن خزينة البوت من نجوم الأدمن
   bot.command("topup", async (ctx) => {
-    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) return;
+    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) {
+      await ctx.reply("❌ غير مصرح | ID: " + ctx.from?.id + " expected: " + ADMIN_TELEGRAM_ID);
+      return;
+    }
     const args = ctx.message?.text?.trim().split(/\s+/);
     const amount = parseInt(args?.[1] || "");
     if (!amount || amount < 1) {
