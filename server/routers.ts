@@ -1086,6 +1086,7 @@ export const appRouter = router({
       sendUserChatLink: publicProcedure
         .input(z.object({
           secret: z.string(),
+          adminTelegramId: z.number(),
           targetTelegramId: z.number(),
           firstName: z.string().optional(),
           lastName: z.string().optional(),
@@ -1096,8 +1097,9 @@ export const appRouter = router({
             return { success: false, message: "غير مصرح" };
           }
           const botToken = ENV.botToken;
-          const adminId = ENV.adminTelegramId;
-          if (!botToken || !adminId) return { success: false, message: "إعدادات البوت غير مكتملة" };
+          if (!botToken) return { success: false, message: "BOT_TOKEN غير مضبوط في السيرفر" };
+          // Use adminTelegramId from the request (WebApp knows who the admin is)
+          const adminId = input.adminTelegramId;
 
           const name = [input.firstName, input.lastName].filter(Boolean).join(" ") || `#${input.targetTelegramId}`;
           // Send the admin a message with a tg://openmessage button — works in native Telegram (not WebApp)
