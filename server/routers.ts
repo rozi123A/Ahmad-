@@ -788,6 +788,7 @@ export const appRouter = router({
               stars,
               method: "telegram_stars",
               status: "pending",
+              updatedAt: new Date(),
             });
 
             // 4. Create transaction record
