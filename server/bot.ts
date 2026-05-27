@@ -450,6 +450,9 @@ export async function startBot(app?: Express) {
 }
 
 // ── إرسال نجوم تلقائياً عبر sendGift (Bot API 8.3+) ──────────────────────
+// يعمل مع أي مبلغ بما فيه الحد الأدنى 10 نجوم:
+// 1) يحاول المطابقة التامة أولاً (هدايا كبيرة + صغيرة)
+// 2) إذا تعذّرت المطابقة التامة يرسل أصغر هدية متاحة ≥ المبلغ المتبقي (فرق بسيط للمستخدم)
 export async function sendStarsGift(
   botToken: string,
   telegramId: number,
@@ -464,41 +467,67 @@ export async function sendStarsGift(
       return { success: false, sent: 0, error: giftsData.description || 'لا توجد هدايا متاحة' };
     }
 
-    // تصفية هدايا النجوم وترتيبها تنازلياً
+    // تصفية هدايا النجوم فقط
     const starGifts: Array<{ id: string; star_count: number }> = giftsData.result.gifts
-      .filter((g: any) => typeof g.star_count === 'number' && g.star_count > 0)
-      .sort((a: any, b: any) => b.star_count - a.star_count);
+      .filter((g: any) => typeof g.star_count === 'number' && g.star_count > 0);
 
     if (starGifts.length === 0) {
       return { success: false, sent: 0, error: 'لا تتوفر هدايا نجوم في المتجر حالياً' };
     }
 
-    let remaining = starsCount;
-    let totalSent = 0;
+    // ترتيب تنازلي للخوارزمية الجشعة
+    const descGifts = [...starGifts].sort((a, b) => b.star_count - a.star_count);
+    // ترتيب تصاعدي للعثور على أصغر هدية تغطي المتبقي
+    const ascGifts  = [...starGifts].sort((a, b) => a.star_count - b.star_count);
 
-    // خوارزمية جشعة: إرسال أكبر هدية ممكنة أولاً
-    for (const gift of starGifts) {
+    let remaining = starsCount;
+    let totalSent  = 0;
+
+    // دالة مساعدة لإرسال هدية واحدة
+    async function sendOne(giftId: string, giftStars: number): Promise<string | null> {
+      const res  = await fetch(`https://api.telegram.org/bot${botToken}/sendGift`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: telegramId, gift_id: giftId }),
+      });
+      const data = (await res.json()) as any;
+      return data.ok ? null : (data.description || 'فشل إرسال الهدية — تحقق من رصيد النجوم في البوت');
+    }
+
+    // المرحلة 1: خوارزمية جشعة — أكبر هدية أولاً (مطابقة تامة قدر الإمكان)
+    for (const gift of descGifts) {
       while (remaining >= gift.star_count) {
-        const sendRes = await fetch(`https://api.telegram.org/bot${botToken}/sendGift`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: telegramId, gift_id: gift.id }),
-        });
-        const sendData = (await sendRes.json()) as any;
-        if (!sendData.ok) {
-          return {
-            success: totalSent > 0,
-            sent: totalSent,
-            error: sendData.description || 'فشل إرسال الهدية — تحقق من رصيد النجوم في البوت',
-          };
-        }
+        const err = await sendOne(gift.id, gift.star_count);
+        if (err) return { success: totalSent > 0, sent: totalSent, error: err };
         totalSent += gift.star_count;
         remaining -= gift.star_count;
       }
     }
 
+    // المرحلة 2: إذا بقي مبلغ لم يُغطَّ (هدايا ≥ remaining غير موجودة بالضبط)
+    // → أرسل أصغر هدية متاحة قيمتها ≥ remaining (المستخدم يحصل على الفرق كمكافأة)
+    if (remaining > 0) {
+      const cover = ascGifts.find(g => g.star_count >= remaining);
+      if (cover) {
+        const err = await sendOne(cover.id, cover.star_count);
+        if (err) return { success: totalSent > 0, sent: totalSent, error: err };
+        totalSent += cover.star_count;
+        remaining  = 0;
+      } else {
+        // لا توجد هدية تغطي المتبقي (أي الطلب أصغر من أصغر هدية متاحة وأكبر مما أُرسل)
+        if (totalSent === 0) {
+          // أرسل أصغر هدية متاحة على الأقل حتى لا يخرج المستخدم بلا شيء
+          const smallest = ascGifts[0];
+          const err = await sendOne(smallest.id, smallest.star_count);
+          if (err) return { success: false, sent: 0, error: err };
+          totalSent += smallest.star_count;
+          remaining  = 0;
+        }
+      }
+    }
+
     if (totalSent === 0) {
-      return { success: false, sent: 0, error: 'لا توجد هدايا بهذا الحجم — حجم الهدية الأدنى أكبر من المطلوب' };
+      return { success: false, sent: 0, error: 'تعذّر إرسال النجوم — لا توجد هدايا مناسبة' };
     }
 
     return { success: true, sent: totalSent };
