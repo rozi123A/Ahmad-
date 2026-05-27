@@ -288,6 +288,59 @@ export async function startBot(app?: Express) {
 
   scheduleReminders(bot);
 
+  // ── Admin command middleware (top-level, runs before everything else) ──
+  bot.use(async (ctx, next) => {
+    const text = (ctx.message as any)?.text || "";
+    const fromId = ctx.from?.id;
+    const ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
+
+    if (text === "/botbalance" || text.startsWith("/botbalance ")) {
+      if (fromId !== ADMIN_ID) {
+        await ctx.reply("❌ غير مصرح. ID الخاص بك: " + fromId).catch(() => {});
+        return;
+      }
+      try {
+        const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=1`);
+        const d = (await r.json()) as any;
+        const bal = d?.result?.amount ?? 0;
+        await ctx.reply(`⭐ رصيد البوت: ${bal} نجمة\n\nلشحن النجوم: /topup <العدد>\nمثال: /topup 100`);
+      } catch (e: any) {
+        await ctx.reply("❌ خطأ: " + (e?.message || "تعذّر الاتصال")).catch(() => {});
+      }
+      return;
+    }
+
+    if (text === "/topup" || text.startsWith("/topup ")) {
+      if (fromId !== ADMIN_ID) {
+        await ctx.reply("❌ غير مصرح. ID الخاص بك: " + fromId).catch(() => {});
+        return;
+      }
+      const parts = text.trim().split(/\s+/);
+      const amount = parseInt(parts[1] || "");
+      if (!amount || amount < 1) {
+        await ctx.reply("⚠️ الاستخدام: /topup <عدد النجوم>\nمثال: /topup 100");
+        return;
+      }
+      try {
+        const invoiceLink = await ctx.telegram.createInvoiceLink({
+          title: "شحن خزينة البوت ⭐",
+          description: `إيداع ${amount} نجمة في البوت لإرسالها تلقائياً`,
+          payload: `admin_topup_${amount}_${Date.now()}`,
+          provider_token: "",
+          currency: "XTR",
+          prices: [{ label: `${amount} نجمة`, amount }],
+        });
+        await ctx.reply(`⭐ لشحن البوت بـ ${amount} نجمة:\n${invoiceLink}`);
+      } catch (e: any) {
+        await ctx.reply("❌ فشل: " + (e?.message || "خطأ غير معروف")).catch(() => {});
+      }
+      return;
+    }
+
+    return next();
+  });
+
+
   bot.start(async (ctx) => {
     const telegramId = ctx.from.id;
     const username = ctx.from.username || "";
