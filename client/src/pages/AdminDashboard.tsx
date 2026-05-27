@@ -278,18 +278,11 @@ export default function AdminDashboard() {
       if (tg?.openTelegramLink) tg.openTelegramLink(url);
       else window.open(url, "_blank");
     } else {
-      // No username — tg:// deep link only works via window.open, not openTelegramLink
-      const deepLink = `tg://user?id=${telegramId}`;
-      // Try native deep link first, fall back to copying ID
-      try {
-        window.open(deepLink, "_blank");
-      } catch {
-        navigator.clipboard.writeText(String(telegramId)).catch(() => {});
-      }
-      // Also copy stars count hint
+      // No username — copy the ID and show clear instructions
+      navigator.clipboard.writeText(String(telegramId)).catch(() => {});
       toast({
-        title: "📋 فتح ملف المستخدم",
-        description: `ID: ${telegramId} — ابحث عنه في تيليجرام يدوياً وأرسل Stars`,
+        title: `📋 تم نسخ الـ ID: ${telegramId}`,
+        description: "ابحث عن المستخدم في تيليجرام بالـ ID، ثم اضغط ⋮ واختر «Send Stars»",
       });
     }
   };
