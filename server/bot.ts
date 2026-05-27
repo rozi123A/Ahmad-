@@ -372,6 +372,73 @@ export async function startBot(app?: Express) {
     ctx.reply("استخدم الزر 'فتح التطبيق' للوصول إلى واجهة الكسب الخاصة بك.");
   });
 
+  // ── أوامر الأدمن: رصيد البوت وشحن النجوم ──────────────────────────────
+
+  // /botbalance — يعرض رصيد النجوم الحالي في البوت
+  bot.command("botbalance", async (ctx) => {
+    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) return;
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getStarTransactions?limit=1`);
+      const data = (await res.json()) as any;
+      if (data.ok) {
+        const balance = data.result?.amount ?? 0;
+        await ctx.reply(`⭐ رصيد البوت الحالي: ${balance} نجمة\n\nلشحن النجوم استخدم: /topup <عدد النجوم>\nمثال: /topup 100`);
+      } else {
+        await ctx.reply("❌ فشل جلب الرصيد: " + (data.description || "خطأ غير معروف"));
+      }
+    } catch (e: any) {
+      await ctx.reply("❌ خطأ: " + (e?.message || "تعذّر الاتصال"));
+    }
+  });
+
+  // /topup <amount> — ينشئ رابط دفع لشحن خزينة البوت من نجوم الأدمن
+  bot.command("topup", async (ctx) => {
+    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) return;
+    const args = ctx.message?.text?.trim().split(/\s+/);
+    const amount = parseInt(args?.[1] || "");
+    if (!amount || amount < 1) {
+      await ctx.reply(
+        "⚠️ الاستخدام الصحيح:\n/topup <عدد النجوم>\n\nمثال: /topup 100\nيشحن 100 نجمة من حسابك إلى خزينة البوت."
+      );
+      return;
+    }
+    try {
+      const invoiceLink = await ctx.telegram.createInvoiceLink({
+        title: "شحن خزينة البوت ⭐",
+        description: `إيداع ${amount} نجمة في البوت لإرسالها تلقائياً عند الموافقة على طلبات السحب`,
+        payload: `admin_topup_${amount}_${Date.now()}`,
+        currency: "XTR",
+        prices: [{ label: `${amount} نجمة`, amount }],
+      });
+      await ctx.reply(
+        `⭐ لشحن البوت بـ ${amount} نجمة اضغط الرابط أدناه:\n${invoiceLink}\n\n` +
+        `✅ بعد الدفع ستُرسل النجوم تلقائياً للمستخدمين عند كل موافقة على سحب.`
+      );
+    } catch (e: any) {
+      await ctx.reply("❌ فشل إنشاء رابط الدفع: " + (e?.message || "خطأ غير معروف"));
+    }
+  });
+
+  // قبول دفع شحن الخزينة تلقائياً
+  bot.on("pre_checkout_query", async (ctx) => {
+    await ctx.answerPreCheckoutQuery(true);
+  });
+
+  // تأكيد نجاح الشحن وإشعار الأدمن
+  bot.on("message", async (ctx, next) => {
+    const msg = ctx.message as any;
+    if (msg?.successful_payment && msg.successful_payment.invoice_payload?.startsWith("admin_topup_")) {
+      const stars = msg.successful_payment.total_amount;
+      try {
+        await ctx.reply(
+          `✅ تم شحن البوت بنجاح!\n⭐ المبلغ: ${stars} نجمة\n\nالبوت الآن قادر على إرسال النجوم تلقائياً عند الموافقة على طلبات السحب.`
+        );
+      } catch (_) {}
+      return;
+    }
+    return next();
+  });
+
   bot.on("chat_member", async (ctx) => {
     try {
       const update = (ctx.update as any).chat_member;
@@ -420,7 +487,7 @@ export async function startBot(app?: Express) {
 
     try {
       app.use(bot.webhookCallback(secretPath));
-      await bot.telegram.setWebhook(webhookUrl, { drop_pending_updates: true, allowed_updates: ["message", "callback_query", "chat_member", "my_chat_member"] });
+      await bot.telegram.setWebhook(webhookUrl, { drop_pending_updates: true, allowed_updates: ["message", "callback_query", "chat_member", "my_chat_member", "pre_checkout_query"] });
       console.log(`[Bot] ✅ Webhook mode ENABLED (Anti-409): ${webhookUrl}`);
       return;
     } catch (err) {
