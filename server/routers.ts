@@ -782,6 +782,9 @@ export const appRouter = router({
             )
           `);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS updated_at timestamp NOT NULL DEFAULT NOW()`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS method varchar(50) DEFAULT 'telegram_stars'`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS note text`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at timestamp`);
         } catch (_) {}
 
         const client = await pool.connect();
@@ -803,11 +806,11 @@ export const appRouter = router({
             [input.amount, input.telegramId]
           );
 
-          // 3. Create withdrawal record
+          // 3. Create withdrawal record (only use guaranteed columns)
           await client.query(
-            `INSERT INTO withdrawals (telegram_id, amount, stars, method, status, updated_at)
-             VALUES ($1, $2, $3, $4, 'pending', NOW())`,
-            [input.telegramId, input.amount, stars, "telegram_stars"]
+            `INSERT INTO withdrawals (telegram_id, amount, stars, status)
+             VALUES ($1, $2, $3, 'pending')`,
+            [input.telegramId, input.amount, stars]
           );
 
           // 4. Create transaction record
