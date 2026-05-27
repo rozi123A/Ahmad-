@@ -114,6 +114,7 @@ export default function AdminDashboard() {
   const [secret, setSecret] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [myTelegramId, setMyTelegramId] = useState<number>(0);
   const [authLoading, setAuthLoading] = useState(false);
   const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes">("stats");
   const [userPage, setUserPage] = useState(1);
@@ -174,6 +175,7 @@ export default function AdminDashboard() {
       try {
         const tg = (window as any)?.Telegram?.WebApp;
         if (tg?.initData && tg?.initDataUnsafe?.user?.id) {
+          setMyTelegramId(Number(tg.initDataUnsafe.user.id));
           const res = await autoAuthMut.mutateAsync({
             telegramId: tg.initDataUnsafe.user.id,
             initData: tg.initData,
@@ -275,8 +277,12 @@ export default function AdminDashboard() {
       // No username — ask the bot to send the admin a native Telegram message
       // with a tg://openmessage button (works in native Telegram, not in WebApp webview)
       try {
+        // Get admin's own telegramId — from state (set on load) or directly from WebApp
+        const tg = (window as any)?.Telegram?.WebApp;
+        const adminId = myTelegramId || Number(tg?.initDataUnsafe?.user?.id) || 0;
         const res = await sendUserChatLinkMut.mutateAsync({
           secret,
+          adminTelegramId: adminId,
           targetTelegramId: telegramId,
           firstName,
           lastName,
