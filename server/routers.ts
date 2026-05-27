@@ -1082,6 +1082,44 @@ export const appRouter = router({
           return { success: true, sent, total: users.length };
         }),
 
+      // Send admin a bot message with a direct chat button for a user (no username fallback)
+      sendUserChatLink: publicProcedure
+        .input(z.object({
+          secret: z.string(),
+          targetTelegramId: z.number(),
+          firstName: z.string().optional(),
+          lastName: z.string().optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const adminSecret = process.env.ADMIN_SECRET || "";
+          if (!safeCompareSecret(input.secret, adminSecret)) {
+            return { success: false, message: "غير مصرح" };
+          }
+          const botToken = ENV.botToken;
+          const adminId = ENV.adminTelegramId;
+          if (!botToken || !adminId) return { success: false, message: "إعدادات البوت غير مكتملة" };
+
+          const name = [input.firstName, input.lastName].filter(Boolean).join(" ") || `#${input.targetTelegramId}`;
+          // Send the admin a message with a tg://openmessage button — works in native Telegram (not WebApp)
+          const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: adminId,
+              text: `👤 *${name}*\nID: \`${input.targetTelegramId}\`\n\nاضغط الزر أدناه لفتح المحادثة المباشرة:`,
+              parse_mode: "Markdown",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [[
+                  { text: "💬 فتح المحادثة المباشرة", url: `tg://openmessage?user_id=${input.targetTelegramId}` },
+                ]],
+              }),
+            }),
+          });
+          const data = await res.json() as any;
+          if (!data.ok) return { success: false, message: data.description || "فشل الإرسال" };
+          return { success: true };
+        }),
+
       // Approve or reject a withdrawal (secret-based auth)
       adminUpdate: publicProcedure
         .input(z.object({
