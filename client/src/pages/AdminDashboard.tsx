@@ -265,9 +265,18 @@ export default function AdminDashboard() {
 
   const openTelegramChat = (telegramId: number, username?: string) => {
     const tg = (window as any)?.Telegram?.WebApp;
-    const url = username ? `https://t.me/${username}` : `tg://user?id=${telegramId}`;
-    if (tg?.openTelegramLink) tg.openTelegramLink(url);
-    else window.open(url, "_blank");
+    if (username) {
+      // With username — openTelegramLink accepts https://t.me/ links
+      const url = `https://t.me/${username}`;
+      if (tg?.openTelegramLink) tg.openTelegramLink(url);
+      else window.open(url, "_blank");
+    } else {
+      // No username — use tg://openmessage deep link to open direct chat by user_id
+      // openLink (not openTelegramLink) supports tg:// deep links
+      const deepLink = `tg://openmessage?user_id=${telegramId}`;
+      if (tg?.openLink) tg.openLink(deepLink);
+      else window.location.href = deepLink;
+    }
   };
 
   const openSendStars = (telegramId: number, username?: string) => {
