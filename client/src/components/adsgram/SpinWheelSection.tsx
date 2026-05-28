@@ -98,13 +98,15 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   const [tokenLoading,      setTokenLoading]      = useState(false);
   const [showBuyModal,      setShowBuyModal]      = useState(false);
   const [buyLoading,        setBuyLoading]        = useState(false);
+  const [starsLoading,      setStarsLoading]      = useState(false);
   const { toast } = useToast();
   const t = translations[lang];
 
-  const spinMutation     = trpc.spin.perform.useMutation();
-  const getTokenMutation = trpc.ads.getToken.useMutation();
-  const claimMutation    = trpc.ads.claim.useMutation();
-  const buySpinsMutation = trpc.spin.buy.useMutation();
+  const spinMutation         = trpc.spin.perform.useMutation();
+  const getTokenMutation     = trpc.ads.getToken.useMutation();
+  const claimMutation        = trpc.ads.claim.useMutation();
+  const buySpinsMutation     = trpc.spin.buy.useMutation();
+  const buyWithStarsMutation = trpc.spin.buyWithStars.useMutation();
 
   useEffect(() => { setAdSpinsUsed(getAdSpinsUsed()); }, []);
   useEffect(() => { drawWheel(); }, [rotation]);
@@ -279,6 +281,35 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
     }
   };
 
+  const handleBuyWithStars = async (qty: number) => {
+    if (starsLoading) return;
+    setStarsLoading(true);
+    try {
+      const initData = (window as any).Telegram?.WebApp?.initData || "";
+      const res = await buyWithStarsMutation.mutateAsync({ telegramId: user.telegramId, initData, quantity: qty });
+      if (!res.success || !res.invoiceLink) throw new Error(res.message || "فشل إنشاء الفاتورة");
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.openInvoice) {
+        tg.openInvoice(res.invoiceLink, (status: string) => {
+          if (status === "paid") {
+            setShowBuyModal(false);
+            setShowNoSpinsModal(false);
+            toast({ title: "🎡 تم الدفع!", description: `ستُضاف ${qty} دورة لحسابك خلال ثوانٍ. افتح التطبيق من جديد!` });
+          } else if (status === "cancelled") {
+            toast({ title: "إلغاء", description: "تم إلغاء الدفع", variant: "destructive" });
+          }
+        });
+      } else {
+        window.open(res.invoiceLink, "_blank");
+        toast({ title: "⭐ رابط الدفع", description: "افتح الرابط وادفع بنجومك" });
+      }
+    } catch (e: any) {
+      toast({ title: "خطأ", description: e?.message || "فشل إنشاء الفاتورة", variant: "destructive" });
+    } finally {
+      setStarsLoading(false);
+    }
+  };
+
   return (
     <>
       {showAdOverlay && (
@@ -358,7 +389,44 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               })}
             </div>
 
-            {buyLoading && (
+
+            {/* ─── شراء بنجوم تيليغرام ─── */}
+            <div style={{ marginTop: 16, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 14 }}>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textAlign: "center", marginBottom: 10, fontWeight: 700, letterSpacing: 1, textTransform: "uppercase" }}>
+                أو ادفع بـ ⭐ نجوم تيليغرام
+              </p>
+              {[
+                { qty: 1, stars: 20, label: "دورة واحدة",  badge: null,       color: "#F59E0B" },
+                { qty: 3, stars: 60, label: "٣ دورات",     badge: "وفّر 0%",  color: "#EF4444" },
+                { qty: 5, stars: 100, label: "٥ دورات",    badge: "🔥 الأفضل", color: "#10B981" },
+              ].map((pkg) => (
+                <button key={pkg.qty} onClick={() => handleBuyWithStars(pkg.qty)}
+                  disabled={starsLoading}
+                  style={{
+                    width: "100%", padding: "12px 16px", borderRadius: 14, border: "none",
+                    background: `linear-gradient(135deg, ${pkg.color}99, ${pkg.color}cc)`,
+                    cursor: starsLoading ? "not-allowed" : "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    boxShadow: `0 4px 16px ${pkg.color}33`,
+                    opacity: starsLoading ? 0.7 : 1,
+                    marginBottom: 8,
+                  }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 20 }}>⭐</span>
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{pkg.label}</div>
+                      {pkg.badge && <div style={{ fontSize: 10, color: "#fde68a", fontWeight: 700 }}>{pkg.badge}</div>}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>{pkg.stars} ⭐</div>
+                    <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10 }}>نجمة</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {(buyLoading || starsLoading) && (
               <p style={{ textAlign: "center", color: "rgba(255,255,255,0.5)", fontSize: 12, marginTop: 14 }}>
                 جاري المعالجة...
               </p>
