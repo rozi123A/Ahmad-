@@ -76,7 +76,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 20, overflow: "hidden" }}>
           <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(16,185,129,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(16,185,129,0.07)" }}>
             <span style={{ fontSize: 15 }}>🎁</span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.1em" }}>استرداد كود مكافأة</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.redeem_code || "استرداد كود مكافأة"}</span>
           </div>
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 8 }}>
@@ -84,14 +84,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 value={code}
                 onChange={e => { setCode(e.target.value.toUpperCase()); setMsg(null); }}
                 onKeyDown={e => e.key === "Enter" && handleRedeem()}
-                placeholder="أدخل الكود هنا..."
+                placeholder={t.redeem_placeholder || "أدخل الكود هنا..."}
                 style={{ flex: 1, borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(16,185,129,0.2)", color: "#fff", fontSize: 13, outline: "none", fontFamily: "monospace", letterSpacing: "0.05em" }}
               />
               <button
                 onClick={handleRedeem}
                 disabled={!code.trim() || loading}
                 style={{ height: 42, padding: "0 18px", borderRadius: 12, border: "none", background: code.trim() ? "linear-gradient(135deg,#10B981,#059669)" : "rgba(255,255,255,0.05)", color: code.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 13, cursor: code.trim() ? "pointer" : "not-allowed", flexShrink: 0 }}>
-                {loading ? "..." : "استرداد"}
+                {loading ? (t.redeem_loading || "...") : (t.redeem_button || "استرداد")}
               </button>
             </div>
             {msg && (

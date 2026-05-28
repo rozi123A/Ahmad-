@@ -175,7 +175,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
               {isClaimed ? "✅" : isReady ? "✕" : timeLeft}
             </button>
 
-            {/* "استمر بدون مكافأة" — only during countdown */}
+            {/* "Continue without reward" — only during countdown */}
             {phase === "countdown" && (
               <button
                 onClick={onClose}
@@ -188,7 +188,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
                   whiteSpace:"nowrap",
                 }}
               >
-                استمر بدون مكافأة
+                {t?.redeem_continue_no_reward || "استمر بدون مكافأة"}
               </button>
             )}
           </div>

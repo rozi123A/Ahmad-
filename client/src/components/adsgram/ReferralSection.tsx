@@ -91,7 +91,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
         }}
       >
         <Gift size={20} />
-        {claiming ? "جاري التحقق..." : "استلم نقاط الإحالة المعلقة"}
+        {claiming ? (t.redeem_loading || "جاري التحقق...") : (t.claim_referral || "استلم نقاط الإحالة المعلقة")}
       </button>
 
       {/* How it works */}
