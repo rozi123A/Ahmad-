@@ -780,7 +780,7 @@ export const appRouter = router({
           return { success: false, message: "المبلغ يجب أن يكون عدداً صحيحاً موجباً" };
         }
         if (input.amount < minWithdraw) {
-          return { success: false, message: `الحد الأدنى للسحب ${minWithdraw.toLocaleString()} نقطة` };
+          return { success: false, message: `الحد الأدنى للسحب ${minWithdraw.toLocaleString()} نقطة (= ${Math.floor(minWithdraw/1000)} نجمة)` };
         }
         if (input.amount > currentBalance) {
           return { success: false, message: "رصيدك غير كافٍ" };
@@ -795,7 +795,7 @@ export const appRouter = router({
 
         const stars = Math.floor(input.amount / starsRate);
         if (stars < 1) {
-          return { success: false, message: `الحد الأدنى للسحب هو 10,000 نقطة (= 10 نجوم)` };
+          return { success: false, message: `الحد الأدنى للسحب هو 15,000 نقطة (= 15 نجمة)` };
         }
 
         const pool = await getPool();
