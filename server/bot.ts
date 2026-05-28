@@ -447,6 +447,30 @@ export async function startBot(app?: Express) {
     ctx.reply("استخدم الزر 'فتح التطبيق' للوصول إلى واجهة الكسب الخاصة بك.");
   });
 
+  // /buy — شراء نقاط بالنجوم
+  bot.command("buy", async (ctx) => {
+    const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+    await ctx.reply(
+      `🛒 *متجر النقاط*\n\n` +
+      `اشترِ نقاطاً بنجوم تيليغرام واستخدمها في البوت:\n\n` +
+      `🌟 *باقة البداية* — 50 ⭐ ← 5,000 نقطة\n` +
+      `⭐ *باقة الذهب* — 100 ⭐ ← 12,000 نقطة (+20%)\n` +
+      `💎 *باقة الماس* — 250 ⭐ ← 35,000 نقطة (+40%)\n\n` +
+      `اختر باقتك:`,
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "🌟 50 ⭐ ← 5,000 نقطة",   callback_data: "buy_pkg_1" }],
+            [{ text: "⭐ 100 ⭐ ← 12,000 نقطة",  callback_data: "buy_pkg_2" }],
+            [{ text: "💎 250 ⭐ ← 35,000 نقطة",  callback_data: "buy_pkg_3" }],
+            ...(webappUrl ? [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] : []),
+          ],
+        },
+      } as any
+    );
+  });
+
   // ── أوامر الأدمن: رصيد البوت وشحن النجوم ──────────────────────────────
 
   // /botbalance — يعرض رصيد النجوم الحالي في البوت
@@ -752,6 +776,55 @@ export async function startBot(app?: Express) {
         await ctx.answerCbQuery("✅ تم رفض الطلب وإعادة نقاط المستخدم").catch(() => {});
       } catch (e: any) {
         await ctx.answerCbQuery("❌ خطأ: " + (e?.message || "فشل")).catch(() => {});
+      }
+      return;
+    }
+
+    // buy_pkg_<1|2|3> — إنشاء فاتورة شراء نقاط وإرسالها للمستخدم
+    if (data.startsWith("buy_pkg_")) {
+      const pkgId = parseInt(data.split("_")[2] || "0");
+      const packages: Record<number, { stars: number; points: number; label: string; bonus: string }> = {
+        1: { stars: 50,  points: 5000,  label: "باقة البداية 🌟",  bonus: "" },
+        2: { stars: 100, points: 12000, label: "باقة الذهب ⭐",   bonus: "20% مكافأة" },
+        3: { stars: 250, points: 35000, label: "باقة الماس 💎",   bonus: "40% مكافأة" },
+      };
+      const pkg = packages[pkgId];
+      if (!pkg || !fromId) {
+        await ctx.answerCbQuery("❌ باقة غير صالحة").catch(() => {});
+        return;
+      }
+      try {
+        const botToken = process.env.BOT_TOKEN!;
+        const payload = `buy_points_${fromId}_${pkgId}_${pkg.points}_${Date.now()}`;
+        const res = await fetch(`https://api.telegram.org/bot${botToken}/createInvoiceLink`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: pkg.label,
+            description: `احصل على ${pkg.points.toLocaleString()} نقطة${pkg.bonus ? ` — ${pkg.bonus}!` : "!"}`,
+            payload,
+            currency: "XTR",
+            prices: [{ label: `${pkg.points.toLocaleString()} نقطة`, amount: pkg.stars }],
+          }),
+        });
+        const result = (await res.json()) as any;
+        if (result.ok) {
+          await ctx.answerCbQuery("").catch(() => {});
+          await bot.telegram.sendMessage(fromId,
+            `💳 *${pkg.label}*\n\n` +
+            `⭐ السعر: *${pkg.stars} نجمة*\n` +
+            `💰 تحصل على: *${pkg.points.toLocaleString()} نقطة*${pkg.bonus ? `\n🎁 ${pkg.bonus}` : ""}\n\n` +
+            `اضغط الزر أدناه للدفع:`,
+            {
+              parse_mode: "Markdown",
+              reply_markup: { inline_keyboard: [[{ text: `💳 ادفع ${pkg.stars} ⭐`, url: result.result }]] },
+            } as any
+          ).catch(() => {});
+        } else {
+          await ctx.answerCbQuery("❌ فشل إنشاء الفاتورة").catch(() => {});
+        }
+      } catch (_) {
+        await ctx.answerCbQuery("❌ خطأ في الاتصال").catch(() => {});
       }
       return;
     }
