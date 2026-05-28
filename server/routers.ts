@@ -660,6 +660,42 @@ export const appRouter = router({
           spinsLeft: updatedUser?.spinsLeft ?? (currentSpins + input.quantity),
         };
       }),
+
+    buyWithStars: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), quantity: z.number().min(1).max(10) }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data", invoiceLink: "" };
+
+        const user = await getTelegramUser(input.telegramId);
+        if (!user) return { success: false, message: "User not found", invoiceLink: "" };
+        if (user.isBanned) return { success: false, message: "تم تعليق حسابك", invoiceLink: "" };
+
+        const STARS_PER_SPIN = 20;
+        const totalStars = input.quantity * STARS_PER_SPIN;
+        const botToken = process.env.BOT_TOKEN;
+        if (!botToken) return { success: false, message: "Bot not configured", invoiceLink: "" };
+
+        const payload = `spin_stars_${input.telegramId}_${input.quantity}_${Date.now()}`;
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${botToken}/createInvoiceLink`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: input.quantity === 1 ? "دورة واحدة في عجلة الحظ 🎡" : `${input.quantity} دورات في عجلة الحظ 🎡`,
+              description: `اشترِ ${input.quantity} دورة وتوقع جوائز تصل إلى 1000 نقطة! 🎁`,
+              payload,
+              currency: "XTR",
+              prices: [{ label: `${input.quantity} × دورة (${STARS_PER_SPIN} ⭐ لكل دورة)`, amount: totalStars }],
+            }),
+          });
+          const data = (await res.json()) as any;
+          if (!data.ok) return { success: false, message: data.description || "فشل إنشاء رابط الدفع", invoiceLink: "" };
+          return { success: true, invoiceLink: data.result as string, message: "" };
+        } catch (e: any) {
+          return { success: false, message: e?.message || "خطأ غير معروف", invoiceLink: "" };
+        }
+      }),
   }),
 
 
