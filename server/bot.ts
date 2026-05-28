@@ -513,6 +513,37 @@ export async function startBot(app?: Express) {
       } catch (_) {}
       return;
     }
+
+    // شراء دورات عجلة الحظ بالنجوم
+    if (msg?.successful_payment && msg.successful_payment.invoice_payload?.startsWith("spin_stars_")) {
+      const parts = (msg.successful_payment.invoice_payload as string).split("_");
+      // format: spin_stars_<telegramId>_<qty>_<timestamp>
+      const telegramId = parseInt(parts[2] || "0");
+      const quantity   = parseInt(parts[3] || "1");
+      const stars      = msg.successful_payment.total_amount;
+      if (telegramId > 0 && quantity > 0) {
+        try {
+          const user = await getTelegramUser(telegramId);
+          if (user) {
+            const currentSpins = Number(user.spinsLeft) || 0;
+            await upsertTelegramUser({ telegramId, spinsLeft: currentSpins + quantity });
+            await createTransaction({
+              telegramId,
+              type: "bonus",
+              points: 0,
+              metadata: JSON.stringify({ action: "buy_spins_stars", quantity, stars }),
+            });
+          }
+        } catch (_) {}
+      }
+      try {
+        await ctx.reply(
+          `✅ تم الدفع بنجاح!\n⭐ دفعت: ${stars} نجمة\n🎡 حصلت على: ${quantity} دورة في عجلة الحظ\n\nافتح التطبيق والعب الآن! 🎁`
+        );
+      } catch (_) {}
+      return;
+    }
+
     return next();
   });
 
