@@ -972,8 +972,10 @@ export const appRouter = router({
             const msg = input.status === "approved"
               ? starsResult.success
                 ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
-                  `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
+                  `⭐ لقد أرسلنا لك هدية بقيمة *${starsResult.sent.toLocaleString()} Stars* إلى حسابك\n` +
                   `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                  `📌 *ملاحظة مهمة:* ستصلك رسالة هدية من تيليغرام\n` +
+                  `اضغط على زر *"عرض"* ثم اختر *"تحويل إلى نجوم"* لإضافتها إلى رصيدك ⭐\n\n` +
                   `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
                 : `✅ *تمت الموافقة على طلب السحب*\n\n` +
                   `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} Stars* قيد المعالجة\n` +
