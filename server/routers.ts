@@ -1009,6 +1009,10 @@ export const appRouter = router({
                     reply_markup: JSON.stringify({
                       inline_keyboard: [
                         [{ text: `👤 فتح ملف ${userName}`, url: profileLink }],
+                        [
+                          { text: "✅ تم إرسال النجوم", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                          { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                        ],
                       ],
                     }),
                   }),
