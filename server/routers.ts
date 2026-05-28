@@ -964,59 +964,102 @@ export const appRouter = router({
             const userTag   = w.username ? `@${w.username}` : `ID: ${w.telegramId}`;
             const userName  = w.firstName || w.username || String(w.telegramId);
 
-            // ── رسالة المستخدم ──────────────────────────────────────────
+            // ── إرسال النجوم تلقائياً من رصيد البوت + إشعار المستخدم ──
             if (input.status === "approved") {
-              // رسالة التأكيد للمستخدم
-              fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  chat_id: w.telegramId,
-                  text:
-                    `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                    `⭐ ستصلك *${Number(w.stars).toLocaleString()} نجمة* مباشرة على تيليغرام\n` +
-                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                    `📌 *ملاحظة:* النجوم ستُرسل من حساب الإدارة الشخصي مباشرة إلى رصيدك خلال دقائق.\n` +
-                    `تأكد أن *ملفك الشخصي غير مخفي* حتى تتمكن الإدارة من إيجادك.\n\n` +
-                    `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
-                  parse_mode: "Markdown",
-                  ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
-                }),
-              }).catch(() => {});
+              // إرسال الهدية تلقائياً من رصيد البوت
+              let starsResult: { success: boolean; sent: number; error?: string } = { success: false, sent: 0 };
+              starsResult = await sendStarsGift(botToken, Number(w.telegramId), Number(w.stars)).catch((e) => ({
+                success: false, sent: 0, error: e?.message || "خطأ غير متوقع"
+              }));
 
-              // ── إشعار الأدمن لإرسال النجوم يدوياً ──────────────────
-              if (adminId) {
-                const profileLink = w.username
-                  ? `https://t.me/${w.username}`
-                  : `tg://user?id=${w.telegramId}`;
+              if (starsResult.success) {
+                // ── رسالة النجاح للمستخدم ──
                 fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    chat_id: adminId,
+                    chat_id: w.telegramId,
                     text:
-                      `🔔 *إجراء مطلوب — إرسال نجوم يدوياً*\n\n` +
-                      `👤 المستخدم: *${userName}* (${userTag})\n` +
-                      `🆔 ID: \`${w.telegramId}\`\n` +
-                      `⭐ المبلغ: *${Number(w.stars).toLocaleString()} نجمة*\n` +
-                      `💰 النقاط: ${Number(w.amount).toLocaleString()}\n\n` +
-                      `📋 *خطوات الإرسال المباشر للنجوم:*\n` +
-                      `1️⃣ افتح *الإعدادات* في تيليغرام\n` +
-                      `2️⃣ اضغط على *"نجومي ⭐"*\n` +
-                      `3️⃣ اضغط *"إرسال نجوم"* أو *"Send Stars"*\n` +
-                      `4️⃣ ابحث عن المستخدم: *${userTag}*\n` +
-                      `5️⃣ أدخل العدد: *${Number(w.stars)}* ثم أكّد\n\n` +
-                      `✅ ستصل النجوم مباشرة لرصيد *نجومي* الخاص بالمستخدم`,
+                      `🎁 *وصلتك هدية نجوم!*\n\n` +
+                      `⭐ أرسلنا لك *${starsResult.sent} نجمة* من رصيد البوت\n` +
+                      `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                      `📌 *خطوة واحدة فقط لاستلام نجومك:*\n` +
+                      `اذهب إلى ملفك الشخصي ← تبويب *"الهدايا 💝"*\n` +
+                      `ثم اضغط على الهدية — ستجد زر *"استبدالها بالنجوم"*\n` +
+                      `وستُضاف فوراً لخانة *نجومي ⭐*\n\n` +
+                      `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
                     parse_mode: "Markdown",
-                    reply_markup: JSON.stringify({
-                      inline_keyboard: [
-                        [{ text: `👤 فتح ملف ${userName}`, url: profileLink }],
-                        [
-                          { text: "✅ تم إرسال النجوم", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                          { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                        ],
-                      ],
+                    ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
+                  }),
+                }).catch(() => {});
+
+                // إشعار الأدمن بنجاح الإرسال التلقائي
+                if (adminId) {
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: adminId,
+                      text:
+                        `✅ *تم إرسال النجوم تلقائياً*\n\n` +
+                        `👤 المستخدم: *${userName}* (${userTag})\n` +
+                        `⭐ أُرسلت: *${starsResult.sent} نجمة* من رصيد البوت\n` +
+                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n\n` +
+                        `تم إشعار المستخدم بخطوة تحويل الهدية إلى نجومي ✔️`,
+                      parse_mode: "Markdown",
+                      reply_markup: JSON.stringify({
+                        inline_keyboard: [[
+                          { text: "✅ تم الإرسال — مكتمل", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${starsResult.sent}` },
+                          { text: "❌ رفض وإعادة النقاط", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                        ]],
+                      }),
                     }),
+                  }).catch(() => {});
+                }
+
+              } else {
+                // ── فشل الإرسال التلقائي — إشعار الأدمن للتدخل اليدوي ──
+                if (adminId) {
+                  const profileLink = w.username ? `https://t.me/${w.username}` : `tg://user?id=${w.telegramId}`;
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: adminId,
+                      text:
+                        `⚠️ *فشل الإرسال التلقائي — يلزم تدخل يدوي*\n\n` +
+                        `👤 المستخدم: *${userName}* (${userTag})\n` +
+                        `🆔 ID: \`${w.telegramId}\`\n` +
+                        `⭐ المبلغ: *${Number(w.stars)} نجمة*\n` +
+                        `❌ السبب: ${starsResult.error || "رصيد البوت غير كافٍ"}\n\n` +
+                        `📋 أرسل النجوم يدوياً:\n` +
+                        `الإعدادات ← *نجومي* ← *إرسال نجوم* ← ${userTag} ← *${Number(w.stars)}*`,
+                      parse_mode: "Markdown",
+                      reply_markup: JSON.stringify({
+                        inline_keyboard: [
+                          [{ text: `👤 فتح ملف ${userName}`, url: profileLink }],
+                          [
+                            { text: "✅ تم إرسالها يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                            { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                          ],
+                        ],
+                      }),
+                    }),
+                  }).catch(() => {});
+                }
+                // إشعار المستخدم بأن طلبه قيد المعالجة
+                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: w.telegramId,
+                    text:
+                      `✅ *تمت الموافقة على طلب السحب!*\n\n` +
+                      `⭐ *${Number(w.stars)} نجمة* ستصلك خلال دقائق\n` +
+                      `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                      `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+                    parse_mode: "Markdown",
+                    ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
                   }),
                 }).catch(() => {});
               }
