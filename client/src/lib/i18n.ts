@@ -151,6 +151,10 @@ export type Language = "ar" | "en" | "ru";
       withdraw_conversion_rate: "معدل التحويل",
       withdraw_minimum_amount: "الحد الأدنى",
       withdraw_processing: "جاري المعالجة...",
+      withdraw_pending: "سيتم مراجعة طلبك قريباً",
+      withdraw_error: "فشل الطلب",
+      need_more_points: "تحتاج",
+      to_reach_min: "للوصول إلى الحد الأدنى",
     },
     en: {
       welcome: "🎮 Play Now & Earn Points!",
@@ -302,6 +306,10 @@ export type Language = "ar" | "en" | "ru";
       withdraw_conversion_rate: "Conversion Rate",
       withdraw_minimum_amount: "Minimum",
       withdraw_processing: "Processing...",
+      withdraw_pending: "Your request will be reviewed soon",
+      withdraw_error: "Request failed",
+      need_more_points: "Need",
+      to_reach_min: "to reach minimum",
     },
     ru: {
       welcome: "🎮 Играй сейчас и зарабатывай очки!",
@@ -453,6 +461,10 @@ export type Language = "ar" | "en" | "ru";
       withdraw_conversion_rate: "Курс конвертации",
       withdraw_minimum_amount: "Минимум",
       withdraw_processing: "Обработка...",
+      withdraw_pending: "Ваш запрос будет рассмотрен в ближайшее время",
+      withdraw_error: "Ошибка запроса",
+      need_more_points: "Нужно",
+      to_reach_min: "для достижения минимума",
     }
   };
   
