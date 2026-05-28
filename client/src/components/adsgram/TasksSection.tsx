@@ -29,7 +29,7 @@ import { useState, useEffect } from "react";
               toast({
                 title: isAr ? "⚠️ تم خصم نقاط" : "⚠️ Points Deducted",
                 description: isAr
-                  ? `غادرت ${res.left?.join(", ")} — خُصم منك ${res.deducted} نقطة`
+                  ? (t.task_left_group || "غادرت {groups} — خُصم منك {deducted} نقطة").replace("{groups}", res.left?.join(", ") || "").replace("{deducted}", res.deducted?.toString() || "")
                   : `Left ${res.left?.join(", ")} — ${res.deducted} pts deducted`,
                 variant: "destructive",
               });
@@ -133,7 +133,7 @@ import { useState, useEffect } from "react";
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {task.completed ? (
                       <span style={{ color: "#10B981", fontSize: 12, fontWeight: 600 }}>
-                        ✅ +{task.pointsEarned} {isAr ? "نقطة" : "pts"}
+                        ✅ {isAr ? (t.task_points_earned || "+{points} نقطة").replace("{points}", task.pointsEarned.toString()) : `+${task.pointsEarned} pts`}
                       </span>
                     ) : (
                       <span style={{
@@ -142,7 +142,7 @@ import { useState, useEffect } from "react";
                       }}>
                         {task.pointsMin === task.pointsMax
                           ? `+${task.pointsMin}`
-                          : `+${task.pointsMin}-${task.pointsMax}`} {isAr ? "نقطة" : "pts"}
+                          : `+${task.pointsMin}-${task.pointsMax}`} {isAr ? (t.task_points_range || "+{min}-{max} نقطة").replace("{min}", task.pointsMin.toString()).replace("{max}", task.pointsMax.toString()) : "pts"}
                       </span>
                     )}
                   </div>
@@ -181,7 +181,7 @@ import { useState, useEffect } from "react";
           borderRadius: 12, fontSize: 12, color: "rgba(255,255,255,0.5)", textAlign: "center",
         }}>
           ⚠️ {isAr
-            ? "إذا غادرت القناة ستُخصم نقاطك تلقائياً"
+            ? (t.task_leave_channel_warning || "إذا غادرت القناة ستُخصم نقاطك تلقائياً")
             : "Leaving the channel will deduct your points automatically"}
         </div>
       </div>

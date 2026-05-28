@@ -59,14 +59,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
         try {
           const res = await redeemMut.mutateAsync({ telegramId, initData, code: code.trim() });
           if (res.success) {
-            setMsg({ text: res.message || "تم الاسترداد!", ok: true });
+            setMsg({ text: res.message || t.redeem_success || "تم الاسترداد!", ok: true });
             setCode("");
             if (res.balance) onReward(res.balance);
           } else {
-            setMsg({ text: res.message || "خطأ", ok: false });
+            setMsg({ text: res.message || t.error || "خطأ", ok: false });
           }
         } catch {
-          setMsg({ text: "حدث خطأ، حاول مجدداً", ok: false });
+          setMsg({ text: t.redeem_error || "حدث خطأ، حاول مجدداً", ok: false });
         } finally {
           setLoading(false);
         }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { translations } from "@/lib/i18n";
 import {
   Users, TrendingUp, Wallet, Send, Shield, BarChart3,
   Eye, EyeOff, RefreshCw, Ban, CheckCircle,
@@ -125,6 +126,8 @@ export default function AdminDashboard() {
   const [withdrawFilter, setWithdrawFilter] = useState("pending");
   const [withdrawActionLoading, setWithdrawActionLoading] = useState<number | null>(null);
   const { toast } = useToast();
+  const lang = (window as any).Telegram?.WebApp?.language || "ar";
+  const t = translations[lang] || translations.ar;
 
   // Code form state
   const [codeInput, setCodeInput] = useState("");
@@ -203,12 +206,12 @@ export default function AdminDashboard() {
       if (res.success) {
         localStorage.setItem("adminSecret", secret);
         setAuthed(true);
-        toast({ title: "✅ تم الدخول", description: "مرحباً بك في لوحة التحكم" });
+        toast({ title: t.admin_login_success, description: t.admin_login_welcome });
       } else {
-        toast({ title: "❌ رمز خاطئ", description: "كلمة المرور غير صحيحة", variant: "destructive" });
+        toast({ title: t.admin_login_failed, description: t.admin_login_wrong_password, variant: "destructive" });
       }
     } catch {
-      toast({ title: "خطأ", description: "تعذر الاتصال بالخادم", variant: "destructive" });
+      toast({ title: t.error || "خطأ", description: t.admin_connection_error, variant: "destructive" });
     } finally {
       setAuthLoading(false);
     }
@@ -227,13 +230,13 @@ export default function AdminDashboard() {
     try {
       const res = await broadcastMut.mutateAsync({ secret, message: broadcastMsg, targetGroup: broadcastTarget });
       if (res.success) {
-        toast({ title: "✅ تم الإرسال", description: `أُرسلت إلى ${res.sent} من ${res.total} مستخدم` });
+        toast({ title: t.admin_broadcast_sent, description: t.admin_broadcast_progress.replace("{sent}", res.sent.toString()).replace("{total}", res.total.toString()) });
         setBroadcastMsg("");
       } else {
-        toast({ title: "فشل", description: (res as any).message || "خطأ", variant: "destructive" });
+        toast({ title: t.admin_broadcast_failed, description: (res as any).message || t.error, variant: "destructive" });
       }
     } catch {
-      toast({ title: "خطأ", description: "فشل الإرسال", variant: "destructive" });
+      toast({ title: t.error || "خطأ", description: t.admin_broadcast_send_failed, variant: "destructive" });
     } finally {
       setBroadcastLoading(false);
     }
@@ -242,7 +245,7 @@ export default function AdminDashboard() {
   const handleBan = async (telegramId: number, ban: boolean) => {
     try {
       await banMut.mutateAsync({ secret, telegramId, ban });
-      toast({ title: ban ? "🚫 تم الحظر" : "✅ تم رفع الحظر" });
+      toast({ title: ban ? t.admin_user_banned  : t.admin_user_unbanned });
       usersQ.refetch();
     } catch {
       toast({ title: "خطأ", variant: "destructive" });
@@ -254,13 +257,13 @@ export default function AdminDashboard() {
     try {
       const res = await updateWithdrawMut.mutateAsync({ secret, withdrawalId, status, note });
       if (res.success) {
-        toast({ title: status === "approved" ? "✅ تمت الموافقة" : "❌ تم الرفض" });
+        toast({ title: status === "approved" ? t.admin_action_approved  : t.admin_action_rejected });
         withdrawQ.refetch();
       } else {
         toast({ title: "خطأ", description: (res as any).message || "فشل التحديث", variant: "destructive" });
       }
     } catch {
-      toast({ title: "خطأ", description: "تعذر الاتصال", variant: "destructive" });
+      toast({ title: t.error || "خطأ", description: t.admin_connection_failed, variant: "destructive" });
     } finally {
       setWithdrawActionLoading(null);
     }
@@ -289,8 +292,8 @@ export default function AdminDashboard() {
         });
         if (res.success) {
           toast({
-            title: "📨 تم الإرسال",
-            description: "افتح تيليجرام العادي — وصلتك رسالة من البوت تحتوي زر فتح المحادثة",
+            title: t.admin_message_sent,
+            description: t.admin_telegram_message_desc,
           });
         } else {
           toast({ title: "خطأ", description: (res as any).message || "فشل الإرسال", variant: "destructive" });
@@ -312,17 +315,17 @@ export default function AdminDashboard() {
       // No username — copy the ID and show clear instructions
       navigator.clipboard.writeText(String(telegramId)).catch(() => {});
       toast({
-        title: `📋 تم نسخ الـ ID: ${telegramId}`,
-        description: "ابحث عن المستخدم في تيليجرام بالـ ID، ثم اضغط ⋮ واختر «Send Stars»",
+        title: t.admin_id_copied.replace("{id}", telegramId),
+        description: t.admin_id_instruction,
       });
     }
   };
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      toast({ title: `✅ تم النسخ`, description: label });
+      toast({ title: t.admin_copied, description: label });
     }).catch(() => {
-      toast({ title: "⚠️ فشل النسخ", description: "يدوياً: " + text, variant: "destructive" });
+      toast({ title: t.admin_copy_failed, description: t.admin_copy_manual.replace("{text}", text), variant: "destructive" });
     });
   };
 
@@ -384,11 +387,11 @@ export default function AdminDashboard() {
     try {
       const res = await createCodeMut.mutateAsync({ secret, code: codeInput.trim(), reward: codeReward, maxUses: codeMaxUses, expiresInHours: codeExpiry, postToChannel: codePostChannel });
       if (res.success) {
-        toast({ title: "✅ تم إنشاء الكود", description: `الكود: ${(res as any).code?.code}` });
+        toast({ title: t.admin_code_created, description: t.admin_code_value.replace("{code}", (res as any).code?.code || "") });
         setCodeInput("");
         codesQ.refetch();
       } else {
-        toast({ title: "❌ خطأ", description: (res as any).message || "فشل إنشاء الكود", variant: "destructive" });
+        toast({ title: t.admin_code_failed, description: (res as any).message || t.admin_create_failed, variant: "destructive" });
       }
     } finally {
       setCodeLoading(false);
@@ -399,7 +402,7 @@ export default function AdminDashboard() {
     setDeleteCodeLoading(id);
     try {
       await deleteCodeMut.mutateAsync({ secret, id });
-      toast({ title: "🗑️ تم إلغاء الكود" });
+      toast({ title: t.admin_code_cancelled });
       codesQ.refetch();
     } finally {
       setDeleteCodeLoading(null);
@@ -898,7 +901,7 @@ export default function AdminDashboard() {
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontFamily: "monospace", fontSize: 15, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.28)" : "#6EE7B7", letterSpacing: "0.08em" }}>{c.code}</span>
                             <button
-                              onClick={() => navigator.clipboard?.writeText(c.code).then(() => toast({ title: "تم نسخ الكود" }))}
+                              onClick={() => navigator.clipboard?.writeText(c.code).then(() => toast({ title: t.admin_copy_to_clipboard }))}
                               style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.25)", padding: "2px 4px", borderRadius: 4 }}
                               title="نسخ الكود"
                             ><Copy size={11} /></button>
@@ -972,7 +975,7 @@ export default function AdminDashboard() {
                               onClick={() => {
                                 const msg = buildCodeMessage(c.code, c.reward, c.maxUses, c.expiresAt);
                                 navigator.clipboard?.writeText(msg).then(() =>
-                                  toast({ title: "✅ تم نسخ الرسالة", description: "الصقها في قناتك مباشرة" })
+                                  toast({ title: t.admin_copy_message, description: t.admin_paste_channel })
                                 );
                               }}
                               style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, height: 36, borderRadius: 10, border: "1px solid rgba(99,102,241,0.3)", background: "rgba(99,102,241,0.1)", cursor: "pointer", color: "#A5B4FC", fontSize: 11, fontWeight: 700 }}
@@ -993,13 +996,13 @@ export default function AdminDashboard() {
                                     expiresAt: new Date(c.expiresAt).toISOString(),
                                   });
                                   if (res.success) {
-                                    toast({ title: "✅ تم الإرسال للقناة!", description: `تم نشر كود ${c.code} بنجاح` });
+                                    toast({ title: t.admin_sent_to_channel, description: t.admin_published.replace("{code}", c.code) });
                                   } else {
-                                    toast({ title: "❌ فشل الإرسال", description: res.message || "تحقق من إعدادات البوت" });
+                                    toast({ title: t.admin_send_failed, description: res.message || t.admin_check_bot_settings });
                                   }
                                 } catch (err: any) {
                                   const msg = err?.message || err?.data?.message || "تحقق من BOT_TOKEN و REQUIRED_CHANNEL";
-                                  toast({ title: "❌ خطأ في الإرسال", description: msg });
+                                  toast({ title: t.admin_send_error, description: msg });
                                 } finally {
                                   setSendingToChannel(null);
                                 }

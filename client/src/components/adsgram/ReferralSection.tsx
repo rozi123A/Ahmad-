@@ -42,13 +42,13 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
       if (res.claimed > 0) {
         toast({
           title: "🎉 تم استلام النقاط!",
-          description: `ربحت ${res.points} نقطة من ${res.claimed} إحالة لم تُحتسب`,
+          description: (t.referral_earned_from || "ربحت {points} نقطة من {count} إحالة لم تُحتسب").replace("{points}", res.points.toString()).replace("{count}", res.claimed.toString()),
         });
         refetch();
       } else {
         toast({
           title: "لا يوجد نقاط معلقة",
-          description: "جميع نقاط الإحالة تم احتسابها مسبقاً",
+          description: t.referral_already_claimed || "جميع نقاط الإحالة تم احتسابها مسبقاً",
           variant: "destructive",
         });
       }
