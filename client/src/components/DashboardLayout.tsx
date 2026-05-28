@@ -21,15 +21,31 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  LogOut, 
+  PanelLeft, 
+  Users,
+  Home,
+  Settings,
+  Bell,
+  Search,
+  Plus,
+  Star,
+  Heart,
+  Sparkles,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
+// Professional icon configuration with gradient effects
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: Home, label: "Home", path: "/" },
+  { icon: LayoutDashboard, label: "Dashboard", path: "/some-path" },
+  { icon: Users, label: "Team", path: "/team" },
+  { icon: Settings, label: "Settings", path: "/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -188,12 +204,23 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => setLocation(item.path)}
                       tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
+                      className={`h-10 transition-all font-normal group relative overflow-hidden`}
                     >
+                      {/* Active indicator gradient */}
+                      {isActive && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5 rounded-lg" />
+                      )}
+                      {/* Icon with professional styling */}
                       <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        className={`h-4 w-4 relative z-10 transition-all duration-300 ${
+                          isActive 
+                            ? "text-primary drop-shadow-lg" 
+                            : "text-muted-foreground group-hover:text-foreground"
+                        }`}
                       />
-                      <span>{item.label}</span>
+                      {/* Hover glow effect */}
+                      <div className={`absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-primary/10 to-transparent`} />
+                      <span className="relative z-10">{item.label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -232,14 +259,19 @@ function DashboardLayoutContent({
             </DropdownMenu>
           </SidebarFooter>
         </Sidebar>
+        {/* Resize handle with gradient */}
         <div
-          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors ${isCollapsed ? "hidden" : ""}`}
+          className={`absolute top-0 right-0 w-1 h-full cursor-col-resize group transition-all duration-300 ${
+            isCollapsed ? "hidden" : ""
+          }`}
           onMouseDown={() => {
             if (isCollapsed) return;
             setIsResizing(true);
           }}
           style={{ zIndex: 50 }}
-        />
+        >
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        </div>
       </div>
 
       <SidebarInset>
