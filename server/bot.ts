@@ -720,20 +720,28 @@ export async function sendStarsGift(
       }
     }
 
-    // المرحلة 2: إذا بقي مبلغ لم يُغطَّ بعد الخوارزمية الجشعة
-    // → ابحث عن أكبر هدية ≤ remaining (لا نُرسل أكثر من المطلوب أبداً)
-    while (remaining > 0) {
-      const best = descGifts.find(g => g.star_count <= remaining);
-      if (!best) break; // لا توجد هدية أصغر من أو تساوي المتبقي — نتوقف
-      const err = await sendOne(best.id, best.star_count);
-      if (err) return { success: totalSent > 0, sent: totalSent, error: err };
-      totalSent += best.star_count;
-      remaining -= best.star_count;
+    // المرحلة 2: إذا بقي مبلغ لم يُغطَّ — أرسل أقرب هدية ≥ remaining
+    // (المستخدم يحصل على الفرق كمكافأة بسيطة لأن الهدايا بفئات ثابتة)
+    if (remaining > 0) {
+      const cover = ascGifts.find(g => g.star_count >= remaining);
+      if (cover) {
+        const err = await sendOne(cover.id, cover.star_count);
+        if (err) return { success: totalSent > 0, sent: totalSent, error: err };
+        totalSent += cover.star_count;
+        remaining  = 0;
+      } else if (totalSent === 0) {
+        // المبلغ أكبر من أكبر هدية متاحة — أرسل أكبر هدية متاحة
+        const biggest = descGifts[0];
+        if (biggest) {
+          const err = await sendOne(biggest.id, biggest.star_count);
+          if (err) return { success: false, sent: 0, error: err };
+          totalSent += biggest.star_count;
+        }
+      }
     }
 
     if (totalSent === 0) {
-      const minGift = ascGifts[0]?.star_count ?? '?';
-      return { success: false, sent: 0, error: `أقل هدية متاحة في تيليغرام هي ${minGift} نجمة — الطلب يحتاج تعديل الحد الأدنى للسحب إلى ${minGift}000 نقطة` };
+      return { success: false, sent: 0, error: 'لا توجد هدايا نجوم متاحة في تيليغرام حالياً' };
     }
 
     return { success: true, sent: totalSent };
