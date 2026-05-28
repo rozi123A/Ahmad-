@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-  import { Send, Star, AlertCircle, Wallet, ChevronDown, Check, Copy } from "lucide-react";
+  import { PaperPlaneTilt, Star, Warning, Wallet, CaretDown, Check, Copy } from "@phosphor-icons/react";
   import { useToast } from "@/hooks/use-toast";
   import { trpc } from "@/lib/trpc";
   import { translations, type Language } from "@/lib/i18n";
@@ -147,7 +147,7 @@ import { useState, useEffect } from "react";
 
         {user.balance < user.minWithdraw && (
           <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 16, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-            <AlertCircle size={20} style={{ color: "#F59E0B", flexShrink: 0, marginTop: 1 }} />
+            <Warning size={20} style={{ color: "#F59E0B", flexShrink: 0, marginTop: 1 }} />
             <div>
               <p style={{ fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 3 }}>{t.not_enough_balance غير كافٍ"}</p>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{t.need_more_points"} {(user.minWithdraw - user.balance).toLocaleString()} {t.points} {t.to_reach_min إلى الحد الأدنى"}</p>
@@ -307,7 +307,7 @@ import { useState, useEffect } from "react";
             {loading ? (
               <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
             ) : (
-              <Send size={20} />
+              <PaperPlaneTilt size={20} />
             )}
             {loading ? (t.withdraw_sending الإرسال...") : `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
           </button>
