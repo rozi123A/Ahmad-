@@ -42,19 +42,19 @@ import { useState, useEffect } from "react";
 
     const methodInfo: Record<WithdrawalMethod, { icon: string; label: string; desc: string; color: string }> = {
       telegram_stars: { 
-        icon: "⭐", 
+        icon: "", 
         label: t.withdraw_method_stars, 
         desc: t.withdraw_method_stars_desc تصل كهدية", 
         color: "#FFD700" 
       },
       ton: { 
-        icon: "💎", 
+        icon: "", 
         label: t.withdraw_method_ton, 
         desc: t.withdraw_method_ton_desc مباشرة لمحفظتك", 
         color: "#10B981" 
       },
       usdt: { 
-        icon: "💵", 
+        icon: "", 
         label: t.withdraw_method_usdt, 
         desc: t.withdraw_method_usdt_desc لمحفظتك على Tron", 
         color: "#60A5FA" 
@@ -79,12 +79,12 @@ import { useState, useEffect } from "react";
     const handleWithdraw = async () => {
       // Check if user has wallet for selected method
       if (method === "ton" && !tonWallet) {
-        toast({ title: "⚠️ " + t.withdraw_ton_wallet, description: t.withdraw_no_wallet_error, variant: "destructive" });
+        toast({ title: " " + t.withdraw_ton_wallet, description: t.withdraw_no_wallet_error, variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
       if (method === "usdt" && !usdtWallet) {
-        toast({ title: "⚠️ " + t.withdraw_usdt_wallet, description: t.withdraw_no_usdt_error, variant: "destructive" });
+        toast({ title: " " + t.withdraw_usdt_wallet, description: t.withdraw_no_usdt_error, variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
@@ -129,7 +129,7 @@ import { useState, useEffect } from "react";
             </div>
             <div style={{ textAlign: "right" }}>
               <p style={{ fontSize: 9, color: "rgba(16,185,129,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{t.stars_equivalent}</p>
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}>⭐ {Math.floor(user.balance / user.starsRate)}</p>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}> {Math.floor(user.balance / user.starsRate)}</p>
             </div>
           </div>
 
@@ -316,7 +316,7 @@ import { useState, useEffect } from "react";
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { label: t.withdraw_conversion_rate التحويل", value: `${user.starsRate} ${t.points} = ⭐1`, color: "#A78BFA" },
+            { label: t.withdraw_conversion_rate التحويل", value: `${user.starsRate} ${t.points} = 1`, color: "#A78BFA" },
             { label: t.withdraw_minimum_amount الأدنى", value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>

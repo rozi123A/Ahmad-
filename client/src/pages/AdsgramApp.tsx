@@ -75,7 +75,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       return (
         <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.18)", borderRadius: 20, overflow: "hidden" }}>
           <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(16,185,129,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(16,185,129,0.07)" }}>
-            <span style={{ fontSize: 15 }}>🎁</span>
+            <span style={{ fontSize: 15 }}></span>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#34D399", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.redeem_code}</span>
           </div>
           <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
@@ -108,7 +108,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const initData = typeof window !== "undefined" ? (window as any).Telegram?.WebApp?.initData || "" : "";
       const { data: transactions, isLoading } = trpc.telegram.getTransactions.useQuery({ telegramId, initData: initData }, { enabled: !!initData });
       const t = translations[lang];
-      const typeIcons: Record<string, string> = { ad: "📺", spin: "🎡", referral: "👥", withdraw: "💸", bonus: "🎁", task: "✅" };
+      const typeIcons: Record<string, string> = { ad: "", spin: "", referral: "👥", withdraw: "💸", bonus: "", task: "" };
       const typeColors: Record<string, string> = { ad: "#F59E0B", spin: "#8B5CF6", referral: "#3B82F6", withdraw: "#EF4444", bonus: "#10B981", task: "#6366F1" };
 
       if (isLoading) return (
@@ -185,7 +185,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
               || new URLSearchParams(window.location.search).get('ref') || undefined;
             if (!telegramUser) { setErrorType("no_user"); setLoading(false); return; }
             setDisplayName(telegramUser.first_name || telegramUser.username || "");
-              // ✅ Membership check
+              //  Membership check
               if (!memberVerifiedRef.current) {
                 try {
                   const memberResult = await checkMemberMutation.mutateAsync({
@@ -338,7 +338,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
               rel="noopener noreferrer"
               style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, width:"100%", maxWidth:300, height:54, borderRadius:16, background:"linear-gradient(135deg,#7C3AED,#4F46E5)", color:"#fff", fontWeight:900, fontSize:16, textDecoration:"none", marginBottom:14, boxShadow:"0 6px 24px rgba(124,58,237,0.4)" }}
             >
-              <span style={{ fontSize:20 }}>📢</span>
+              <span style={{ fontSize:20 }}></span>
               اشترك في القناة
             </a>
 
@@ -350,7 +350,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             >
               {recheckLoading
                 ? <><div style={{ width:18,height:18,border:"2.5px solid rgba(255,255,255,0.2)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin2 0.8s linear infinite" }} /> جارٍ التحقق...</>
-                : <><span>✅</span> لقد اشتركت — تحقق</>
+                : <><span></span> لقد اشتركت — تحقق</>
               }
             </button>
           </div>
@@ -384,7 +384,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             {top:"33%", left:"4%",   size:10, delay:"2.1s",  dur:"3s"},
           ] as {top?:string;left?:string;right?:string;bottom?:string;size:number;delay:string;dur:string}[]).map((s,i)=>(
             <div key={i} style={{ position:"absolute", top:s.top, left:s.left, right:s.right, bottom:s.bottom, animation:`starTwinkle ${s.dur} ${s.delay} ease-in-out infinite`, pointerEvents:"none" }}>
-              ⭐
+              
             </div>
           ))}
 
@@ -394,7 +394,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             <div style={{ position:"absolute", inset:-8, width:116, height:116, borderRadius:"50%", border:"2.5px solid transparent", borderTopColor:"#8B5CF6", borderRightColor:"#FFD700", borderBottomColor:"rgba(139,92,246,0.15)", borderLeftColor:"rgba(255,215,0,0.15)", animation:"spin 2s linear infinite" }} />
             <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(255,215,0,0.35)", borderBottomColor:"rgba(139,92,246,0.35)", animation:"spin 5s linear infinite reverse" }} />
             <div style={{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(145deg,#1a0a3a,#0a0a20)", border:"1px solid rgba(139,92,246,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 50px rgba(109,40,217,0.35), 0 0 100px rgba(109,40,217,0.1), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
-              <span style={{ fontSize:46, animation:"pulse 2s ease-in-out infinite", display:"block", lineHeight:1 }}>⭐</span>
+              <span style={{ fontSize:46, animation:"pulse 2s ease-in-out infinite", display:"block", lineHeight:1 }}></span>
             </div>
           </div>
 
@@ -421,7 +421,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
       if (errorType === "no_telegram") return (
         <div style={{ minHeight: "100vh", background: "#070711", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 8 }}>📱</div>
+          <div style={{ fontSize: 64, marginBottom: 8 }}></div>
           <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 900, margin: 0 }}>افتح التطبيق من داخل Telegram</h2>
           <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
             هذا التطبيق يعمل فقط كـ Mini App داخل Telegram.<br/>ابحث عن البوت وافتحه من هناك.
@@ -457,8 +457,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "36px 28px", textAlign: "center", zIndex: 1 }}>
             <div style={{ position: "relative" }}>
-              <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🚫</div>
-              <div style={{ position: "absolute", bottom: -4, right: -4, width: 30, height: 30, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>⚠️</div>
+              <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}></div>
+              <div style={{ position: "absolute", bottom: -4, right: -4, width: 30, height: 30, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}></div>
             </div>
             <div>
               <h1 style={{ color: "#EF4444", fontSize: 24, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.5px" }}>Account Permanently Banned</h1>
@@ -609,7 +609,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <p style={{ fontSize: 9, color: "rgba(167,139,250,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Telegram Stars</p>
-                        <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700" }}>⭐ {starsEquivalent}</p>
+                        <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700" }}> {starsEquivalent}</p>
                       </div>
                     </div>
                   </div>
@@ -618,8 +618,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 {/* Quick Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { emoji: "📺", label: t.today_ads, value: Math.min(safeUser.todayAds, 50), color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", tab: "ads" },
-                    { emoji: "🎡", label: t.spins, value: `${safeUser.spinsLeft}/5`, color: "#EC4899", bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", tab: "spin" },
+                    { emoji: "", label: t.today_ads, value: Math.min(safeUser.todayAds, 50), color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", tab: "ads" },
+                    { emoji: "", label: t.spins, value: `${safeUser.spinsLeft}/5`, color: "#EC4899", bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", tab: "spin" },
                   ].map((s, i) => (
                     <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(s.tab); }} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left", transition: "transform 0.15s", width: "100%" }}>
                       <span style={{ fontSize: 26 }}>{s.emoji}</span>
@@ -637,7 +637,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 {/* Daily Gift */}
                 <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 20, overflow: "hidden" }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(139,92,246,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(139,92,246,0.08)" }}>
-                    <span style={{ fontSize: 15 }}>🎁</span>
+                    <span style={{ fontSize: 15 }}></span>
                     <span style={{ fontSize: 11, fontWeight: 800, color: "#C4B5FD", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.daily_gift_title}</span>
                   </div>
                   <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
@@ -657,8 +657,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                     <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ الإجراءات السريعة</span>
                   </div>
                   {[
-                    { emoji: "📺", label: t.watch_ad, sub: `+${safeUser.adReward} ${t.points}`, color: "#F59E0B", tab: "ads" },
-                    { emoji: "🎡", label: t.try_luck, sub: t.random_prize, color: "#EC4899", tab: "spin" },
+                    { emoji: "", label: t.watch_ad, sub: `+${safeUser.adReward} ${t.points}`, color: "#F59E0B", tab: "ads" },
+                    { emoji: "", label: t.try_luck, sub: t.random_prize, color: "#EC4899", tab: "spin" },
                     { emoji: "👥", label: t.invite_friend, sub: t.extra_reward, color: "#3B82F6", tab: "friends" },
                   ].map((a, i, arr) => (
                     <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(a.tab); }} style={{ width: "100%", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer", color: "#fff", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
@@ -691,7 +691,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             {activeTab === "ads" && (
               <div style={{ paddingTop: 6 }}>
                 <div style={{ marginBottom: 18 }}>
-                  <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#F59E0B" }}>📺 {t.watch_ad}</h2>
+                  <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#F59E0B" }}> {t.watch_ad}</h2>
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>
                     {(t.earn_per_ad.replace("{reward}" لكل إعلان تشاهده").replace("{reward}", String(safeUser.adReward))}
                   </p>
@@ -704,7 +704,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             {activeTab === "spin" && (
               <div style={{ paddingTop: 6 }}>
                 <div style={{ marginBottom: 18 }}>
-                  <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#EC4899" }}>🎡 {t.spin_title}</h2>
+                  <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#EC4899" }}> {t.spin_title}</h2>
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>{t.spin_subtitle}</p>
                 </div>
                 <SpinWheelSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} onSwitchToAds={() => setActiveTab("ads")} onLock={() => setIsNavLocked(true)} onUnlock={() => setIsNavLocked(false)} />

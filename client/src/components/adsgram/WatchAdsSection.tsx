@@ -81,7 +81,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       const claimData = await claimMutation.mutateAsync({ telegramId: user.telegramId, token: pendingToken, initData, type: "points" });
       if (claimData.success) {
         const newBalance = Number(claimData.balance ?? user.balance + user.adReward);
-        toast({ title: "🎉 أحسنت!", description: `ربحت +${claimData.reward} ${t.points}` });
+        toast({ title: " أحسنت!", description: `ربحت +${claimData.reward} ${t.points}` });
         onReward({ balance: newBalance, todayAds: user.todayAds + 1, lastAdTime: Date.now() });
         setCooldownRemaining(user.adCooldown);
       } else {
@@ -211,9 +211,9 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
 
         <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "12px 16px" }}>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.9, textAlign: "center" }}>
-            📺 {t.watch_full_ad}<br/>
-            ⏱️ {t.ad_cooldown_info.replace("{cooldown}", String(user.adCooldown))}<br/>
-            🎯 {t.daily_ads_limit.replace("{limit}", "50")}
+             {t.watch_full_ad}<br/>
+             {t.ad_cooldown_info.replace("{cooldown}", String(user.adCooldown))}<br/>
+             {t.daily_ads_limit.replace("{limit}", "50")}
           </p>
         </div>
       </div>

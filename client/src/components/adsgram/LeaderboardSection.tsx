@@ -110,7 +110,7 @@ export default function LeaderboardSection({ myTelegramId, lang }: LeaderboardSe
     <div style={{ paddingBottom: 20 }}>
       {/* Header */}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
-        <div style={{ fontSize: 36, marginBottom: 6 }}>🏆</div>
+        <div style={{ fontSize: 36, marginBottom: 6 }}></div>
         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: -0.5 }}>
           {t.leaderboard_title}
         </h2>
@@ -177,7 +177,7 @@ export default function LeaderboardSection({ myTelegramId, lang }: LeaderboardSe
       <button onClick={refresh} style={{ width: "100%", marginTop: 20, padding: "12px",
         background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: 14, color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-        🔄 {t.leaderboard_refresh}
+         {t.leaderboard_refresh}
       </button>
     </div>
   );

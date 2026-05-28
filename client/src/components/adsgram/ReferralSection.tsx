@@ -30,7 +30,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
   };
 
   const handleShare = () => {
-    const text = `🎮 انضم معي في لعبة الأرباح! اربح نقاط وحوّلها لـ Telegram Stars⭐\n\n${referralLink}`;
+    const text = ` انضم معي في لعبة الأرباح! اربح نقاط وحوّلها لـ Telegram Stars\n\n${referralLink}`;
     if (navigator.share) navigator.share({ title: "Start Coin✨", text, url: referralLink });
     else { navigator.clipboard.writeText(text); toast({ title: t.copied }); }
   };
@@ -41,7 +41,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
       const res = await claimMutation.mutateAsync({ telegramId: user.telegramId, initData });
       if (res.claimed > 0) {
         toast({
-          title: "🎉 تم استلام النقاط!",
+          title: " تم استلام النقاط!",
           description: (t.referral_earned_from || "ربحت {points} نقطة من {count} إحالة لم تُحتسب").replace("{points}", res.points.toString()).replace("{count}", res.claimed.toString()),
         });
         refetch();
@@ -96,10 +96,10 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
 
       {/* How it works */}
       <div style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08))", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 20, padding: 18 }}>
-        <p style={{ fontSize: 11, fontWeight: 800, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}>🎯 {t.rewards || "كيف تربح؟"}</p>
+        <p style={{ fontSize: 11, fontWeight: 800, color: "#A78BFA", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 14 }}> {t.rewards || "كيف تربح؟"}</p>
         {[
-          { icon: "💰", text: t.friend_join || "نقاط فورية عند تسجيل صديقك" },
-          { icon: "🔄", text: t.friend_earnings || "مكافأة إضافية من إعلانات صديقك" },
+          { icon: "", text: t.friend_join || "نقاط فورية عند تسجيل صديقك" },
+          { icon: "", text: t.friend_earnings || "مكافأة إضافية من إعلانات صديقك" },
         ].map((r, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < 1 ? 10 : 0 }}>
             <span style={{ fontSize: 20, flexShrink: 0 }}>{r.icon}</span>

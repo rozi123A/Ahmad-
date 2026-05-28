@@ -19,10 +19,10 @@ import { useState, useRef, useCallback, useEffect } from "react";
         <div style={{ fontSize:64 }}>₿</div>
         <p style={{ color:"#f59e0b", fontWeight:900, fontSize:26, margin:0, textAlign:"center", textShadow:"0 0 20px rgba(245,158,11,0.6)" }}>Earn Crypto Daily!</p>
         <p style={{ color:"rgba(255,255,255,0.6)", fontSize:15, margin:0 }}>Trade & earn up to 300% APY</p>
-        <div style={{ display:"flex", gap:8, marginTop:6 }}>{["🪙","💎","🚀"].map((e,i) => <span key={i} style={{ fontSize:28 }}>{e}</span>)}</div>
+        <div style={{ display:"flex", gap:8, marginTop:6 }}>{["","",""].map((e,i) => <span key={i} style={{ fontSize:28 }}>{e}</span>)}</div>
       </div>,
       <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#1a0533,#3d0070,#6a0dad)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
-        <div style={{ fontSize:64 }}>🎮</div>
+        <div style={{ fontSize:64 }}></div>
         <p style={{ color:"#fff", fontWeight:900, fontSize:26, margin:0, textAlign:"center" }}>WIN BIG PRIZES!</p>
         <p style={{ color:"#e879f9", fontSize:15, margin:0 }}>Play & Win up to $10,000</p>
         <div style={{ background:"linear-gradient(135deg,#a855f7,#ec4899)", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>PLAY FREE NOW</div>
@@ -31,12 +31,12 @@ import { useState, useRef, useCallback, useEffect } from "react";
         <div style={{ fontSize:64 }}>🛍️</div>
         <p style={{ color:"#fff", fontWeight:900, fontSize:24, margin:0, textAlign:"center" }}>MEGA SALE — 90% OFF</p>
         <p style={{ color:"#6ee7b7", fontSize:15, margin:0 }}>Limited time offer today only!</p>
-        <div style={{ background:"#f59e0b", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#000", fontWeight:900, fontSize:16 }}>SHOP NOW 🔥</div>
+        <div style={{ background:"#f59e0b", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#000", fontWeight:900, fontSize:16 }}>SHOP NOW </div>
       </div>,
       <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0ea5e9,#2563eb,#1e1b4b)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
-        <div style={{ fontSize:64 }}>📱</div>
+        <div style={{ fontSize:64 }}></div>
         <p style={{ color:"#fff", fontWeight:900, fontSize:24, margin:0, textAlign:"center" }}>New App — Install Free</p>
-        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:15, margin:0 }}>⭐⭐⭐⭐⭐  4.9 · 10M+ Downloads</p>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:15, margin:0 }}>  4.9 · 10M+ Downloads</p>
         <div style={{ background:"#22c55e", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>INSTALL NOW ↓</div>
       </div>,
     ];
@@ -172,7 +172,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
                 lineHeight:1,
               }}
             >
-              {isClaimed ? "✅" : isReady ? "✕" : timeLeft}
+              {isClaimed ? "" : isReady ? "✕" : timeLeft}
             </button>
 
             {/* "Continue without reward" — only during countdown */}

@@ -28,48 +28,48 @@ function buildCodeMessage(code: string, reward: number, maxUses: number, expires
       "⚡ New Redeem Code is LIVE! ⚡",
       "",
       `🎟 Code: ${code}`,
-      `🎁 Reward: ${pts} Points`,
+      ` Reward: ${pts} Points`,
       `⏳ Valid For: ${timeLabel}`,
       `👥 Limited To: ${maxUses} Users`,
       "",
-      "🔥 Time is running out — redeem your reward now before the code expires!",
-      "🚀 Open the Mini App and claim it instantly 💎",
+      " Time is running out — redeem your reward now before the code expires!",
+      " Open the Mini App and claim it instantly ",
     ],
     // 2 — Alert style
     [
       "🚨 EXCLUSIVE CODE DROP 🚨",
       "━━━━━━━━━━━━━━━━",
       `🎫 Code: ${code}`,
-      `💰 Reward: ${pts} Points`,
+      ` Reward: ${pts} Points`,
       `⌛ Active For: ${timeShort}`,
-      `🎯 Only ${maxUses} Spots Left!`,
+      ` Only ${maxUses} Spots Left!`,
       "━━━━━━━━━━━━━━━━",
       "⚡ First come, first served!",
-      "👉 Claim before it's gone 🏆",
+      "👉 Claim before it's gone ",
     ],
     // 3 — Premium style
     [
-      "💎 PREMIUM CODE JUST DROPPED 💎",
+      " PREMIUM CODE JUST DROPPED ",
       "",
       `🔑 Code: ${code}`,
-      `🏆 Earn: ${pts} Points`,
+      ` Earn: ${pts} Points`,
       `⏱ Valid: ${timeShort}`,
-      `🎯 Limited: ${maxUses} Users Only`,
+      ` Limited: ${maxUses} Users Only`,
       "",
-      "🌟 The fastest win — don't sleep on this!",
-      "🚀 Open the Mini App and grab your reward 💰",
+      " The fastest win — don't sleep on this!",
+      " Open the Mini App and grab your reward ",
     ],
     // 4 — Fire style
     [
-      "🔥 HOT CODE ALERT 🔥",
+      " HOT CODE ALERT ",
       "",
       `🎟 Code: ${code}`,
-      `💎 Points: ${pts}`,
+      ` Points: ${pts}`,
       `⏳ Time Left: ${timeShort}`,
       `👥 Max Users: ${maxUses}`,
       "",
       "💥 Snap it before it's gone!",
-      "✅ Tap & claim instantly in the Mini App 🚀",
+      " Tap & claim instantly in the Mini App ",
     ],
   ];
 
@@ -410,11 +410,11 @@ export default function AdminDashboard() {
   };
 
   const TABS = [
-    { id: "stats" as const, icon: <BarChart3 size={16} />, label: "الإحصائيات", emoji: "📊" },
+    { id: "stats" as const, icon: <BarChart3 size={16} />, label: "الإحصائيات", emoji: "" },
     { id: "users" as const, icon: <Users size={16} />, label: "المستخدمون", emoji: "👥" },
     { id: "withdrawals" as const, icon: <Wallet size={16} />, label: "السحوبات", emoji: "💸" },
     { id: "broadcast" as const, icon: <Megaphone size={16} />, label: "الإشعارات", emoji: "📣" },
-    { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "🎁" },
+    { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "" },
   ];
 
   const filteredUsers = (usersQ.data?.users || []).filter((u: any) => {
@@ -423,14 +423,14 @@ export default function AdminDashboard() {
     return (u.firstName || "").toLowerCase().includes(s) || (u.username || "").toLowerCase().includes(s) || String(u.telegramId).includes(s);
   });
 
-  const inactiveTemplate = `👋 مرحباً {name}!
+  const inactiveTemplate = ` مرحباً {name}!
 
 لاحظنا أنك لم تلعب منذ فترة 😔
 
-🎁 لديك 5 دورة مجانية بانتظارك!
-💰 رصيدك الحالي: {balance} نقطة
+ لديك 5 دورة مجانية بانتظارك!
+ رصيدك الحالي: {balance} نقطة
 
-تعال والعب الآن واربح أكثر! 🚀`;
+تعال والعب الآن واربح أكثر! `;
 
   return (
     <div style={{ minHeight: "100vh", background: "#070711", color: "#fff", fontFamily: "'Inter',system-ui,sans-serif", padding: "0 14px 32px" }}>
@@ -473,12 +473,12 @@ export default function AdminDashboard() {
               <>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <StatCard emoji="👥" label="إجمالي المستخدمين" value={stats.totalUsers ?? 0} color="#A78BFA" />
-                  <StatCard emoji="💰" label="إجمالي النقاط" value={stats.totalPoints ?? 0} color="#FFD700" />
-                  <StatCard emoji="📺" label="إعلانات اليوم" value={stats.todayAds ?? 0} color="#F59E0B" sub="اليوم" />
+                  <StatCard emoji="" label="إجمالي النقاط" value={stats.totalPoints ?? 0} color="#FFD700" />
+                  <StatCard emoji="" label="إعلانات اليوم" value={stats.todayAds ?? 0} color="#F59E0B" sub="اليوم" />
                   <StatCard emoji="💸" label="طلبات سحب معلقة" value={stats.pendingWithdrawals ?? 0} color="#EF4444" />
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <StatCard emoji="⭐" label="Stars تم صرفها" value={stats.totalStarsWithdrawn ?? 0} color="#06B6D4" />
+                  <StatCard emoji="" label="Stars تم صرفها" value={stats.totalStarsWithdrawn ?? 0} color="#06B6D4" />
                   <StatCard emoji="🆕" label="مستخدمون جدد اليوم" value={stats.newUsersToday ?? 0} color="#10B981" sub="اليوم" />
                 </div>
                 <Card>
@@ -491,7 +491,7 @@ export default function AdminDashboard() {
                           <p style={{ fontSize: 13, fontWeight: 700, color: "#E2E8F0", margin: 0 }}>{u.firstName || u.username || `#${u.telegramId}`}</p>
                           {u.username && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>@{u.username}</p>}
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 900, color: "#FFD700" }}>💰 {fmtN(Number(u.balance))}</span>
+                        <span style={{ fontSize: 14, fontWeight: 900, color: "#FFD700" }}> {fmtN(Number(u.balance))}</span>
                       </div>
                     ))}
                     {!(stats.topUsers?.length) && <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", padding: 16 }}>لا بيانات</p>}
@@ -534,7 +534,7 @@ export default function AdminDashboard() {
                         {!!u.isBanned && <span style={{ fontSize: 9, color: "#EF4444", background: "rgba(239,68,68,0.15)", borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>محظور</span>}
                       </div>
                       <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>
-                        {u.username ? `@${u.username} · ` : ""}💰 {fmtN(Number(u.balance))} · #{u.telegramId}{u.country ? ` · 🌍 ${u.country}` : ""}
+                        {u.username ? `@${u.username} · ` : ""} {fmtN(Number(u.balance))} · #{u.telegramId}{u.country ? ` · 🌍 ${u.country}` : ""}
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -562,12 +562,12 @@ export default function AdminDashboard() {
 
             {/* How-to guide */}
             <div style={{ background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.2)", borderRadius: 16, padding: "14px 16px" }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: "#FFD700", marginBottom: 10 }}>⭐ كيف ترسل Stars يدوياً — 3 خطوات</p>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#FFD700", marginBottom: 10 }}> كيف ترسل Stars يدوياً — 3 خطوات</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {[
-                  ["1️⃣", "اضغط زر", "⭐ أرسل Stars", "لفتح ملف المستخدم في تيليجرام"],
+                  ["1️⃣", "اضغط زر", " أرسل Stars", "لفتح ملف المستخدم في تيليجرام"],
                   ["2️⃣", "في ملفه اضغط", "⋮ النقاط الثلاث", "ثم اختر «Send Stars» وأدخل العدد"],
-                  ["3️⃣", "ارجع هنا واضغط", "✅ تأكيد الإرسال", "لتغيير الحالة إلى «تمت الموافقة»"],
+                  ["3️⃣", "ارجع هنا واضغط", " تأكيد الإرسال", "لتغيير الحالة إلى «تمت الموافقة»"],
                 ].map(([num, pre, bold, post]) => (
                   <div key={num as string} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14 }}>{num}</span>
@@ -580,7 +580,7 @@ export default function AdminDashboard() {
             </div>
 
             <div style={{ display: "flex", gap: 8 }}>
-              {([["pending","⏳ معلقة"],["approved","✅ موافق"],["rejected","❌ مرفوضة"]] as const).map(([v, l]) => (
+              {([["pending","⏳ معلقة"],["approved"," موافق"],["rejected"," مرفوضة"]] as const).map(([v, l]) => (
                 <button key={v} onClick={() => setWithdrawFilter(v)} style={{ flex: 1, height: 40, borderRadius: 12, border: `1px solid ${withdrawFilter === v ? "rgba(139,92,246,0.5)" : "rgba(255,255,255,0.08)"}`, background: withdrawFilter === v ? "rgba(139,92,246,0.2)" : "rgba(255,255,255,0.03)", color: withdrawFilter === v ? "#A78BFA" : "rgba(255,255,255,0.4)", fontWeight: 800, fontSize: 11, cursor: "pointer" }}>{l}</button>
               ))}
             </div>
@@ -603,7 +603,7 @@ export default function AdminDashboard() {
                             onClick={() => copyToClipboard(w.username, `@${w.username} — تم النسخ`)}
                             style={{ fontSize: 11, color: "#60A5FA", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 8, padding: "2px 8px", cursor: "pointer", marginBottom: 2, fontWeight: 700 }}
                           >
-                            @{w.username} 📋
+                            @{w.username} 
                           </button>
                         )}
                         <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{fmtDate(w.createdAt)}</p>
@@ -613,7 +613,7 @@ export default function AdminDashboard() {
                           onClick={() => copyToClipboard(String(w.stars), `${w.stars} Stars — تم النسخ`)}
                           style={{ fontSize: 20, fontWeight: 900, color: "#FFD700", background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.25)", borderRadius: 10, padding: "4px 10px", cursor: "pointer", display: "block", marginBottom: 4 }}
                         >
-                          ⭐ {fmtN(Number(w.stars))}
+                           {fmtN(Number(w.stars))}
                         </button>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>{fmtN(Number(w.amount))} نقطة</p>
                       </div>
@@ -622,24 +622,24 @@ export default function AdminDashboard() {
                     {/* Status + ID */}
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 8, background: w.status === "pending" ? "rgba(245,158,11,0.15)" : w.status === "approved" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: w.status === "pending" ? "#FCD34D" : w.status === "approved" ? "#34D399" : "#FCA5A5" }}>
-                        {w.status === "pending" ? "⏳ معلق" : w.status === "approved" ? "✅ تم الإرسال" : "❌ مرفوض"}
+                        {w.status === "pending" ? "⏳ معلق" : w.status === "approved" ? " تم الإرسال" : " مرفوض"}
                       </span>
                       <button
                         onClick={() => copyToClipboard(String(w.telegramId), `ID: ${w.telegramId} — تم النسخ`)}
                         style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "3px 8px", cursor: "pointer" }}
                       >
-                        ID: {w.telegramId} 📋
+                        ID: {w.telegramId} 
                       </button>
                     </div>
 
                     {/* Action buttons */}
                     <div style={{ display: "flex", gap: 8 }}>
-                      {/* ⭐ Send Stars — opens profile */}
+                      {/*  Send Stars — opens profile */}
                       <button
                         onClick={() => openSendStars(w.telegramId, w.username)}
                         style={{ flex: 2, height: 42, borderRadius: 10, border: "1px solid rgba(255,215,0,0.4)", background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
                       >
-                        ⭐ أرسل {fmtN(Number(w.stars))} Stars
+                         أرسل {fmtN(Number(w.stars))} Stars
                       </button>
 
                       {/* Chat button */}
@@ -717,14 +717,14 @@ export default function AdminDashboard() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em" }}>نص الرسالة</p>
                     {broadcastTarget === "inactive" && (
-                      <button onClick={() => setBroadcastMsg(inactiveTemplate)} style={{ fontSize: 10, color: "#A78BFA", background: "rgba(139,92,246,0.15)", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 700 }}>📋 استخدم القالب</button>
+                      <button onClick={() => setBroadcastMsg(inactiveTemplate)} style={{ fontSize: 10, color: "#A78BFA", background: "rgba(139,92,246,0.15)", border: "none", borderRadius: 8, padding: "4px 10px", cursor: "pointer", fontWeight: 700 }}> استخدم القالب</button>
                     )}
                   </div>
                   <textarea
                     value={broadcastMsg}
                     onChange={e => setBroadcastMsg(e.target.value)}
                     rows={7}
-                    placeholder={broadcastTarget === "inactive" ? "مثال:\n👋 مرحباً {name}!\n\nلاحظنا أنك لم تلعب منذ فترة 😔\n🎁 لديك 5 دورة مجانية!\n💰 رصيدك: {balance} نقطة" : "اكتب رسالتك هنا..."}
+                    placeholder={broadcastTarget === "inactive" ? "مثال:\n مرحباً {name}!\n\nلاحظنا أنك لم تلعب منذ فترة 😔\n لديك 5 دورة مجانية!\n رصيدك: {balance} نقطة" : "اكتب رسالتك هنا..."}
                     style={{ width: "100%", borderRadius: 16, padding: 14, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: 1.7 }}
                   />
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>{broadcastMsg.length} / 1000 حرف</p>
@@ -738,7 +738,7 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: 13, color: "#E2E8F0", lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
                         {broadcastMsg.replace("{name}", "أحمد").replace("{balance}", "300")}
                       </p>
-                      <div style={{ marginTop: 12, background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 800, color: "#A78BFA", textAlign: "center" }}>🎮 افتح التطبيق</div>
+                      <div style={{ marginTop: 12, background: "rgba(139,92,246,0.2)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: 10, padding: "8px 14px", fontSize: 12, fontWeight: 800, color: "#A78BFA", textAlign: "center" }}> افتح التطبيق</div>
                     </div>
                   </div>
                 )}
@@ -750,11 +750,11 @@ export default function AdminDashboard() {
                   style={{ height: 56, borderRadius: 18, border: "none", background: broadcastMsg.trim() ? "linear-gradient(135deg,#EC4899,#DB2777)" : "rgba(255,255,255,0.05)", color: broadcastMsg.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 15, cursor: broadcastMsg.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, boxShadow: broadcastMsg.trim() ? "0 6px 24px rgba(236,72,153,0.35)" : "none" }}
                 >
                   {broadcastLoading ? <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Send size={20} />}
-                  {broadcastLoading ? "جاري الإرسال..." : broadcastTarget === "all" ? "🚀 إرسال لجميع المستخدمين" : "📩 إرسال للغائبين"}
+                  {broadcastLoading ? "جاري الإرسال..." : broadcastTarget === "all" ? " إرسال لجميع المستخدمين" : "📩 إرسال للغائبين"}
                 </button>
 
                 <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 14, padding: "12px 14px" }}>
-                  <p style={{ fontSize: 11, color: "#FCD34D", fontWeight: 700, marginBottom: 4 }}>⚠️ تنبيه</p>
+                  <p style={{ fontSize: 11, color: "#FCD34D", fontWeight: 700, marginBottom: 4 }}> تنبيه</p>
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>الإرسال يتم بمعدل 1 رسالة / 50ms لتجنب حظر Telegram. قد يستغرق وقتاً عند عدد كبير.</p>
                 </div>
               </div>
@@ -818,7 +818,7 @@ export default function AdminDashboard() {
                     <div style={{ position: "absolute", top: 2, left: codePostChannel ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: "#fff", transition: "left 0.2s", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
                   </div>
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 800, color: codePostChannel ? "#34D399" : "rgba(255,255,255,0.5)", margin: 0 }}>📢 نشر في القناة</p>
+                    <p style={{ fontSize: 12, fontWeight: 800, color: codePostChannel ? "#34D399" : "rgba(255,255,255,0.5)", margin: 0 }}> نشر في القناة</p>
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>إرسال الكود تلقائياً لقناة البوت</p>
                   </div>
                 </button>
@@ -828,7 +828,7 @@ export default function AdminDashboard() {
                   <div style={{ background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.15)", borderRadius: 14, padding: 14 }}>
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 700, textTransform: "uppercase", marginBottom: 10 }}>معاينة رسالة القناة</p>
                     <p style={{ fontSize: 12, color: "#E2E8F0", lineHeight: 2, margin: 0, direction: "rtl", whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
-                      {`🎁 كود مكافأة جديد!\n\n💰 الكود: ${codeInput.trim()}\n🏆 المكافأة: ${codeReward.toLocaleString()} نقطة\n⏰ صالح لمدة: ${codeExpiry} ساعة\n👥 أقصى عدد مستخدمين: ${codeMaxUses}\n\n🚀 استرد الآن من Mini App!`}
+                      {` كود مكافأة جديد!\n\n الكود: ${codeInput.trim()}\n المكافأة: ${codeReward.toLocaleString()} نقطة\n⏰ صالح لمدة: ${codeExpiry} ساعة\n👥 أقصى عدد مستخدمين: ${codeMaxUses}\n\n استرد الآن من Mini App!`}
                     </p>
                   </div>
                 )}
@@ -839,7 +839,7 @@ export default function AdminDashboard() {
                   style={{ height: 52, borderRadius: 16, border: "none", background: codeInput.trim() ? "linear-gradient(135deg,#10B981,#059669)" : "rgba(255,255,255,0.05)", color: codeInput.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 14, cursor: codeInput.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: codeInput.trim() ? "0 6px 24px rgba(16,185,129,0.3)" : "none" }}
                 >
                   {codeLoading ? <div style={{ width: 20, height: 20, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Gift size={18} />}
-                  {codeLoading ? "جاري الإنشاء..." : "🎁 إنشاء الكود" + (codePostChannel ? " ونشره في القناة" : "")}
+                  {codeLoading ? "جاري الإنشاء..." : " إنشاء الكود" + (codePostChannel ? " ونشره في القناة" : "")}
                 </button>
               </div>
             </Card>
@@ -866,7 +866,7 @@ export default function AdminDashboard() {
                 {codesQ.isLoading && <div style={{ textAlign: "center", padding: 24, color: "rgba(255,255,255,0.3)", fontSize: 13 }}>جاري التحميل...</div>}
                 {!codesQ.isLoading && (codesQ.data?.codes || []).length === 0 && (
                   <div style={{ textAlign: "center", padding: 30, color: "rgba(255,255,255,0.2)", fontSize: 13 }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>🎁</div>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}></div>
                     لا توجد أكواد بعد
                   </div>
                 )}
@@ -927,7 +927,7 @@ export default function AdminDashboard() {
                         {/* Row 2: Reward + Expiry */}
                         <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 8, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.15)" }}>
-                            <span style={{ fontSize: 11 }}>🏆</span>
+                            <span style={{ fontSize: 11 }}></span>
                             <span style={{ fontSize: 11, fontWeight: 800, color: "#FCD34D" }}>{c.reward.toLocaleString()}</span>
                             <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>نقطة</span>
                           </div>
@@ -942,7 +942,7 @@ export default function AdminDashboard() {
                         {/* Row 3: Redemption progress */}
                         <div style={{ marginBottom: !inactive ? 10 : 0 }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 700 }}>📊 الاستردادات</span>
+                            <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 700 }}> الاستردادات</span>
                             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                               <span style={{ fontSize: 13, fontWeight: 900, color: inactive ? "rgba(255,255,255,0.3)" : barColor }}>{c.usedCount}</span>
                               <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>/</span>

@@ -315,7 +315,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       {showAdOverlay && (
         <AdOverlay
           seconds={15}
-          rewardLabel={t.spin_extra إضافية 🎡"}
+          rewardLabel={t.spin_extra إضافية "}
           onClaim={handleAdClaim}
           onClose={() => { setShowAdOverlay(false); setPendingToken(null); onUnlock?.(); }}
         />
@@ -345,7 +345,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
             </button>
 
             <div style={{ textAlign: "center", marginBottom: 6 }}>
-              <div style={{ fontSize: 48, marginBottom: 4 }}>🛒</div>
+              <div style={{ fontSize: 48, marginBottom: 4 }}></div>
               <h3 style={{ fontSize: 20, fontWeight: 900, color: "#fff", margin: 0 }}>{t.spin_buy_title}</h3>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>
                 {`${t.current_balance}: `} <span style={{ color: "#facc15", fontWeight: 800 }}>{user.balance.toLocaleString()} {t.points}</span>
@@ -368,7 +368,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                       transition: "all 0.2s",
                     }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <span style={{ fontSize: 22 }}>{"🎡".repeat(Math.min(pkg.qty, 3))}</span>
+                      <span style={{ fontSize: 22 }}>{"".repeat(Math.min(pkg.qty, 3))}</span>
                       <div style={{ textAlign: "left" }}>
                         <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{pkg.label}</div>
                         {pkg.badge && (
@@ -412,14 +412,14 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                     marginBottom: 8,
                   }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 20 }}>⭐</span>
+                    <span style={{ fontSize: 20 }}></span>
                     <div style={{ textAlign: "left" }}>
                       <div style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{pkg.label}</div>
                       {pkg.badge && <div style={{ fontSize: 10, color: "#fde68a", fontWeight: 700 }}>{pkg.badge}</div>}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
-                    <div style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>{pkg.stars} ⭐</div>
+                    <div style={{ color: "#fff", fontWeight: 900, fontSize: 15 }}>{pkg.stars} </div>
                     <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 10 }}>نجمة</div>
                   </div>
                 </button>
@@ -458,7 +458,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
             </button>
 
             <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 56, marginBottom: 8 }}>🎡</div>
+              <div style={{ fontSize: 56, marginBottom: 8 }}></div>
             </div>
 
             <h3 style={{ fontSize: 22, fontWeight: 900, color: "#fff", textAlign: "center", marginBottom: 8 }}>

@@ -167,7 +167,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
             {canClaim && (
               <>
                 {[{ top: 5, left: 8, size: 10, delay: "0s" }, { top: 20, left: 95, size: 8, delay: "0.3s" }, { top: 60, left: 3, size: 6, delay: "0.6s" }, { top: 85, left: 90, size: 10, delay: "0.9s" }].map((s, i) => (
-                  <div key={i} style={{ position: "absolute", top: s.top, left: s.left, fontSize: s.size, animation: `starFloat 2.5s ease-in-out ${s.delay} infinite`, pointerEvents: "none" }}>⭐</div>
+                  <div key={i} style={{ position: "absolute", top: s.top, left: s.left, fontSize: s.size, animation: `starFloat 2.5s ease-in-out ${s.delay} infinite`, pointerEvents: "none" }}></div>
                 ))}
               </>
             )}
@@ -178,7 +178,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
         {showReward && (
           <div style={{ position: "fixed", inset: 0, zIndex: 99999, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
             <div style={{ background: "rgba(0,0,0,0.85)", borderRadius: 28, padding: "28px 40px", textAlign: "center", border: "2px solid rgba(250,204,21,0.5)", boxShadow: "0 0 60px rgba(250,204,21,0.3)", animation: "rewardPop 0.5s cubic-bezier(0.34,1.56,0.64,1) both" }}>
-              <div style={{ fontSize: 52, marginBottom: 10 }}>🎁</div>
+              <div style={{ fontSize: 52, marginBottom: 10 }}></div>
               <p style={{ fontSize: 28, fontWeight: 900, color: "#FDE68A", margin: 0 }}>+{reward.toLocaleString()}</p>
               <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 6 }}>{t.points}</p>
             </div>
@@ -191,7 +191,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{t.daily_gift_ready || "الهدية جاهزة!"}</span>
               <div style={{ background: "linear-gradient(135deg,#7c3aed,#4f46e5)", borderRadius: 14, padding: "8px 20px", cursor: "pointer", border: "1px solid rgba(167,139,250,0.4)" }} onClick={handleBoxClick}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>🎁 {t.open_gift || "افتح الهدية"}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}> {t.open_gift || "افتح الهدية"}</span>
               </div>
             </div>
           ) : (
