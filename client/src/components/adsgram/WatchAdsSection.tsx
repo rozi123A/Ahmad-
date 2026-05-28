@@ -68,7 +68,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       onLock?.();
       setShowAd(true);
     } catch (e: any) {
-      toast({ title: t.ad_error || "خطأ", description: e?.message || t.ad_error_desc, variant: "destructive" });
+      toast({ title: t.error, description: e?.message || t.ad_error_desc, variant: "destructive" });
     } finally {
       setTokenLoading(false);
     }
@@ -88,7 +88,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
         throw new Error(claimData.message || t.ad_error_desc);
       }
     } catch (error: any) {
-      toast({ title: t.ad_error || "خطأ", description: error.message || t.ad_error_desc, variant: "destructive" });
+      toast({ title: t.error, description: error.message || t.ad_error_desc, variant: "destructive" });
     } finally {
       setPendingToken(null);
       onUnlock?.();
@@ -212,8 +212,8 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
         <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "12px 16px" }}>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", lineHeight: 1.9, textAlign: "center" }}>
             📺 {t.watch_full_ad}<br/>
-            ⏱️ {(t.ad_cooldown_info || "كل إعلان مرة كل {cooldown} ثانية").replace("{cooldown}", String(user.adCooldown))}<br/>
-            🎯 {(t.daily_ads_limit || "الحد اليومي {limit} إعلان").replace("{limit}", "50")}
+            ⏱️ {t.ad_cooldown_info.replace("{cooldown}", String(user.adCooldown))}<br/>
+            🎯 {t.daily_ads_limit.replace("{limit}", "50")}
           </p>
         </div>
       </div>

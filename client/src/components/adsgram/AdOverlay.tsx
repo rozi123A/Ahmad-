@@ -212,7 +212,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
                 border:"2.5px solid rgba(14,165,233,0.3)", borderTopColor:"#0ea5e9",
                 borderRadius:"50%", animation:"adSpin 0.8s linear infinite", flexShrink:0,
               }}/>
-              <span style={{ color:"#fff", fontSize:14, fontWeight:700 }}>{t.ad_loading || "جاري تحميل الإعلان..."}</span>
+              <span style={{ color:"#fff", fontSize:14, fontWeight:700 }}>{t.ad_loading}</span>
             </div>
           </div>
         )}

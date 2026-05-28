@@ -211,7 +211,7 @@ export default function AdminDashboard() {
         toast({ title: t.admin_login_failed, description: t.admin_login_wrong_password, variant: "destructive" });
       }
     } catch {
-      toast({ title: t.error || "خطأ", description: t.admin_connection_error, variant: "destructive" });
+      toast({ title: t.error, description: t.admin_connection_error, variant: "destructive" });
     } finally {
       setAuthLoading(false);
     }
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
         toast({ title: t.admin_broadcast_failed, description: (res as any).message || t.error, variant: "destructive" });
       }
     } catch {
-      toast({ title: t.error || "خطأ", description: t.admin_broadcast_send_failed, variant: "destructive" });
+      toast({ title: t.error, description: t.admin_broadcast_send_failed, variant: "destructive" });
     } finally {
       setBroadcastLoading(false);
     }
@@ -263,7 +263,7 @@ export default function AdminDashboard() {
         toast({ title: "خطأ", description: (res as any).message || "فشل التحديث", variant: "destructive" });
       }
     } catch {
-      toast({ title: t.error || "خطأ", description: t.admin_connection_failed, variant: "destructive" });
+      toast({ title: t.error, description: t.admin_connection_failed, variant: "destructive" });
     } finally {
       setWithdrawActionLoading(null);
     }
