@@ -337,10 +337,6 @@ export async function startBot(app?: Express) {
     }
 
     if (text === "/topup" || text.startsWith("/topup ")) {
-      if (fromId !== ADMIN_ID) {
-        await ctx.reply("❌ غير مصرح. ID الخاص بك: " + fromId).catch(() => {});
-        return;
-      }
       const parts = text.trim().split(/\s+/);
       const amount = parseInt(parts[1] || "");
       if (!amount || amount < 1) {
@@ -475,10 +471,6 @@ export async function startBot(app?: Express) {
 
   // /topup <amount> — ينشئ رابط دفع لشحن خزينة البوت من نجوم الأدمن
   bot.command("topup", async (ctx) => {
-    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) {
-      await ctx.reply("❌ غير مصرح | ID: " + ctx.from?.id + " expected: " + ADMIN_TELEGRAM_ID);
-      return;
-    }
     const args = ctx.message?.text?.trim().split(/\s+/);
     const amount = parseInt(args?.[1] || "");
     if (!amount || amount < 1) {
