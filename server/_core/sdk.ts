@@ -209,7 +209,8 @@ class SDKServer {
     cookieValue: string | undefined | null
   ): Promise<{ openId: string; appId: string; name: string } | null> {
     if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
+      // Silent fail for missing cookies — this is expected for Telegram WebApp users
+      // Only log when debugging is enabled
       return null;
     }
 
