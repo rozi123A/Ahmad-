@@ -37,7 +37,7 @@ services:
       - key: AD_REWARD
         value: "100"
       - key: MIN_WITHDRAW
-        value: "10000"
+        value: "15000"
       - key: STARS_RATE
         value: "1000"
       - key: AD_COOLDOWN
