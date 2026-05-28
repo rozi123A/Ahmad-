@@ -469,6 +469,47 @@ export async function startBot(app?: Express) {
     }
   });
 
+  // /givespins <telegramId> <quantity> — يعطي دورات مجاناً للتجربة (أدمن فقط)
+  bot.command("givespins", async (ctx) => {
+    if (ctx.from?.id !== ADMIN_TELEGRAM_ID) {
+      await ctx.reply("❌ غير مصرح");
+      return;
+    }
+    const args = ctx.message?.text?.trim().split(/\s+/);
+    const targetId = parseInt(args?.[1] || "");
+    const qty      = parseInt(args?.[2] || "1");
+    if (!targetId || isNaN(qty) || qty < 1 || qty > 50) {
+      await ctx.reply(
+        "⚠️ الاستخدام:\n/givespins <telegram_id> <عدد الدورات>\n\nمثال:\n/givespins 5279238199 5\nيعطي 5 دورات مجانية للاختبار"
+      );
+      return;
+    }
+    try {
+      const user = await getTelegramUser(targetId);
+      if (!user) {
+        await ctx.reply(`❌ المستخدم ${targetId} غير موجود في قاعدة البيانات.\n\nتأكد أنه فتح البوت مرة واحدة على الأقل.`);
+        return;
+      }
+      const currentSpins = Number(user.spinsLeft) || 0;
+      await upsertTelegramUser({ telegramId: targetId, spinsLeft: currentSpins + qty });
+      await createTransaction({
+        telegramId: targetId,
+        type: "bonus",
+        points: 0,
+        metadata: JSON.stringify({ action: "admin_give_spins", quantity: qty, by: ctx.from?.id }),
+      });
+      await ctx.reply(
+        `✅ تم!\n🎡 أُضيفت ${qty} دورة للمستخدم ${targetId}\n📊 الدورات الآن: ${currentSpins + qty}`
+      );
+      // إشعار المستخدم
+      try {
+        await bot.telegram.sendMessage(targetId, `🎁 حصلت على ${qty} دورة مجانية في عجلة الحظ!\nافتح التطبيق والعب الآن 🎡`);
+      } catch (_) {}
+    } catch (e: any) {
+      await ctx.reply("❌ خطأ: " + (e?.message || "فشل"));
+    }
+  });
+
   // /topup <amount> — ينشئ رابط دفع لشحن خزينة البوت من نجوم الأدمن
   bot.command("topup", async (ctx) => {
     const args = ctx.message?.text?.trim().split(/\s+/);
