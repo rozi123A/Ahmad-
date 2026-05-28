@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Clock } from "lucide-react";
+import { Clock } from "@phosphor-icons/react";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";

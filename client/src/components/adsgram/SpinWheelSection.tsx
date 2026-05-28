@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gift, Sparkles, Tv2, X, ShoppingCart, Zap } from "lucide-react";
+import { Gift, Sparkle, Television, X, ShoppingCart, Lightning } from "@phosphor-icons/react";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";
@@ -492,7 +492,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 marginBottom: 10,
               }}
             >
-              <Tv2 size={20} />
+              <Television size={20} />
               {tokenLoading ? "..." : adSpinsLeft > 0 ? t.watch_ad_earn_spin : t.no_more_daily_ads}
             </button>
 
@@ -530,7 +530,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               </span>
             </div>
             <div className="flex items-center gap-1 px-3 py-1 bg-slate-800/50 rounded-full border border-slate-700/50">
-              <Sparkles className="h-3 w-3 text-yellow-400" />
+              <Sparkle className="h-3 w-3 text-yellow-400" />
               <span className="text-xs font-medium text-yellow-400">{t.big_prizes}</span>
             </div>
           </CardTitle>
@@ -618,7 +618,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                   border: "none", cursor: adSpinsLeft > 0 && !tokenLoading ? "pointer" : "not-allowed",
                 }}
               >
-                <Tv2 className="h-5 w-5" />
+                <Television className="h-5 w-5" />
                 {tokenLoading ? "..." : adSpinsLeft > 0 ? t.watch_ad_earn_spin : t.no_more_daily_ads}
               </button>
               <button

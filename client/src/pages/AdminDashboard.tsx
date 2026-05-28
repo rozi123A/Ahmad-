@@ -3,10 +3,10 @@ import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { translations } from "@/lib/i18n";
 import {
-  Users, TrendingUp, Wallet, Send, Shield, BarChart3,
-  Eye, EyeOff, RefreshCw, Ban, CheckCircle,
-  Megaphone, LogOut, MessageCircle, XCircle, Search, Bell, Gift, Trash2, Copy, Wand2
-} from "lucide-react";
+  Users, TrendUp, Wallet, PaperPlaneTilt, Shield, ChartBar,
+  Eye, EyeSlash, ArrowCounterClockwise, Prohibit, CheckCircle,
+  Broadcast, SignOut, ChatCircle, XCircle, MagnifyingGlass, Bell, Gift, Trash, Copy, MagicWand
+} from "@phosphor-icons/react";
 
 const fmtN = (n: number) => n?.toLocaleString() ?? "0";
 const fmtDate = (d: string) =>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-    import { ChevronRight, History } from "lucide-react";
+    import { CaretRight, ClockCounterClockwise } from "@phosphor-icons/react";
     import { translations, type Language } from "@/lib/i18n";
     import WatchAdsSection from "@/components/adsgram/WatchAdsSection";
     import SpinWheelSection from "@/components/adsgram/SpinWheelSection";
@@ -668,7 +668,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span style={{ fontSize: 11, fontWeight: 800, color: a.color, background: `${a.color}18`, borderRadius: 8, padding: "3px 9px" }}>{a.sub}</span>
-                        <ChevronRight size={15} style={{ color: "rgba(255,255,255,0.2)" }} />
+                        <CaretRight size={15} style={{ color: "rgba(255,255,255,0.2)" }} />
                       </div>
                     </button>
                   ))}
@@ -677,7 +677,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 {/* Activity */}
                 <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, overflow: "hidden", marginBottom: 4 }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 8 }}>
-                    <History size={14} style={{ color: "rgba(255,255,255,0.35)" }} />
+                    <ClockCounterClockwise size={14} style={{ color: "rgba(255,255,255,0.35)" }} />
                     <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.activity_log}</span>
                   </div>
                   <div style={{ padding: "12px 14px", maxHeight: 280, overflowY: "auto" }}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Share2, Copy, Check, Users, TrendingUp, Gift } from "lucide-react";
+import { ShareNetwork, Copy, Check, Users, TrendUp, Gift } from "@phosphor-icons/react";
 import { useToast } from "@/hooks/use-toast";
 import { translations, type Language } from "@/lib/i18n";
 import { trpc } from "@/lib/trpc";
@@ -65,7 +65,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {[
           { icon: <Users size={22} />, color: "#3B82F6", bg: "rgba(59,130,246,0.1)", border: "rgba(59,130,246,0.2)", label: t.referral_count || "الأصدقاء", value: stats?.count ?? 0 },
-          { icon: <TrendingUp size={22} />, color: "#FFD700", bg: "rgba(255,215,0,0.08)", border: "rgba(255,215,0,0.2)", label: t.referral_earned || "نقاطك من الإحالة", value: (stats?.totalEarned ?? 0).toLocaleString() },
+          { icon: <TrendUp size={22} />, color: "#FFD700", bg: "rgba(255,215,0,0.08)", border: "rgba(255,215,0,0.2)", label: t.referral_earned || "نقاطك من الإحالة", value: (stats?.totalEarned ?? 0).toLocaleString() },
         ].map((s, i) => (
           <div key={i} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 20, padding: 20, textAlign: "center" }}>
             <div style={{ color: s.color, marginBottom: 8, display: "flex", justifyContent: "center" }}>{s.icon}</div>
@@ -123,7 +123,7 @@ export default function ReferralSection({ user, lang, initData }: ReferralSectio
           {copied ? t.copied || "تم النسخ!" : t.copy || "نسخ"}
         </button>
         <button onClick={handleShare} style={{ height: 54, borderRadius: 18, border: "none", background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontWeight: 800, fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 20px rgba(59,130,246,0.35)" }}>
-          <Share2 size={18} />
+          <ShareNetwork size={18} />
           {t.share || "مشاركة"}
         </button>
       </div>

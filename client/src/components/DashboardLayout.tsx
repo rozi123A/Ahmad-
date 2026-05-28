@@ -22,30 +22,24 @@ import {
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
 import { 
-  LayoutDashboard, 
-  LogOut, 
-  PanelLeft, 
+  House, 
+  ChartBar,
   Users,
-  Home,
-  Settings,
-  Bell,
-  Search,
-  Plus,
-  Star,
-  Heart,
-  Sparkles,
-} from "lucide-react";
+  Gear,
+  SignOut,
+  List,
+} from "@phosphor-icons/react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-// Professional icon configuration with gradient effects
+// Premium Phosphor icons configuration
 const menuItems = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: LayoutDashboard, label: "Dashboard", path: "/some-path" },
+  { icon: House, label: "Home", path: "/" },
+  { icon: ChartBar, label: "Dashboard", path: "/some-path" },
   { icon: Users, label: "Team", path: "/team" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: Gear, label: "Settings", path: "/settings" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -182,7 +176,7 @@ function DashboardLayoutContent({
                 className="h-8 w-8 flex items-center justify-center hover:bg-accent rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
                 aria-label="Toggle navigation"
               >
-                <PanelLeft className="h-4 w-4 text-muted-foreground" />
+                <List className="h-5 w-5 text-muted-foreground" />
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
@@ -210,9 +204,11 @@ function DashboardLayoutContent({
                       {isActive && (
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5 rounded-lg" />
                       )}
-                      {/* Icon with professional styling */}
-                      <item.icon
-                        className={`h-4 w-4 relative z-10 transition-all duration-300 ${
+                      {/* Phosphor Icon with professional styling */}
+                      <item.icon 
+                        size={20} 
+                        weight={isActive ? "fill" : "regular"} 
+                        className={`relative z-10 transition-all duration-300 ${
                           isActive 
                             ? "text-primary drop-shadow-lg" 
                             : "text-muted-foreground group-hover:text-foreground"
@@ -252,7 +248,7 @@ function DashboardLayoutContent({
                   onClick={logout}
                   className="cursor-pointer text-destructive focus:text-destructive"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
+                  <SignOut size={18} className="mr-2" />
                   <span>Sign out</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
