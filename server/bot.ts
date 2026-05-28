@@ -585,6 +585,44 @@ export async function startBot(app?: Express) {
       return;
     }
 
+    // شراء نقاط بالنجوم — buy_points_<telegramId>_<packageId>_<points>_<timestamp>
+    if (msg?.successful_payment && msg.successful_payment.invoice_payload?.startsWith("buy_points_")) {
+      const parts  = (msg.successful_payment.invoice_payload as string).split("_");
+      const telegramId = parseInt(parts[2] || "0");
+      const points     = parseInt(parts[4] || "0");
+      const stars      = msg.successful_payment.total_amount;
+      if (telegramId > 0 && points > 0) {
+        try {
+          const { getTelegramUser, upsertTelegramUser, createTransaction } = await import("./db");
+          const user = await getTelegramUser(telegramId);
+          if (user) {
+            const newBalance = (Number(user.balance) || 0) + points;
+            await upsertTelegramUser({ telegramId, balance: newBalance });
+            await createTransaction({
+              telegramId,
+              type: "bonus",
+              points,
+              metadata: JSON.stringify({ action: "buy_points_stars", stars, points }),
+            });
+          }
+        } catch (_) {}
+      }
+      try {
+        const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+        await ctx.reply(
+          `✅ *تم الشراء بنجاح!*\n\n` +
+          `⭐ دفعت: *${stars} نجمة*\n` +
+          `💰 حصلت على: *${points.toLocaleString()} نقطة* أُضيفت لرصيدك فوراً\n\n` +
+          `العب أكثر واجمع نقاطك لطلب السحب! 🚀`,
+          {
+            parse_mode: "Markdown",
+            ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] } } : {}),
+          } as any
+        );
+      } catch (_) {}
+      return;
+    }
+
     return next();
   });
 
