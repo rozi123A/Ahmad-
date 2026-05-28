@@ -117,7 +117,7 @@ import { useState, useEffect } from "react";
                   background: task.type === "bot" ? "rgba(99,102,241,0.2)" : "rgba(59,130,246,0.2)",
                   display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
                 }}>
-                  {task.type === "bot" ? "🤖" : ""}
+                  {task.type === "bot" ? "◆" : ""}
                 </div>
 
                 {/* Info */}

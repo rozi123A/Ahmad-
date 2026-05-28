@@ -259,7 +259,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   const handleBuySpins = async (qty: number, price: number) => {
     if (buyLoading) return;
     if (user.balance < price) {
-      toast({ title: t.insufficient_balance غير كافٍ 😔", description: `${t.need_points"} ${price} ${t.points}. ${t.current_balance الحالي"}: ${user.balance} ${t.points}`, variant: "destructive" });
+      toast({ title: t.insufficient_balance غير كافٍ ○", description: `${t.need_points"} ${price} ${t.points}. ${t.current_balance الحالي"}: ${user.balance} ${t.points}`, variant: "destructive" });
       return;
     }
     setBuyLoading(true);
@@ -462,7 +462,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
             </div>
 
             <h3 style={{ fontSize: 22, fontWeight: 900, color: "#fff", textAlign: "center", marginBottom: 8 }}>
-              {t.spin_no_spins دوراتك اليومية! 😅"}
+              {t.spin_no_spins دوراتك اليومية! ☺"}
             </h3>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textAlign: "center", marginBottom: 24, lineHeight: 1.6 }}>
               {t.spin_ad_desc إعلاناً قصيراً واحصل على دورة إضافية."}<br />

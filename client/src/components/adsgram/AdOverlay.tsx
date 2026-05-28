@@ -28,7 +28,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
         <div style={{ background:"linear-gradient(135deg,#a855f7,#ec4899)", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>PLAY FREE NOW</div>
       </div>,
       <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0d1b2a,#1b4332,#2d6a4f)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
-        <div style={{ fontSize:64 }}>🛍️</div>
+        <div style={{ fontSize:64 }}>◈️</div>
         <p style={{ color:"#fff", fontWeight:900, fontSize:24, margin:0, textAlign:"center" }}>MEGA SALE — 90% OFF</p>
         <p style={{ color:"#6ee7b7", fontSize:15, margin:0 }}>Limited time offer today only!</p>
         <div style={{ background:"#f59e0b", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#000", fontWeight:900, fontSize:16 }}>SHOP NOW </div>

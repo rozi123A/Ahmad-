@@ -84,7 +84,7 @@ export default function LeaderboardSection({ myTelegramId, lang }: LeaderboardSe
   /* ── Podium card ── */
   function PodiumCard({ u, idx }: { u: LeaderboardUser; idx: number }) {
     const size = idx === 0 ? 46 : 38;
-    const medals = ["🥇","🥈","🥉"];
+    const medals = ["①","②","③"];
     return (
       <div style={{ flex: idx === 0 ? 1.2 : 1,
         background: PODIUM_BG[idx], borderRadius: idx === 0 ? 20 : 18,
