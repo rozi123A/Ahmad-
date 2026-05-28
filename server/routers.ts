@@ -972,18 +972,16 @@ export const appRouter = router({
             const msg = input.status === "approved"
               ? starsResult.success
                 ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
-                  `⭐ لقد أرسلنا لك هدية بقيمة *${starsResult.sent.toLocaleString()} Stars* إلى حسابك\n` +
+                  `⭐ أرسلنا لك هدية بقيمة *${starsResult.sent.toLocaleString()} نجمة*\n` +
                   `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                  `📌 *ملاحظة مهمة:* ستصلك رسالة هدية من تيليغرام\n` +
-                  `اضغط على زر *"عرض"* ثم اختر *"تحويل إلى نجوم"* لإضافتها إلى رصيدك ⭐\n\n` +
-                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+                  `📌 *لاستلام نجومك اتبع الخطوات أدناه* 👇`
                 : `✅ *تمت الموافقة على طلب السحب*\n\n` +
-                  `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} Stars* قيد المعالجة\n` +
+                  `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} نجمة* قيد المعالجة\n` +
                   `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
                   `⚠️ ${starsResult.error || "سيتم الإرسال يدوياً من الإدارة خلال 24 ساعة"}\n\n` +
                   `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
               : `❌ *تم رفض طلب السحب*\n\n` +
-                `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
+                `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ نجمة*\n` +
                 `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                 `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                 `تواصل مع الدعم إذا كان لديك استفسار.`;
@@ -1002,6 +1000,32 @@ export const appRouter = router({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(body),
             }).catch(() => {});
+
+            // ── إرسال رسالة إرشادية ثانية عند نجاح إرسال الهدية ──
+            if (input.status === "approved" && starsResult.success) {
+              const guideMsg =
+                `📋 *كيف تستلم نجومك في 3 خطوات:*\n\n` +
+                `1️⃣ اضغط على *ملفك الشخصي* (اسمك في أعلى تيليغرام)\n\n` +
+                `2️⃣ مرر للأسفل وابحث عن قسم *"الهدايا"* واضغط عليه\n\n` +
+                `3️⃣ اضغط على الهدية ثم اختر *"بيع"* — ستُضاف النجوم فوراً لرصيدك ⭐\n\n` +
+                `━━━━━━━━━━━━━━━\n` +
+                `💡 *أو* اضغط الزر أدناه للذهاب مباشرة لصفحة نجومك`;
+              fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  chat_id: w.telegramId,
+                  text: guideMsg,
+                  parse_mode: "Markdown",
+                  reply_markup: JSON.stringify({
+                    inline_keyboard: [
+                      [{ text: "⭐ صفحة نجومي", url: "https://t.me/stars" }],
+                      ...(webappUrl ? [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] : []),
+                    ],
+                  }),
+                }),
+              }).catch(() => {});
+            }
           }
         }
 
