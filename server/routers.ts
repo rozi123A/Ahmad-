@@ -22,7 +22,8 @@ import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel, sendStarsGi
 import { z } from "zod";
 import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
-  createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode } from "./db";
+  createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
+  getUserWallets, updateUserTonWallet, updateUserUsdtWallet } from "./db";
 import { eq } from "drizzle-orm";
 import { telegramUsers, withdrawals, transactions } from "../drizzle/schema";
 import crypto from "crypto";
@@ -805,7 +806,12 @@ export const appRouter = router({
   withdraw: router({
     // Create a new withdrawal request
     request: publicProcedure
-      .input(z.object({ telegramId: z.number(), amount: z.number().int().positive().min(10000), initData: z.string() }))
+      .input(z.object({ 
+        telegramId: z.number(), 
+        amount: z.number().int().positive().min(10000), 
+        initData: z.string(),
+        method: z.enum(["telegram_stars", "ton", "usdt"]).default("telegram_stars")
+      }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) {
@@ -842,6 +848,14 @@ export const appRouter = router({
           return { success: false, message: `الحد الأدنى للسحب هو 15,000 نقطة (= 15 نجمة)` };
         }
 
+        // Validate wallet for TON/USDT methods
+        if (input.method === "ton" && !user.tonWallet) {
+          return { success: false, message: "⚠️ يجب إضافة عنوان محفظة TON أولاً من الإعدادات" };
+        }
+        if (input.method === "usdt" && !user.usdtWallet) {
+          return { success: false, message: "⚠️ يجب إضافة عنوان محفظة USDT (TRC-20) أولاً من الإعدادات" };
+        }
+
         const pool = await getPool();
         if (!pool) return { success: false, message: "قاعدة البيانات غير متوفرة" };
 
@@ -865,6 +879,11 @@ export const appRouter = router({
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS method varchar(50) DEFAULT 'telegram_stars'`);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS note text`);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at timestamp`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_tx_hash VARCHAR(100)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_amount VARCHAR(50)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_tx_hash VARCHAR(200)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_amount VARCHAR(50)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_wallet VARCHAR(100)`);
         } catch (_) {}
 
         const client = await pool.connect();
@@ -886,18 +905,19 @@ export const appRouter = router({
             [input.amount, input.telegramId]
           );
 
-          // 3. Create withdrawal record (only use guaranteed columns)
+          // 3. Create withdrawal record with method and wallet
+          const userWallet = input.method === "ton" ? user.tonWallet : input.method === "usdt" ? user.usdtWallet : null;
           await client.query(
-            `INSERT INTO withdrawals (telegram_id, amount, stars, status)
-             VALUES ($1, $2, $3, 'pending')`,
-            [input.telegramId, input.amount, stars]
+            `INSERT INTO withdrawals (telegram_id, amount, stars, status, method, user_wallet)
+             VALUES ($1, $2, $3, 'pending', $4, $5)`,
+            [input.telegramId, input.amount, stars, input.method, userWallet]
           );
 
           // 4. Create transaction record
           await client.query(
             `INSERT INTO transactions (telegram_id, type, points, metadata)
              VALUES ($1, 'withdraw', $2, $3)`,
-            [input.telegramId, -input.amount, JSON.stringify({ stars, status: "pending" })]
+            [input.telegramId, -input.amount, JSON.stringify({ stars, status: "pending", method: input.method })]
           );
 
           await client.query("COMMIT");
@@ -916,15 +936,20 @@ export const appRouter = router({
         if (botToken && adminId) {
           const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || "مجهول";
           const username = user.username ? `@${user.username}` : "بدون username";
+          const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : 
+                              input.method === "ton" ? "💎 TON" : "💵 USDT (TRC-20)";
+          const methodIcon = input.method === "telegram_stars" ? "⭐" : input.method === "ton" ? "💎" : "💵";
           const msg = [
-            `🔔 <b>طلب سحب جديد</b>`,
+            `🔔 <b>طلب سحب جديد (${methodLabel})</b>`,
             ``,
             `👤 الاسم: <b>${name}</b>`,
             `🔗 المعرف: ${username}`,
             `🆔 Telegram ID: <code>${input.telegramId}</code>`,
             ``,
             `💰 النقاط: <b>${input.amount.toLocaleString()}</b>`,
-            `⭐ النجوم: <b>${stars}</b>`,
+            `${methodIcon} المبلغ: <b>${stars}</b> ${input.method === "telegram_stars" ? "نجمة" : ""}`,
+            `📦 الطريقة: <b>${methodLabel}</b>`,
+            input.method !== "telegram_stars" && userWallet ? `🔗 المحفظة: <code>${userWallet}</code>` : "",
             ``,
             `📋 حالة الطلب: قيد المعالجة`,
             `⏰ الوقت: ${new Date().toLocaleString("ar-SA")}`,
@@ -939,7 +964,13 @@ export const appRouter = router({
           }).catch(() => {});
         }
 
-        return { success: true, stars, message: "تم إرسال طلب السحب بنجاح! سيتم المعالجة خلال 24 ساعة." };
+        const methodMsg = input.method === "telegram_stars" 
+          ? "⏰ سيتم إرسال النجوم خلال 24 ساعة (تصل كهدية في Telegram)"
+          : input.method === "ton" 
+          ? "⏰ سيتم إرسال TON خلال 24 ساعة"
+          : "⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة";
+
+        return { success: true, stars, method: input.method, message: `✅ تم إرسال طلب السحب بنجاح!\n\n${methodMsg}` };
       }),
 
     // Get current user's withdrawal history
@@ -949,6 +980,43 @@ export const appRouter = router({
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) return [];
         return await getUserWithdrawals(input.telegramId, 10);
+      }),
+
+    // Get user's wallet addresses
+    getWallets: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string() }))
+      .query(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { tonWallet: null, usdtWallet: null };
+        return await getUserWallets(input.telegramId);
+      }),
+
+    // Update TON wallet address
+    updateTonWallet: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), wallet: z.string().min(20).max(100) }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "غير مصرح" };
+        try {
+          await updateUserTonWallet(input.telegramId, input.wallet);
+          return { success: true, message: "✅ تم تحديث محفظة TON بنجاح" };
+        } catch (err: any) {
+          return { success: false, message: err.message || "فشل تحديث المحفظة" };
+        }
+      }),
+
+    // Update USDT wallet address
+    updateUsdtWallet: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), wallet: z.string().min(30).max(50) }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "غير مصرح" };
+        try {
+          await updateUserUsdtWallet(input.telegramId, input.wallet);
+          return { success: true, message: "✅ تم تحديث محفظة USDT بنجاح" };
+        } catch (err: any) {
+          return { success: false, message: err.message || "فشل تحديث المحفظة" };
+        }
       }),
 
     // Admin: get all pending withdrawals (only if adminId matches env)
@@ -997,7 +1065,7 @@ export const appRouter = router({
           input.note
         );
 
-        // إشعار المستخدم + إشعار الأدمن لإرسال النجوم يدوياً
+        // إشعار المستخدم + إشعار الأدمن لإرسال النجوم/تون/USDT يدوياً
         const botToken = ENV.botToken;
         const adminId  = ENV.adminTelegramId;
         if (botToken) {
@@ -1007,37 +1075,109 @@ export const appRouter = router({
             const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
             const userTag   = w.username ? `@${w.username}` : `ID: ${w.telegramId}`;
             const userName  = w.firstName || w.username || String(w.telegramId);
+            const method    = w.method || "telegram_stars";
 
-            // ── إرسال النجوم تلقائياً من رصيد البوت + إشعار المستخدم ──
+            // ── الموافقة على السحب ──
             if (input.status === "approved") {
-              // إرسال الهدية تلقائياً من رصيد البوت
-              let starsResult: { success: boolean; sent: number; error?: string } = { success: false, sent: 0 };
-              starsResult = await sendStarsGift(botToken, Number(w.telegramId), Number(w.stars)).catch((e) => ({
-                success: false, sent: 0, error: e?.message || "خطأ غير متوقع"
-              }));
+              if (method === "telegram_stars") {
+                // إرسال الهدية تلقائياً من رصيد البوت
+                let starsResult: { success: boolean; sent: number; error?: string } = { success: false, sent: 0 };
+                starsResult = await sendStarsGift(botToken, Number(w.telegramId), Number(w.stars)).catch((e) => ({
+                  success: false, sent: 0, error: e?.message || "خطأ غير متوقع"
+                }));
 
-              if (starsResult.success) {
-                // ── رسالة النجاح للمستخدم ──
-                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    chat_id: w.telegramId,
-                    text:
-                      `🎁 *وصلتك هدية نجوم!*\n\n` +
-                      `⭐ أرسلنا لك *${starsResult.sent} نجمة* من رصيد البوت\n` +
-                      `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                      `📌 *خطوة واحدة فقط لاستلام نجومك:*\n` +
-                      `اذهب إلى ملفك الشخصي ← تبويب *"الهدايا 💝"*\n` +
-                      `ثم اضغط على الهدية — ستجد زر *"استبدالها بالنجوم"*\n` +
-                      `وستُضاف فوراً لخانة *نجومي ⭐*\n\n` +
-                      `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
-                    parse_mode: "Markdown",
-                    ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
-                  }),
-                }).catch(() => {});
+                if (starsResult.success) {
+                  // ── رسالة النجاح للمستخدم ──
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: w.telegramId,
+                      text:
+                        `🎁 *وصلتك هدية نجوم!*\n\n` +
+                        `⭐ أرسلنا لك *${starsResult.sent} نجمة* من رصيد البوت\n` +
+                        `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                        `📌 *خطوة واحدة فقط لاستلام نجومك:*\n` +
+                        `اذهب إلى ملفك الشخصي ← تبويب *"الهدايا 💝"*\n` +
+                        `ثم اضغط على الهدية — ستجد زر *"استبدالها بالنجوم"*\n` +
+                        `وستُضاف فوراً لخانة *نجومي ⭐*\n\n` +
+                        `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+                      parse_mode: "Markdown",
+                    }),
+                  }).catch(() => {});
 
-                // إشعار الأدمن بنجاح الإرسال التلقائي
+                  // إشعار الأدمن بنجاح الإرسال التلقائي
+                  if (adminId) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: adminId,
+                        text:
+                          `✅ *تم إرسال النجوم تلقائياً*\n\n` +
+                          `👤 المستخدم: *${userName}* (${userTag})\n` +
+                          `⭐ أُرسلت: *${starsResult.sent} نجمة* من رصيد البوت\n` +
+                          `💰 النقاط: ${Number(w.amount).toLocaleString()}\n\n` +
+                          `تم إشعار المستخدم بخطوة تحويل الهدية إلى نجومي ✔️`,
+                        parse_mode: "Markdown",
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: [[
+                            { text: "✅ تم الإرسال — مكتمل", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${starsResult.sent}` },
+                            { text: "❌ رفض وإعادة النقاط", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                          ]],
+                        }),
+                      }),
+                    }).catch(() => {});
+                  }
+
+                } else {
+                  // ── فشل الإرسال التلقائي — إشعار الأدمن للتدخل اليدوي ──
+                  if (adminId) {
+                    const profileLink = w.username ? `https://t.me/${w.username}` : `tg://user?id=${w.telegramId}`;
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: adminId,
+                        text:
+                          `⚠️ *فشل الإرسال التلقائي — يلزم تدخل يدوي*\n\n` +
+                          `👤 المستخدم: *${userName}* (${userTag})\n` +
+                          `🆔 ID: \`${w.telegramId}\`\n` +
+                          `⭐ المبلغ: *${Number(w.stars)} نجمة*\n` +
+                          `❌ السبب: ${starsResult.error || "رصيد البوت غير كافٍ"}\n\n` +
+                          `📋 أرسل النجوم يدوياً:\n` +
+                          `الإعدادات ← *نجومي* ← *إرسال نجوم* ← ${userTag} ← *${Number(w.stars)}*`,
+                        parse_mode: "Markdown",
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: [
+                            [{ text: `👤 فتح ملف ${userName}`, url: profileLink }],
+                            [
+                              { text: "✅ تم إرسالها يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                              { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                            ],
+                          ],
+                        }),
+                      }),
+                    }).catch(() => {});
+                  }
+                  // إشعار المستخدم بأن طلبه قيد المعالجة
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: w.telegramId,
+                      text:
+                        `✅ *تمت الموافقة على طلب السحب!*\n\n` +
+                        `⭐ *${Number(w.stars)} نجمة* ستصلك خلال دقائق\n` +
+                        `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
+                        `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+                      parse_mode: "Markdown",
+                    }),
+                  }).catch(() => {});
+                }
+
+              } else if (method === "ton") {
+                // ── إشعار الأدمن لمعالجة TON يدوياً ──
                 if (adminId) {
                   fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: "POST",
@@ -1045,53 +1185,24 @@ export const appRouter = router({
                     body: JSON.stringify({
                       chat_id: adminId,
                       text:
-                        `✅ *تم إرسال النجوم تلقائياً*\n\n` +
+                        `💎 *طلب سحب TON جديد*\n\n` +
                         `👤 المستخدم: *${userName}* (${userTag})\n` +
-                        `⭐ أُرسلت: *${starsResult.sent} نجمة* من رصيد البوت\n` +
-                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n\n` +
-                        `تم إشعار المستخدم بخطوة تحويل الهدية إلى نجومي ✔️`,
+                        `🆔 ID: \`${w.telegramId}\`\n` +
+                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
+                        `💎 TON المطلوب: ~${Number(w.stars)} (حسب السعر)\n` +
+                        `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
+                        `📋 يجب إرسال TON يدوياً ثم الضغط على "تم الإرسال"`,
                       parse_mode: "Markdown",
                       reply_markup: JSON.stringify({
                         inline_keyboard: [[
-                          { text: "✅ تم الإرسال — مكتمل", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${starsResult.sent}` },
-                          { text: "❌ رفض وإعادة النقاط", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                          { text: `✅ تم إرسال TON`, callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                          { text: `❌ رفض الطلب`, callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
                         ]],
                       }),
                     }),
                   }).catch(() => {});
                 }
-
-              } else {
-                // ── فشل الإرسال التلقائي — إشعار الأدمن للتدخل اليدوي ──
-                if (adminId) {
-                  const profileLink = w.username ? `https://t.me/${w.username}` : `tg://user?id=${w.telegramId}`;
-                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      chat_id: adminId,
-                      text:
-                        `⚠️ *فشل الإرسال التلقائي — يلزم تدخل يدوي*\n\n` +
-                        `👤 المستخدم: *${userName}* (${userTag})\n` +
-                        `🆔 ID: \`${w.telegramId}\`\n` +
-                        `⭐ المبلغ: *${Number(w.stars)} نجمة*\n` +
-                        `❌ السبب: ${starsResult.error || "رصيد البوت غير كافٍ"}\n\n` +
-                        `📋 أرسل النجوم يدوياً:\n` +
-                        `الإعدادات ← *نجومي* ← *إرسال نجوم* ← ${userTag} ← *${Number(w.stars)}*`,
-                      parse_mode: "Markdown",
-                      reply_markup: JSON.stringify({
-                        inline_keyboard: [
-                          [{ text: `👤 فتح ملف ${userName}`, url: profileLink }],
-                          [
-                            { text: "✅ تم إرسالها يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                            { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                          ],
-                        ],
-                      }),
-                    }),
-                  }).catch(() => {});
-                }
-                // إشعار المستخدم بأن طلبه قيد المعالجة
+                // إشعار المستخدم
                 fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -1099,17 +1210,59 @@ export const appRouter = router({
                     chat_id: w.telegramId,
                     text:
                       `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `⭐ *${Number(w.stars)} نجمة* ستصلك خلال دقائق\n` +
-                      `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                      `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+                      `💎 المبلغ: ~${Number(w.stars)} TON\n` +
+                      `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
+                      `⏰ سيتم إرسال TON خلال 24 ساعة\n\n` +
+                      `شكراً لك! 🚀`,
                     parse_mode: "Markdown",
-                    ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
+                  }),
+                }).catch(() => {});
+
+              } else if (method === "usdt") {
+                // ── إشعار الأدمن لمعالجة USDT يدوياً ──
+                if (adminId) {
+                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      chat_id: adminId,
+                      text:
+                        `💵 *طلب سحب USDT (TRC-20) جديد*\n\n` +
+                        `👤 المستخدم: *${userName}* (${userTag})\n` +
+                        `🆔 ID: \`${w.telegramId}\`\n` +
+                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
+                        `💵 USDT المطلوب: ~${Number(w.stars)} (حسب السعر)\n` +
+                        `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
+                        `📋 يجب إرسال USDT يدوياً ثم الضغط على "تم الإرسال"`,
+                      parse_mode: "Markdown",
+                      reply_markup: JSON.stringify({
+                        inline_keyboard: [[
+                          { text: `✅ تم إرسال USDT`, callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                          { text: `❌ رفض الطلب`, callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                        ]],
+                      }),
+                    }),
+                  }).catch(() => {});
+                }
+                // إشعار المستخدم
+                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chat_id: w.telegramId,
+                    text:
+                      `✅ *تمت الموافقة على طلب السحب!*\n\n` +
+                      `💵 المبلغ: ~${Number(w.stars)} USDT\n` +
+                      `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
+                      `⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\n` +
+                      `شكراً لك! 🚀`,
+                    parse_mode: "Markdown",
                   }),
                 }).catch(() => {});
               }
 
             } else {
-              // ── رسالة رفض الطلب ─────────────────────────────────────
+              // ── رسالة رفض الطلب ──
               fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1117,12 +1270,11 @@ export const appRouter = router({
                   chat_id: w.telegramId,
                   text:
                     `❌ *تم رفض طلب السحب*\n\n` +
-                    `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ نجمة*\n` +
+                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (≈ ${Number(w.stars)} ${method === "telegram_stars" ? "نجمة" : method === "ton" ? "TON" : "USDT"})\n` +
                     `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                     `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                     `تواصل مع الدعم إذا كان لديك استفسار.`,
                   parse_mode: "Markdown",
-                  ...(webappUrl ? { reply_markup: JSON.stringify({ inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] }) } : {}),
                 }),
               }).catch(() => {});
             }

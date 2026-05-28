@@ -1,5 +1,5 @@
-import { useState } from "react";
-  import { Send, Star, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+  import { Send, Star, AlertCircle, Wallet, ChevronDown, Check, Copy } from "lucide-react";
   import { useToast } from "@/hooks/use-toast";
   import { trpc } from "@/lib/trpc";
   import { translations, type Language } from "@/lib/i18n";
@@ -7,18 +7,88 @@ import { useState } from "react";
   interface UserData { telegramId: number; balance: number; minWithdraw: number; starsRate: number; }
   interface WithdrawSectionProps { user: UserData; lang: Language; onSuccess: () => void; }
 
+  type WithdrawalMethod = "telegram_stars" | "ton" | "usdt";
+
   export default function WithdrawSection({ user, lang, onSuccess }: WithdrawSectionProps) {
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showMethodMenu, setShowMethodMenu] = useState(false);
+    const [showWalletSetup, setShowWalletSetup] = useState(false);
+    const [method, setMethod] = useState<WithdrawalMethod>("telegram_stars");
+    const [tonWallet, setTonWallet] = useState("");
+    const [usdtWallet, setUsdtWallet] = useState("");
     const { toast } = useToast();
     const t = translations[lang];
+
     const withdrawMutation = trpc.withdraw.request.useMutation();
+    const walletsQuery = trpc.withdraw.getWallets.useQuery({ 
+      telegramId: user.telegramId, 
+      initData: window.Telegram?.WebApp?.initData || "" 
+    });
+    const updateTonWallet = trpc.withdraw.updateTonWallet.useMutation();
+    const updateUsdtWallet = trpc.withdraw.updateUsdtWallet.useMutation();
+
+    // Load saved wallets
+    useEffect(() => {
+      if (walletsQuery.data) {
+        setTonWallet(walletsQuery.data.tonWallet || "");
+        setUsdtWallet(walletsQuery.data.usdtWallet || "");
+      }
+    }, [walletsQuery.data]);
 
     const numAmount = parseFloat(amount) || 0;
     const starsWorth = Math.floor(numAmount / user.starsRate);
     const canWithdraw = numAmount >= user.minWithdraw && numAmount <= user.balance;
 
+    const methodInfo: Record<WithdrawalMethod, { icon: string; label: string; desc: string; color: string }> = {
+      telegram_stars: { 
+        icon: "⭐", 
+        label: "Telegram Stars", 
+        desc: "النجوم تصل كهدية - تظهر في 'هداياي' ثم تستبدل بالنجوم", 
+        color: "#FFD700" 
+      },
+      ton: { 
+        icon: "💎", 
+        label: "TON", 
+        desc: "تُرسَل مباشرة لمحفظتك على شبكة The Open Network", 
+        color: "#10B981" 
+      },
+      usdt: { 
+        icon: "💵", 
+        label: "USDT (TRC-20)", 
+        desc: "تُرسَل لمحفظتك على شبكة Tron - الأكثر شيوعاً", 
+        color: "#60A5FA" 
+      },
+    };
+
+    const handleSaveWallets = async () => {
+      try {
+        if (tonWallet) {
+          await updateTonWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: tonWallet });
+        }
+        if (usdtWallet) {
+          await updateUsdtWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: usdtWallet });
+        }
+        toast({ title: "✅ تم حفظ المحفظة", description: "يمكنك الآن استخدام هذه المحفظة للسحب" });
+        setShowWalletSetup(false);
+      } catch (e: any) {
+        toast({ title: "❌ خطأ", description: e.message || "فشل حفظ المحفظة", variant: "destructive" });
+      }
+    };
+
     const handleWithdraw = async () => {
+      // Check if user has wallet for selected method
+      if (method === "ton" && !tonWallet) {
+        toast({ title: "⚠️ محفظة TON", description: "يجب إضافة محفظة TON أولاً", variant: "destructive" });
+        setShowWalletSetup(true);
+        return;
+      }
+      if (method === "usdt" && !usdtWallet) {
+        toast({ title: "⚠️ محفظة USDT", description: "يجب إضافة محفظة USDT (TRC-20) أولاً", variant: "destructive" });
+        setShowWalletSetup(true);
+        return;
+      }
+
       if (!canWithdraw) return;
       setLoading(true);
       try {
@@ -26,9 +96,13 @@ import { useState } from "react";
           telegramId: user.telegramId,
           amount: numAmount,
           initData: window.Telegram?.WebApp?.initData || "",
+          method,
         });
         if (result.success) {
-          toast({ title: t.withdraw_success || "طلب مُرسَل!", description: t.withdraw_pending || "سيتم مراجعة طلبك قريباً" });
+          toast({ 
+            title: t.withdraw_success || "طلب مُرسَل!", 
+            description: result.message || t.withdraw_pending || "سيتم مراجعة طلبك قريباً" 
+          });
           setAmount("");
           onSuccess();
         } else {
@@ -81,33 +155,138 @@ import { useState } from "react";
           </div>
         )}
 
-        {/* Input */}
+        {/* Withdrawal Method Selector */}
         {user.balance >= user.minWithdraw && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t.amount || "المبلغ (بالنقاط)"}</p>
-              <div style={{ position: "relative" }}>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder={`الحد الأدنى ${user.minWithdraw.toLocaleString()}`}
-                  style={{ width: "100%", height: 54, borderRadius: 16, padding: "0 16px", background: "rgba(255,255,255,0.04)", border: `1px solid ${numAmount > 0 && !canWithdraw ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`, color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", boxSizing: "border-box" }}
-                />
+          <>
+            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>طريقة الاستلام</p>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {(["telegram_stars", "ton", "usdt"] as WithdrawalMethod[]).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => {
+                      setMethod(m);
+                      if (m === "ton" && !tonWallet) setShowWalletSetup(true);
+                      if (m === "usdt" && !usdtWallet) setShowWalletSetup(true);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                      borderRadius: 12, border: `2px solid ${method === m ? methodInfo[m].color : "rgba(255,255,255,0.08)"}`,
+                      background: method === m ? `${methodInfo[m].color}15` : "rgba(255,255,255,0.02)",
+                      cursor: "pointer", transition: "all 0.2s", textAlign: "left"
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{methodInfo[m].icon}</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: method === m ? methodInfo[m].color : "#fff", marginBottom: 2 }}>{methodInfo[m].label}</p>
+                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>{methodInfo[m].desc}</p>
+                    </div>
+                    {method === m && <Check size={18} color={methodInfo[m].color} />}
+                    {(m === "ton" || m === "usdt") && (
+                      <div style={{ 
+                        fontSize: 9, padding: "3px 8px", borderRadius: 6,
+                        background: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
+                        color: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "#10B981" : "rgba(255,255,255,0.3)"
+                      }}>
+                        {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "✓ محفظة مُضافة" : "إضافة محفظة"}
+                      </div>
+                    )}
+                  </button>
+                ))}
               </div>
-              {numAmount > 0 && (
-                <p style={{ fontSize: 11, color: "#A78BFA", fontWeight: 600, marginTop: 6 }}>⭐ = {starsWorth} Telegram Stars</p>
-              )}
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-              {[user.minWithdraw, Math.floor(user.balance / 2), user.balance].map((v, i) => (
-                <button key={i} onClick={() => setAmount(String(v))} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                  {i === 0 ? "الحد الأدنى" : i === 1 ? "النصف" : "الكل"}
-                </button>
-              ))}
+            {/* Wallet Setup Section */}
+            {(method === "ton" || method === "usdt") && (
+              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <Wallet size={16} style={{ color: methodInfo[method].color }} />
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
+                      {method === "ton" ? "محفظة TON" : "محفظة USDT (TRC-20)"}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowWalletSetup(!showWalletSetup)}
+                    style={{ fontSize: 10, color: methodInfo[method].color, background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    {showWalletSetup ? "إخفاء" : (tonWallet || usdtWallet) ? "تعديل" : "إضافة"}
+                  </button>
+                </div>
+
+                {(method === "ton" ? tonWallet : usdtWallet) && !showWalletSetup ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.1)", borderRadius: 10 }}>
+                    <code style={{ fontSize: 11, color: "#10B981", flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {method === "ton" ? tonWallet : usdtWallet}
+                    </code>
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(method === "ton" ? tonWallet : usdtWallet);
+                        toast({ title: "✅ تم النسخ", description: "تم نسخ عنوان المحفظة" });
+                      }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    >
+                      <Copy size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
+                    </button>
+                  </div>
+                ) : showWalletSetup && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <input
+                      type="text"
+                      placeholder={method === "ton" ? "EQxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" : "Txxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+                      value={method === "ton" ? tonWallet : usdtWallet}
+                      onChange={e => method === "ton" ? setTonWallet(e.target.value) : setUsdtWallet(e.target.value)}
+                      style={{ 
+                        width: "100%", padding: "12px 14px", borderRadius: 12, 
+                        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#fff", fontSize: 12, outline: "none"
+                      }}
+                    />
+                    <button
+                      onClick={handleSaveWallets}
+                      style={{
+                        padding: "10px 16px", borderRadius: 10, border: "none",
+                        background: "linear-gradient(135deg, #10B981, #059669)",
+                        color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
+                      }}
+                    >
+                      {t.save || "حفظ المحفظة"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Input */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t.amount || "المبلغ (بالنقاط)"}</p>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="number"
+                    value={amount}
+                    onChange={e => setAmount(e.target.value)}
+                    placeholder={`الحد الأدنى ${user.minWithdraw.toLocaleString()}`}
+                    style={{ width: "100%", height: 54, borderRadius: 16, padding: "0 16px", background: "rgba(255,255,255,0.04)", border: `1px solid ${numAmount > 0 && !canWithdraw ? "rgba(239,68,68,0.4)" : "rgba(255,255,255,0.1)"}`, color: "#fff", fontSize: 15, fontWeight: 700, outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                {numAmount > 0 && (
+                  <p style={{ fontSize: 11, color: methodInfo[method].color, fontWeight: 600, marginTop: 6 }}>
+                    {methodInfo[method].icon} ≈ {starsWorth} {method === "telegram_stars" ? "Telegram Stars" : method === "ton" ? "TON" : "USDT"}
+                  </p>
+                )}
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+                {[user.minWithdraw, Math.floor(user.balance / 2), user.balance].map((v, i) => (
+                  <button key={i} onClick={() => setAmount(String(v))} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    {i === 0 ? "الحد الأدنى" : i === 1 ? "النصف" : "الكل"}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* CTA */}
@@ -119,14 +298,18 @@ import { useState } from "react";
               width: "100%", height: 60, borderRadius: 20, border: "none",
               cursor: canWithdraw && !loading ? "pointer" : "not-allowed",
               fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-              background: canWithdraw && !loading ? "linear-gradient(135deg, #10B981, #059669)" : "rgba(255,255,255,0.05)",
+              background: canWithdraw && !loading ? `linear-gradient(135deg, ${methodInfo[method].color}, ${methodInfo[method].color}cc)` : "rgba(255,255,255,0.05)",
               color: canWithdraw && !loading ? "#fff" : "rgba(255,255,255,0.25)",
-              boxShadow: canWithdraw && !loading ? "0 6px 24px rgba(16,185,129,0.35)" : "none",
+              boxShadow: canWithdraw && !loading ? `0 6px 24px ${methodInfo[method].color}40` : "none",
               transition: "all 0.3s",
             }}
           >
-            {loading ? <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Send size={20} />}
-            {loading ? "جاري الإرسال..." : `${t.withdraw_btn || "طلب سحب"} ⭐ ${starsWorth > 0 ? starsWorth : "?"} Stars`}
+            {loading ? (
+              <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            ) : (
+              <Send size={20} />
+            )}
+            {loading ? "جاري الإرسال..." : `سحب ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
           </button>
         )}
 

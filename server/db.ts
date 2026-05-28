@@ -36,6 +36,14 @@ export async function getDb() {
       try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS method VARCHAR(50) DEFAULT 'telegram_stars'`); } catch (_) {}
       try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS note TEXT`); } catch (_) {}
       try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at TIMESTAMP`); } catch (_) {}
+        // Wallet fields for TON/USDT withdrawals
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS ton_wallet VARCHAR(100)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS usdt_wallet VARCHAR(100)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_tx_hash VARCHAR(100)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_amount VARCHAR(50)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_tx_hash VARCHAR(200)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_amount VARCHAR(50)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_wallet VARCHAR(100)`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -127,6 +135,8 @@ export async function upsertTelegramUser(user: InsertTelegramUser) {
     if (user.referredBy !== undefined) updateSet.referredBy = user.referredBy;
     if (user.referralCode !== undefined) updateSet.referralCode = user.referralCode;
     if (user.isBanned !== undefined) updateSet.isBanned = user.isBanned;
+    if (user.tonWallet !== undefined) updateSet.tonWallet = user.tonWallet;
+    if (user.usdtWallet !== undefined) updateSet.usdtWallet = user.usdtWallet;
 
     const safeUser = {
       ...user,
@@ -758,4 +768,40 @@ export async function deactivateRedeemCode(id: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(redeemCodes).set({ isActive: false }).where(eq(redeemCodes.id, id));
+}
+
+// ── Wallet Management ──────────────────────────────────────────────────────
+
+export async function getUserWallets(telegramId: number): Promise<{ tonWallet: string | null; usdtWallet: string | null }> {
+  const db = await getDb();
+  if (!db) return { tonWallet: null, usdtWallet: null };
+  const rows = await db.select({ tonWallet: telegramUsers.tonWallet, usdtWallet: telegramUsers.usdtWallet })
+    .from(telegramUsers)
+    .where(eq(telegramUsers.telegramId, telegramId))
+    .limit(1);
+  return rows[0] ?? { tonWallet: null, usdtWallet: null };
+}
+
+export async function updateUserTonWallet(telegramId: number, wallet: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  // Validate TON address format (basic check: starts with EQ or E and is ~48 chars)
+  const normalized = wallet.trim().toLowerCase();
+  if (!normalized.startsWith("eq") && !normalized.startsWith("uq") && !normalized.startsWith("0_")) {
+    throw new Error("عنوان TON غير صالح — يجب أن يبدأ بـ EQ أو UQ");
+  }
+  await db.update(telegramUsers).set({ tonWallet: normalized, updatedAt: new Date() })
+    .where(eq(telegramUsers.telegramId, telegramId));
+}
+
+export async function updateUserUsdtWallet(telegramId: number, wallet: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  // Validate TRC-20 USDT address (starts with T, 34 chars)
+  const normalized = wallet.trim();
+  if (!normalized.startsWith("T") || normalized.length !== 34) {
+    throw new Error("عنوان USDT (TRC-20) غير صالح — يجب أن يبدأ بـ T وطوله 34 حرف");
+  }
+  await db.update(telegramUsers).set({ usdtWallet: normalized, updatedAt: new Date() })
+    .where(eq(telegramUsers.telegramId, telegramId));
 }
