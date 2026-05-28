@@ -696,6 +696,50 @@ export const appRouter = router({
           return { success: false, message: e?.message || "خطأ غير معروف", invoiceLink: "" };
         }
       }),
+
+    buyPoints: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string(), packageId: z.number().min(1).max(3) }))
+      .mutation(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data", invoiceLink: "" };
+
+        const user = await getTelegramUser(input.telegramId);
+        if (!user) return { success: false, message: "User not found", invoiceLink: "" };
+        if (user.isBanned) return { success: false, message: "تم تعليق حسابك", invoiceLink: "" };
+
+        const botToken = process.env.BOT_TOKEN;
+        if (!botToken) return { success: false, message: "Bot not configured", invoiceLink: "" };
+
+        // باقات الشراء: نجوم → نقاط
+        const packages: Record<number, { stars: number; points: number; label: string; bonus: string }> = {
+          1: { stars: 50,  points: 5000,  label: "باقة البداية 🌟",   bonus: "" },
+          2: { stars: 100, points: 12000, label: "باقة الذهب ⭐",    bonus: "20% مكافأة" },
+          3: { stars: 250, points: 35000, label: "باقة الماس 💎",    bonus: "40% مكافأة" },
+        };
+
+        const pkg = packages[input.packageId];
+        if (!pkg) return { success: false, message: "باقة غير موجودة", invoiceLink: "" };
+
+        const payload = `buy_points_${input.telegramId}_${input.packageId}_${pkg.points}_${Date.now()}`;
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${botToken}/createInvoiceLink`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: pkg.label,
+              description: `احصل على ${pkg.points.toLocaleString()} نقطة${pkg.bonus ? ` — ${pkg.bonus}!` : "!"} استخدمها في البوت واربح أكثر 🚀`,
+              payload,
+              currency: "XTR",
+              prices: [{ label: `${pkg.points.toLocaleString()} نقطة`, amount: pkg.stars }],
+            }),
+          });
+          const data = (await res.json()) as any;
+          if (!data.ok) return { success: false, message: data.description || "فشل إنشاء رابط الدفع", invoiceLink: "" };
+          return { success: true, invoiceLink: data.result as string, message: "" };
+        } catch (e: any) {
+          return { success: false, message: e?.message || "خطأ غير معروف", invoiceLink: "" };
+        }
+      }),
   }),
 
 
