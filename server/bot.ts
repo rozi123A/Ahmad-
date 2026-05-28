@@ -620,6 +620,109 @@ export async function startBot(app?: Express) {
     } catch (e) { console.error("[Bot] chat_member error:", e); }
   });
 
+  // ── معالجة أزرار الموافقة/الرفض اليدوي للسحب (للأدمن فقط) ──────────────
+  bot.on("callback_query", async (ctx) => {
+    const fromId = ctx.from?.id;
+    const ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
+    const data = (ctx.callbackQuery as any).data || "";
+
+    // withdraw_done_<withdrawalId>_<userTelegramId>_<stars>
+    if (data.startsWith("withdraw_done_")) {
+      if (fromId !== ADMIN_ID) {
+        await ctx.answerCbQuery("❌ غير مصرح").catch(() => {});
+        return;
+      }
+      const parts = data.split("_"); // [withdraw, done, id, telegramId, stars]
+      const withdrawalId = parseInt(parts[2] || "0");
+      const userTelegramId = parseInt(parts[3] || "0");
+      const stars = parseInt(parts[4] || "0");
+      const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+
+      try {
+        const { updateWithdrawalStatus } = await import("./db");
+        await updateWithdrawalStatus(withdrawalId, "completed");
+
+        // إشعار المستخدم بنجاح الإرسال
+        await bot.telegram.sendMessage(
+          userTelegramId,
+          `🎉 *تم إرسال نجومك بنجاح!*\n\n` +
+          `⭐ وصلتك *${stars} نجمة* على حسابك في تيليغرام\n` +
+          `تحقق من رصيدك في الإعدادات ← نجومي ⭐\n\n` +
+          `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+          {
+            parse_mode: "Markdown",
+            ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] } } : {}),
+          }
+        ).catch(() => {});
+
+        // تحديث رسالة الأدمن
+        await ctx.editMessageReplyMarkup({ inline_keyboard: [[{ text: "✅ تم الإرسال — مكتمل", callback_data: "noop" }]] }).catch(() => {});
+        await ctx.answerCbQuery("✅ تم إشعار المستخدم بنجاح الإرسال").catch(() => {});
+      } catch (e: any) {
+        await ctx.answerCbQuery("❌ خطأ: " + (e?.message || "فشل")).catch(() => {});
+      }
+      return;
+    }
+
+    // withdraw_reject_<withdrawalId>_<userTelegramId>_<amount>
+    if (data.startsWith("withdraw_reject_")) {
+      if (fromId !== ADMIN_ID) {
+        await ctx.answerCbQuery("❌ غير مصرح").catch(() => {});
+        return;
+      }
+      const parts = data.split("_"); // [withdraw, reject, id, telegramId, amount]
+      const withdrawalId = parseInt(parts[2] || "0");
+      const userTelegramId = parseInt(parts[3] || "0");
+      const amount = parseInt(parts[4] || "0");
+      const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+
+      try {
+        const { updateWithdrawalStatus, getTelegramUser, upsertTelegramUser, createTransaction, getAllWithdrawals } = await import("./db");
+
+        // استرداد رصيد المستخدم
+        const allW = await getAllWithdrawals();
+        const w = allW.find((p: any) => p.id === withdrawalId);
+        if (w) {
+          const user = await getTelegramUser(userTelegramId);
+          if (user) {
+            await upsertTelegramUser({ ...user, balance: Number(user.balance) + amount });
+            await createTransaction({
+              telegramId: userTelegramId,
+              type: "refund",
+              points: amount,
+              metadata: JSON.stringify({ action: "withdraw_rejected_by_admin", withdrawalId }),
+            });
+          }
+        }
+        await updateWithdrawalStatus(withdrawalId, "rejected", "رُفض يدوياً من الإدارة");
+
+        // إشعار المستخدم بالرفض
+        await bot.telegram.sendMessage(
+          userTelegramId,
+          `❌ *تم رفض طلب السحب*\n\n` +
+          `نأسف، لم يتم إتمام عملية إرسال النجوم.\n` +
+          `💰 تم إعادة نقاطك إلى رصيدك تلقائياً.\n\n` +
+          `تواصل مع الدعم إذا كان لديك استفسار.`,
+          {
+            parse_mode: "Markdown",
+            ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] } } : {}),
+          }
+        ).catch(() => {});
+
+        // تحديث رسالة الأدمن
+        await ctx.editMessageReplyMarkup({ inline_keyboard: [[{ text: "❌ تم الرفض — مكتمل", callback_data: "noop" }]] }).catch(() => {});
+        await ctx.answerCbQuery("✅ تم رفض الطلب وإعادة نقاط المستخدم").catch(() => {});
+      } catch (e: any) {
+        await ctx.answerCbQuery("❌ خطأ: " + (e?.message || "فشل")).catch(() => {});
+      }
+      return;
+    }
+
+    if (data === "noop") {
+      await ctx.answerCbQuery("").catch(() => {});
+    }
+  });
+
   try {
     console.log("[Bot] Clearing existing webhook/polling state to prevent 409...");
     await bot.telegram.deleteWebhook({ drop_pending_updates: true });
