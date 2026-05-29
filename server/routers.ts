@@ -385,7 +385,7 @@ export const appRouter = router({
         }
 
         const starsRate = await getSetting("starsRate", 1000);
-        const minWithdraw = await getSetting("minWithdraw", 1500);
+        const minWithdraw = await getSetting("minWithdraw", 15000);
 
         return {
           success: true,
@@ -808,7 +808,7 @@ export const appRouter = router({
     request: publicProcedure
       .input(z.object({ 
         telegramId: z.number(), 
-        amount: z.number().int().positive().min(1500), 
+        amount: z.number().int().positive().min(15000), 
         initData: z.string(),
         method: z.enum(["telegram_stars", "ton", "usdt"]).default("telegram_stars")
       }))
@@ -845,7 +845,7 @@ export const appRouter = router({
 
         const stars = Math.floor(input.amount / starsRate);
         // Crypto amount: 1500 points = 0.05 TON/USDT
-        const CRYPTO_BASE_POINTS = 1500;
+        const CRYPTO_BASE_POINTS = 15000;
         const CRYPTO_BASE_AMOUNT = 0.05;
         const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
         if (stars < 1 && input.method === "telegram_stars") {
@@ -954,7 +954,7 @@ export const appRouter = router({
             ``,
             `💰 النقاط: <b>${input.amount.toLocaleString()}</b>`,
             `${methodIcon} المبلغ: <b>${adminDisplayAmount}</b>`,
-            input.method !== "telegram_stars" ? `📐 الحساب: ${input.amount.toLocaleString()} نقطة ÷ 1500 × 0.05` : "",
+            input.method !== "telegram_stars" ? `📐 الحساب: ${input.amount.toLocaleString()} نقطة ÷ 15000 × 0.05` : "",
             `📦 الطريقة: <b>${methodLabel}</b>`,
             input.method !== "telegram_stars" && userWallet ? `🔗 المحفظة: <code>${userWallet}</code>` : "",
             ``,
@@ -1196,8 +1196,8 @@ export const appRouter = router({
                         `👤 المستخدم: *${userName}* (${userTag})\n` +
                         `🆔 ID: \`${w.telegramId}\`\n` +
                         `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💎 TON المطلوب: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} TON\n` +
-                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 1500 × 0.05\n` +
+                        `💎 TON المطلوب: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} TON\n` +
+                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 15000 × 0.05\n` +
                         `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
                         `📋 أرسل TON يدوياً ثم اضغط "تم الإرسال"`,
                       parse_mode: "Markdown",
@@ -1218,7 +1218,7 @@ export const appRouter = router({
                     chat_id: w.telegramId,
                     text:
                       `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💎 المبلغ: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} TON\n` +
+                      `💎 المبلغ: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} TON\n` +
                       `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
                       `⏰ سيتم إرسال TON خلال 24 ساعة\n\n` +
                       `شكراً لك! 🚀`,
@@ -1239,8 +1239,8 @@ export const appRouter = router({
                         `👤 المستخدم: *${userName}* (${userTag})\n` +
                         `🆔 ID: \`${w.telegramId}\`\n` +
                         `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💵 USDT المطلوب: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} USDT\n` +
-                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 1500 × 0.05\n` +
+                        `💵 USDT المطلوب: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} USDT\n` +
+                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 15000 × 0.05\n` +
                         `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
                         `📋 أرسل USDT يدوياً ثم اضغط "تم الإرسال"`,
                       parse_mode: "Markdown",
@@ -1261,7 +1261,7 @@ export const appRouter = router({
                     chat_id: w.telegramId,
                     text:
                       `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💵 المبلغ: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} USDT\n` +
+                      `💵 المبلغ: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} USDT\n` +
                       `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
                       `⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\n` +
                       `شكراً لك! 🚀`,
