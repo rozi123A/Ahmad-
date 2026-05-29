@@ -97,6 +97,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
           rewardLabel={t.daily_gift_title}
           onClaim={handleAdClaim}
           onClose={() => setShowAdOverlay(false)}
+          lang={lang}
         />
       )}
 
