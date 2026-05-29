@@ -385,7 +385,7 @@ export const appRouter = router({
         }
 
         const starsRate = await getSetting("starsRate", 1000);
-        const minWithdraw = await getSetting("minWithdraw", 10000);
+        const minWithdraw = await getSetting("minWithdraw", 1500);
 
         return {
           success: true,
@@ -808,7 +808,7 @@ export const appRouter = router({
     request: publicProcedure
       .input(z.object({ 
         telegramId: z.number(), 
-        amount: z.number().int().positive().min(10000), 
+        amount: z.number().int().positive().min(1500), 
         initData: z.string(),
         method: z.enum(["telegram_stars", "ton", "usdt"]).default("telegram_stars")
       }))
@@ -844,8 +844,12 @@ export const appRouter = router({
         }
 
         const stars = Math.floor(input.amount / starsRate);
-        if (stars < 1) {
-          return { success: false, message: `الحد الأدنى للسحب هو 15,000 نقطة (= 15 نجمة)` };
+        // Crypto amount: 1500 points = 0.05 TON/USDT
+        const CRYPTO_BASE_POINTS = 1500;
+        const CRYPTO_BASE_AMOUNT = 0.05;
+        const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
+        if (stars < 1 && input.method === "telegram_stars") {
+          return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
         }
 
         // Validate wallet for TON/USDT methods
@@ -907,6 +911,7 @@ export const appRouter = router({
 
           // 3. Create withdrawal record with method and wallet
           const userWallet = input.method === "ton" ? user.tonWallet : input.method === "usdt" ? user.usdtWallet : null;
+          const displayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : input.method === "ton" ? `${cryptoAmount} TON` : `${cryptoAmount} USDT`;
           await client.query(
             `INSERT INTO withdrawals (telegram_id, amount, stars, status, method, user_wallet)
              VALUES ($1, $2, $3, 'pending', $4, $5)`,
@@ -939,6 +944,7 @@ export const appRouter = router({
           const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : 
                               input.method === "ton" ? "💎 TON" : "💵 USDT (TRC-20)";
           const methodIcon = input.method === "telegram_stars" ? "⭐" : input.method === "ton" ? "💎" : "💵";
+          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : input.method === "ton" ? `${cryptoAmount} TON` : `${cryptoAmount} USDT (TRC-20)`;
           const msg = [
             `🔔 <b>طلب سحب جديد (${methodLabel})</b>`,
             ``,
@@ -947,7 +953,8 @@ export const appRouter = router({
             `🆔 Telegram ID: <code>${input.telegramId}</code>`,
             ``,
             `💰 النقاط: <b>${input.amount.toLocaleString()}</b>`,
-            `${methodIcon} المبلغ: <b>${stars}</b> ${input.method === "telegram_stars" ? "نجمة" : ""}`,
+            `${methodIcon} المبلغ: <b>${adminDisplayAmount}</b>`,
+            input.method !== "telegram_stars" ? `📐 الحساب: ${input.amount.toLocaleString()} نقطة ÷ 1500 × 0.05` : "",
             `📦 الطريقة: <b>${methodLabel}</b>`,
             input.method !== "telegram_stars" && userWallet ? `🔗 المحفظة: <code>${userWallet}</code>` : "",
             ``,
@@ -967,8 +974,8 @@ export const appRouter = router({
         const methodMsg = input.method === "telegram_stars" 
           ? "⏰ سيتم إرسال النجوم خلال 24 ساعة (تصل كهدية في Telegram)"
           : input.method === "ton" 
-          ? "⏰ سيتم إرسال TON خلال 24 ساعة"
-          : "⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة";
+          ? `⏰ سيتم إرسال ${cryptoAmount} TON إلى محفظتك خلال 24 ساعة`
+          : `⏰ سيتم إرسال ${cryptoAmount} USDT (TRC-20) إلى محفظتك خلال 24 ساعة`;
 
         return { success: true, stars, method: input.method, message: `✅ تم إرسال طلب السحب بنجاح!\n\n${methodMsg}` };
       }),
@@ -1189,9 +1196,10 @@ export const appRouter = router({
                         `👤 المستخدم: *${userName}* (${userTag})\n` +
                         `🆔 ID: \`${w.telegramId}\`\n` +
                         `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💎 TON المطلوب: ~${Number(w.stars)} (حسب السعر)\n` +
+                        `💎 TON المطلوب: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} TON\n` +
+                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 1500 × 0.05\n` +
                         `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
-                        `📋 يجب إرسال TON يدوياً ثم الضغط على "تم الإرسال"`,
+                        `📋 أرسل TON يدوياً ثم اضغط "تم الإرسال"`,
                       parse_mode: "Markdown",
                       reply_markup: JSON.stringify({
                         inline_keyboard: [[
@@ -1210,7 +1218,7 @@ export const appRouter = router({
                     chat_id: w.telegramId,
                     text:
                       `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💎 المبلغ: ~${Number(w.stars)} TON\n` +
+                      `💎 المبلغ: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} TON\n` +
                       `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
                       `⏰ سيتم إرسال TON خلال 24 ساعة\n\n` +
                       `شكراً لك! 🚀`,
@@ -1231,9 +1239,10 @@ export const appRouter = router({
                         `👤 المستخدم: *${userName}* (${userTag})\n` +
                         `🆔 ID: \`${w.telegramId}\`\n` +
                         `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💵 USDT المطلوب: ~${Number(w.stars)} (حسب السعر)\n` +
+                        `💵 USDT المطلوب: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} USDT\n` +
+                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 1500 × 0.05\n` +
                         `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
-                        `📋 يجب إرسال USDT يدوياً ثم الضغط على "تم الإرسال"`,
+                        `📋 أرسل USDT يدوياً ثم اضغط "تم الإرسال"`,
                       parse_mode: "Markdown",
                       reply_markup: JSON.stringify({
                         inline_keyboard: [[
@@ -1252,7 +1261,7 @@ export const appRouter = router({
                     chat_id: w.telegramId,
                     text:
                       `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💵 المبلغ: ~${Number(w.stars)} USDT\n` +
+                      `💵 المبلغ: ${parseFloat(((Number(w.amount) / 1500) * 0.05).toFixed(4))} USDT\n` +
                       `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
                       `⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\n` +
                       `شكراً لك! 🚀`,
@@ -1270,7 +1279,7 @@ export const appRouter = router({
                   chat_id: w.telegramId,
                   text:
                     `❌ *تم رفض طلب السحب*\n\n` +
-                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (≈ ${Number(w.stars)} ${method === "telegram_stars" ? "نجمة" : method === "ton" ? "TON" : "USDT"})\n` +
+                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/1500)*0.05).toFixed(4))} ${method === "ton" ? "TON" : "USDT"}`})\n` +
                     `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                     `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                     `تواصل مع الدعم إذا كان لديك استفسار.`,
