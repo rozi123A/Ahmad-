@@ -355,7 +355,7 @@ export default function AdminDashboard() {
                 style={{ width: "100%", height: 52, borderRadius: 16, padding: "0 48px 0 16px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(139,92,246,0.25)", color: "#fff", fontSize: 14, fontWeight: 600, outline: "none", boxSizing: "border-box" }}
               />
               <button onClick={() => setShowPass(p => !p)} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", padding: 0 }}>
-                {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPass ? <EyeSlash size={18} /> : <Eye size={18} />}
               </button>
             </div>
             <button
@@ -410,10 +410,10 @@ export default function AdminDashboard() {
   };
 
   const TABS = [
-    { id: "stats" as const, icon: <BarChart3 size={16} />, label: "الإحصائيات", emoji: "" },
+    { id: "stats" as const, icon: <ChartBar size={16} />, label: "الإحصائيات", emoji: "" },
     { id: "users" as const, icon: <Users size={16} />, label: "المستخدمون", emoji: "👥" },
     { id: "withdrawals" as const, icon: <Wallet size={16} />, label: "السحوبات", emoji: "💸" },
-    { id: "broadcast" as const, icon: <Megaphone size={16} />, label: "الإشعارات", emoji: "📣" },
+    { id: "broadcast" as const, icon: <Broadcast size={16} />, label: "الإشعارات", emoji: "📣" },
     { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "" },
   ];
 
@@ -448,8 +448,8 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button onClick={() => { window.location.href = "/"; }} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", cursor: "pointer", padding: "0 14px", color: "rgba(255,255,255,0.5)", fontWeight: 700, fontSize: 12 }}>← رجوع</button>
-            <button onClick={() => statsQ.refetch()} style={{ width: 38, height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}><RefreshCw size={15} /></button>
-            <button onClick={handleLogout} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)", cursor: "pointer", padding: "0 14px", display: "flex", alignItems: "center", gap: 6, color: "#FCA5A5", fontWeight: 700, fontSize: 12 }}><LogOut size={14} />خروج</button>
+            <button onClick={() => statsQ.refetch()} style={{ width: 38, height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.5)" }}><ArrowCounterClockwise size={15} /></button>
+            <button onClick={handleLogout} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.08)", cursor: "pointer", padding: "0 14px", display: "flex", alignItems: "center", gap: 6, color: "#FCA5A5", fontWeight: 700, fontSize: 12 }}><SignOut size={14} />خروج</button>
           </div>
         </div>
 
@@ -749,7 +749,7 @@ export default function AdminDashboard() {
                   disabled={broadcastLoading || !broadcastMsg.trim()}
                   style={{ height: 56, borderRadius: 18, border: "none", background: broadcastMsg.trim() ? "linear-gradient(135deg,#EC4899,#DB2777)" : "rgba(255,255,255,0.05)", color: broadcastMsg.trim() ? "#fff" : "rgba(255,255,255,0.2)", fontWeight: 900, fontSize: 15, cursor: broadcastMsg.trim() ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, boxShadow: broadcastMsg.trim() ? "0 6px 24px rgba(236,72,153,0.35)" : "none" }}
                 >
-                  {broadcastLoading ? <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <Send size={20} />}
+                  {broadcastLoading ? <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> : <PaperPlaneTilt size={20} />}
                   {broadcastLoading ? "جاري الإرسال..." : broadcastTarget === "all" ? " إرسال لجميع المستخدمين" : "📩 إرسال للغائبين"}
                 </button>
 
@@ -1022,7 +1022,7 @@ export default function AdminDashboard() {
                             >
                               {sendingToChannel === c.id
                                 ? <><div style={{ width: 12, height: 12, border: "2px solid rgba(56,189,248,0.3)", borderTopColor: "#38BDF8", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} /> جاري الإرسال...</>
-                                : <><Send size={12} /> إرسال للقناة</>}
+                                : <><PaperPlaneTilt size={12} /> إرسال للقناة</>}
                             </button>
                           </div>
                         )}
