@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+  import { translations } from "@/lib/i18n";
   import { trpc } from "@/lib/trpc";
   import { useToast } from "@/hooks/use-toast";
 
@@ -9,6 +10,7 @@ import { useState, useEffect } from "react";
     const { toast } = useToast();
     const [claiming, setClaiming] = useState<number | null>(null);
     const isAr = lang !== "en";
+    const t = translations[lang as keyof typeof translations] || translations["ar"];
 
     const { data, refetch, isLoading } = trpc.tasks.list.useQuery(
       { telegramId: user.telegramId, initData: user.initData },
@@ -29,7 +31,7 @@ import { useState, useEffect } from "react";
               toast({
                 title: isAr ? " تم خصم نقاط" : " Points Deducted",
                 description: isAr
-                  ? (t.task_left_group {groups} — خُصم منك {deducted} نقطة").replace("{groups}", res.left?.join(", ") || "").replace("{deducted}", res.deducted?.toString() || "")
+                  ? t.task_left_group.replace("{groups}", res.left?.join(", ") || "").replace("{deducted}", res.deducted?.toString() || "")
                   : `Left ${res.left?.join(", ")} — ${res.deducted} pts deducted`,
                 variant: "destructive",
               });
