@@ -195,6 +195,7 @@ export default function AdminDashboard() {
   }, []);
 
   const statsQ = trpc.admin.getStats.useQuery({ secret }, { enabled: authed, refetchInterval: 30000 });
+  const onlineQ = trpc.admin.getOnlineUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 15000 });
   const usersQ = trpc.admin.getUsers.useQuery({ secret, page: userPage }, { enabled: authed && tab === "users" });
   const withdrawQ = trpc.admin.getWithdrawals.useQuery({ secret, status: withdrawFilter }, { enabled: authed && tab === "withdrawals" });
 
@@ -471,6 +472,19 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "center", padding: 48 }}>{SPINNER}</div>
             ) : stats ? (
               <>
+                {/* Online Now Banner */}
+                <div style={{ borderRadius: 18, padding: "14px 18px", background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", gap: 14 }}>
+                  <div style={{ position: "relative" }}>
+                    <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 10px #10B981" }} />
+                    <div style={{ position: "absolute", inset: -4, borderRadius: "50%", border: "2px solid rgba(16,185,129,0.3)", animation: "spin 2s linear infinite" }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 600, margin: 0, marginBottom: 2 }}>يلعبون الآن (آخر 5 دقائق)</p>
+                    <p style={{ fontSize: 28, fontWeight: 900, color: "#34D399", margin: 0, lineHeight: 1 }}>{stats.onlineNow ?? 0}</p>
+                  </div>
+                  <span style={{ fontSize: 32 }}>🎮</span>
+                </div>
+
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <StatCard emoji="👥" label="إجمالي المستخدمين" value={stats.totalUsers ?? 0} color="#A78BFA" />
                   <StatCard emoji="" label="إجمالي النقاط" value={stats.totalPoints ?? 0} color="#FFD700" />
@@ -481,6 +495,32 @@ export default function AdminDashboard() {
                   <StatCard emoji="" label="Stars تم صرفها" value={stats.totalStarsWithdrawn ?? 0} color="#06B6D4" />
                   <StatCard emoji="🆕" label="مستخدمون جدد اليوم" value={stats.newUsersToday ?? 0} color="#10B981" sub="اليوم" />
                 </div>
+                {/* Who is playing now */}
+                {(onlineQ.data?.users?.length ?? 0) > 0 && (
+                  <Card>
+                    <CardHead icon={<Eye size={16} />} title={`يلعبون الآن — ${onlineQ.data!.users!.length} لاعب`} color="#10B981" />
+                    <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
+                      {onlineQ.data!.users!.slice(0, 20).map((u: any) => {
+                        const secsAgo = Math.floor((Date.now() - new Date(u.lastSeenAt).getTime()) / 1000);
+                        const timeLabel = secsAgo < 60 ? `${secsAgo}ث` : `${Math.floor(secsAgo / 60)}د`;
+                        return (
+                          <div key={u.telegramId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(16,185,129,0.05)", border: "1px solid rgba(16,185,129,0.1)", borderRadius: 12 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", flexShrink: 0, boxShadow: "0 0 6px #10B981" }} />
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{ fontSize: 12, fontWeight: 700, color: "#E2E8F0", margin: 0 }}>{u.firstName || u.username || `#${u.telegramId}`}</p>
+                              {u.username && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>@{u.username}</p>}
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <p style={{ fontSize: 11, fontWeight: 800, color: "#FFD700", margin: 0 }}>{Number(u.balance).toLocaleString()} </p>
+                              <p style={{ fontSize: 9, color: "rgba(16,185,129,0.6)", margin: 0 }}>منذ {timeLabel}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </Card>
+                )}
+
                 <Card>
                   <CardHead icon={<TrendUp size={16} />} title="أفضل 5 مستخدمين" color="#FFD700" />
                   <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
