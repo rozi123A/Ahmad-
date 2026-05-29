@@ -38,6 +38,7 @@ export const telegramUsers = pgTable("telegram_users", {
   // Withdrawal wallet addresses
   tonWallet: varchar("ton_wallet", { length: 100 }),
   usdtWallet: varchar("usdt_wallet", { length: 100 }),
+  lastSeenAt: timestamp("last_seen_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
