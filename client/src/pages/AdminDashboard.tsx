@@ -540,7 +540,7 @@ export default function AdminDashboard() {
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => openTelegramChat(u.telegramId, u.username, u.firstName, u.lastName)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChatCircle size={14} /></button>
                       <button onClick={() => handleBan(u.telegramId, !u.isBanned)} style={{ height: 34, borderRadius: 10, border: "none", background: !!u.isBanned ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)", color: !!u.isBanned ? "#34D399" : "#FCA5A5", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 10px", display: "flex", alignItems: "center", gap: 5 }}>
-                        {!!u.isBanned ? <CheckCircle size={13} /> : <Ban size={13} />}
+                        {!!u.isBanned ? <CheckCircle size={13} /> : <Prohibit size={13} />}
                         {!!u.isBanned ? "رفع" : "حظر"}
                       </button>
                     </div>
