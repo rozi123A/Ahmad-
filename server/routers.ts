@@ -91,7 +91,19 @@ function verifyTelegramWebApp(initData: string) {
 
     if (calculatedHash !== hash) {
       console.warn("[Auth] Hash mismatch — rejecting request");
-    return null;
+      return null;
+    }
+
+    // Security: verify auth_date is recent (within 1 hour) to prevent replay attacks
+    const authDate = Number(urlParams.get("auth_date"));
+    if (!authDate) {
+      console.warn("[Auth] Missing auth_date — rejecting request");
+      return null;
+    }
+    const AGE_LIMIT_SECONDS = 60 * 60; // 1 hour
+    if (Math.floor(Date.now() / 1000) - authDate > AGE_LIMIT_SECONDS) {
+      console.warn("[Auth] auth_date expired — rejecting replay attack");
+      return null;
     }
 
     return userData;
