@@ -782,7 +782,7 @@ export default function AdminDashboard() {
                       style={{ flex: 1, borderRadius: 12, padding: "10px 14px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#fff", fontSize: 14, outline: "none", fontFamily: "monospace", letterSpacing: "0.05em" }}
                     />
                     <button onClick={generateCode} style={{ height: 42, padding: "0 14px", borderRadius: 12, border: "1px solid rgba(16,185,129,0.3)", background: "rgba(16,185,129,0.1)", color: "#34D399", fontWeight: 700, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-                      <Wand2 size={13} /> توليد
+                      <MagicWand size={13} /> توليد
                     </button>
                   </div>
                 </div>
