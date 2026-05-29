@@ -39,7 +39,7 @@ import { useState, useEffect } from "react";
     const numAmount = parseFloat(amount) || 0;
     const starsWorth = Math.floor(numAmount / user.starsRate);
     // Accurate: 1500 points = 0.05 TON/USDT
-    const CRYPTO_BASE_POINTS = 1500;
+    const CRYPTO_BASE_POINTS = 15000;
     const CRYPTO_BASE_AMOUNT = 0.05;
     const cryptoAmount = numAmount > 0 ? parseFloat(((numAmount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4)) : 0;
     const canWithdraw = numAmount >= user.minWithdraw && numAmount <= user.balance;
@@ -325,7 +325,7 @@ import { useState, useEffect } from "react";
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { label: t.withdraw_conversion_rate, value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⭐` : `1500 ${t.points} = 0.05 ${method === "ton" ? "TON" : "USDT"}`, color: "#A78BFA" },
+            { label: t.withdraw_conversion_rate, value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⭐` : `15000 ${t.points} = 0.05 ${method === "ton" ? "TON" : "USDT"}`, color: "#A78BFA" },
             { label: t.withdraw_minimum_amount, value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>
