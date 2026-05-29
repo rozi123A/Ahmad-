@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+  import { translations } from "@/lib/i18n";
 
   interface AdOverlayProps {
     seconds?: number;
@@ -7,6 +8,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
     onClose: () => void;
     monetagZoneId?: string;
     monetagScriptUrl?: string;
+    lang?: string;
   }
 
   type Phase = "loading" | "countdown" | "ready" | "claimed";
@@ -50,7 +52,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
     onClose,
     monetagZoneId = "11043107",
     monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
+    lang = "ar",
   }: AdOverlayProps) {
+    const t = translations[lang as keyof typeof translations] || translations["ar"];
     const [phase, setPhase] = useState<Phase>("loading");
     const [timeLeft, setTimeLeft] = useState(seconds);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
