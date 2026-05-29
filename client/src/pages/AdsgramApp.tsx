@@ -51,6 +51,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
       const { toast } = useToast();
       const redeemMut = trpc.codes.redeem.useMutation();
+      const t = translations[lang];
 
       const handleRedeem = async () => {
         if (!code.trim() || loading) return;
