@@ -44,19 +44,19 @@ import { useState, useEffect } from "react";
       telegram_stars: { 
         icon: "", 
         label: t.withdraw_method_stars, 
-        desc: t.withdraw_method_stars_desc تصل كهدية", 
+        desc: t.withdraw_method_stars_desc, 
         color: "#FFD700" 
       },
       ton: { 
         icon: "", 
         label: t.withdraw_method_ton, 
-        desc: t.withdraw_method_ton_desc مباشرة لمحفظتك", 
+        desc: t.withdraw_method_ton_desc, 
         color: "#10B981" 
       },
       usdt: { 
         icon: "", 
         label: t.withdraw_method_usdt, 
-        desc: t.withdraw_method_usdt_desc لمحفظتك على Tron", 
+        desc: t.withdraw_method_usdt_desc, 
         color: "#60A5FA" 
       },
     };
@@ -136,7 +136,7 @@ import { useState, useEffect } from "react";
           {/* Progress to min withdraw */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>{t.min_withdraw الأدنى للسحب"}</p>
+              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 600 }}>{t.min_withdraw}</p>
               <p style={{ fontSize: 10, fontWeight: 800, color: pct >= 100 ? "#10B981" : "#FFD700" }}>{user.minWithdraw.toLocaleString()} {t.points}</p>
             </div>
             <div style={{ height: 7, background: "rgba(255,255,255,0.06)", borderRadius: 6, overflow: "hidden" }}>
@@ -149,8 +149,8 @@ import { useState, useEffect } from "react";
           <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 16, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
             <Warning size={20} style={{ color: "#F59E0B", flexShrink: 0, marginTop: 1 }} />
             <div>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 3 }}>{t.not_enough_balance غير كافٍ"}</p>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{t.need_more_points"} {(user.minWithdraw - user.balance).toLocaleString()} {t.points} {t.to_reach_min إلى الحد الأدنى"}</p>
+              <p style={{ fontSize: 12, fontWeight: 700, color: "#FCD34D", marginBottom: 3 }}>{t.not_enough_balance}</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>{t.need_more_points} {(user.minWithdraw - user.balance).toLocaleString()} {t.points} {t.to_reach_min}</p>
             </div>
           </div>
         )}
@@ -189,7 +189,7 @@ import { useState, useEffect } from "react";
                         background: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
                         color: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "#10B981" : "rgba(255,255,255,0.3)"
                       }}>
-                        {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? t.withdraw_wallet_saved مُضافة" : t.withdraw_wallet_add محفظة"}
+                        {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? t.withdraw_wallet_saved : t.withdraw_wallet_add}
                       </div>
                     )}
                   </button>
@@ -204,14 +204,14 @@ import { useState, useEffect } from "react";
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <Wallet size={16} style={{ color: methodInfo[method].color }} />
                     <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                      {method === "ton" ? (t.withdraw_ton_wallet") : (t.withdraw_usdt_wallet (TRC-20)")}
+                      {method === "ton" ? (t.withdraw_ton_wallet) : (t.withdraw_usdt_wallet)}
                     </p>
                   </div>
                   <button 
                     onClick={() => setShowWalletSetup(!showWalletSetup)}
                     style={{ fontSize: 10, color: methodInfo[method].color, background: "none", border: "none", cursor: "pointer" }}
                   >
-                    {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : (tonWallet || usdtWallet) ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add")}
+                    {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : (tonWallet || usdtWallet) ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add)}
                   </button>
                 </div>
 
@@ -223,7 +223,7 @@ import { useState, useEffect } from "react";
                     <button 
                       onClick={() => {
                         navigator.clipboard.writeText(method === "ton" ? tonWallet : usdtWallet);
-                        toast({ title: t.success, description: t.withdraw_wallet_copied عنوان المحفظة" });
+                        toast({ title: t.success, description: t.withdraw_wallet_copied });
                       }}
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                     >
@@ -251,7 +251,7 @@ import { useState, useEffect } from "react";
                         color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
                       }}
                     >
-                      {t.withdraw_save_wallet المحفظة"}
+                      {t.withdraw_save_wallet}
                     </button>
                   </div>
                 )}
@@ -261,7 +261,7 @@ import { useState, useEffect } from "react";
             {/* Input */}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
-                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t.withdraw_select_amount (بالنقاط)"}</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t.withdraw_select_amount}</p>
                 <div style={{ position: "relative" }}>
                   <input
                     type="number"
@@ -281,7 +281,7 @@ import { useState, useEffect } from "react";
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
                 {[user.minWithdraw, Math.floor(user.balance / 2), user.balance].map((v, i) => (
                   <button key={i} onClick={() => setAmount(String(v))} style={{ height: 38, borderRadius: 12, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                    {i === 0 ? (t.withdraw_quick_select الأدنى") : i === 1 ? (t.withdraw_quick_half") : (t.withdraw_quick_all")}
+                    {i === 0 ? (t.withdraw_quick_select) : i === 1 ? (t.withdraw_quick_half) : (t.withdraw_quick_all)}
                   </button>
                 ))}
               </div>
@@ -309,15 +309,15 @@ import { useState, useEffect } from "react";
             ) : (
               <PaperPlaneTilt size={20} />
             )}
-            {loading ? (t.withdraw_sending الإرسال...") : `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
+            {loading ? (t.withdraw_sending) : `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
           </button>
         )}
 
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { label: t.withdraw_conversion_rate التحويل", value: `${user.starsRate} ${t.points} = 1`, color: "#A78BFA" },
-            { label: t.withdraw_minimum_amount الأدنى", value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
+            { label: t.withdraw_conversion_rate, value: `${user.starsRate} ${t.points} = 1`, color: "#A78BFA" },
+            { label: t.withdraw_minimum_amount, value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>
               <p style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>{s.label}</p>
