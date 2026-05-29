@@ -168,7 +168,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       onLock?.();
       setShowAdOverlay(true);
     } catch (e: any) {
-      toast({ title: t.error, description: e?.message || t.ad_load_failed تحميل الإعلان", variant: "destructive" });
+      toast({ title: t.error, description: e?.message || t.ad_load_failed, variant: "destructive" });
     } finally {
       setTokenLoading(false);
     }
@@ -259,7 +259,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   const handleBuySpins = async (qty: number, price: number) => {
     if (buyLoading) return;
     if (user.balance < price) {
-      toast({ title: t.insufficient_balance غير كافٍ ○", description: `${t.need_points"} ${price} ${t.points}. ${t.current_balance الحالي"}: ${user.balance} ${t.points}`, variant: "destructive" });
+      toast({ title: t.insufficient_balance, description: `${t.need_points} ${price} ${t.points}. ${t.current_balance}: ${user.balance} ${t.points}`, variant: "destructive" });
       return;
     }
     setBuyLoading(true);
@@ -301,10 +301,10 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
         });
       } else {
         window.open(res.invoiceLink, "_blank");
-        toast({ title: t.stars_payment_link رابط الدفع", description: t.open_link_pay الرابط وادفع بنجومك" });
+        toast({ title: t.stars_payment_link, description: t.open_link_pay });
       }
     } catch (e: any) {
-      toast({ title: t.error, description: e?.message || t.invoice_failed إنشاء الفاتورة", variant: "destructive" });
+      toast({ title: t.error, description: e?.message || t.invoice_failed, variant: "destructive" });
     } finally {
       setStarsLoading(false);
     }
@@ -315,7 +315,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       {showAdOverlay && (
         <AdOverlay
           seconds={15}
-          rewardLabel={t.spin_extra إضافية "}
+          rewardLabel={t.spin_extra}
           onClaim={handleAdClaim}
           onClose={() => { setShowAdOverlay(false); setPendingToken(null); onUnlock?.(); }}
         />
@@ -462,16 +462,16 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
             </div>
 
             <h3 style={{ fontSize: 22, fontWeight: 900, color: "#fff", textAlign: "center", marginBottom: 8 }}>
-              {t.spin_no_spins دوراتك اليومية! ☺"}
+              {t.spin_no_spins}
             </h3>
             <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textAlign: "center", marginBottom: 24, lineHeight: 1.6 }}>
-              {t.spin_ad_desc إعلاناً قصيراً واحصل على دورة إضافية."}<br />
-              {t.spin_get_free الحصول على دورات مجانية يومياً!"}
+              {t.spin_ad_desc}<br />
+              {t.spin_get_free}
             </p>
 
             <div style={{ background: "rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>{t.spin_today_ads اليوم"}</span>
+                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", fontWeight: 700 }}>{t.spin_today_ads}</span>
                 <span style={{ fontSize: 11, fontWeight: 900, color: "#EC4899" }}>{adSpinsUsed} / {MAX_AD_SPINS}</span>
               </div>
               <div style={{ height: 6, background: "rgba(255,255,255,0.08)", borderRadius: 3, overflow: "hidden" }}>
@@ -508,11 +508,11 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
               }}
             >
               <ShoppingCart size={18} />
-              {t.spin_buy_with_points دورات بنقاطك"}
+              {t.spin_buy_with_points}
             </button>
 
             <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", textAlign: "center", marginTop: 12 }}>
-              {(t.spin_remaining اليوم: {left} من {total} إعلانات").replace("{left}", adSpinsLeft.toString()).replace("{total}", MAX_AD_SPINS.toString())}
+              {(t.spin_remaining).replace("{left}", adSpinsLeft.toString()).replace("{total}", MAX_AD_SPINS.toString())}
             </p>
           </div>
         </div>
@@ -590,7 +590,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 }}
               >
                 <ShoppingCart size={15} />
-                t.spin_buy_more المزيد من الدورات بنقاطك"
+                t.spin_buy_more
               </button>
               <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">
                 {t.daily_spins_info}
@@ -603,7 +603,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 <p className="text-gray-400 text-xs">{t.watch_ad_for_spin_desc}</p>
                 {Number(adSpinsLeft) > 0 && (
                   <p className="text-purple-400 text-xs font-bold">
-                    {adSpinsLeft}/{MAX_AD_SPINS} {t.spin_ads_left today"}
+                    {adSpinsLeft}/{MAX_AD_SPINS} {t.spin_ads_left}
                   </p>
                 )}
               </div>
@@ -631,7 +631,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 }}
               >
                 <ShoppingCart size={16} />
-                t.spin_buy_with_points دورات بنقاطك"
+                t.spin_buy_with_points
               </button>
             </div>
           )}
