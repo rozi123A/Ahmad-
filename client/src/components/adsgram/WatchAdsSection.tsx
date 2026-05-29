@@ -105,6 +105,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
           rewardLabel={`+${user.adReward} ${t.points}`}
           onClaim={handleClaim}
           onClose={() => { setShowAd(false); setPendingToken(null); onUnlock?.(); }}
+          lang={lang}
         />
       )}
 
