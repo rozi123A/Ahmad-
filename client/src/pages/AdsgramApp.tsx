@@ -66,7 +66,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             setMsg({ text: res.message || t.error, ok: false });
           }
         } catch {
-          setMsg({ text: t.redeem_error، حاول مجدداً", ok: false });
+          setMsg({ text: t.redeem_error || "حاول مجدداً", ok: false });
         } finally {
           setLoading(false);
         }
@@ -693,7 +693,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 <div style={{ marginBottom: 18 }}>
                   <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#F59E0B" }}> {t.watch_ad}</h2>
                   <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 5 }}>
-                    {(t.earn_per_ad.replace("{reward}" لكل إعلان تشاهده").replace("{reward}", String(safeUser.adReward))}
+                    {t.earn_per_ad.replace("{reward}", String(safeUser.adReward))}
                   </p>
                 </div>
                 <WatchAdsSection user={safeUser} lang={lang} onReward={(u) => refreshUser(u)} onLock={() => setIsNavLocked(true)} onUnlock={() => setIsNavLocked(false)} />
