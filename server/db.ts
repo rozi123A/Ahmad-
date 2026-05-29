@@ -44,6 +44,8 @@ export async function getDb() {
         try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_tx_hash VARCHAR(200)`); } catch (_) {}
         try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_amount VARCHAR(50)`); } catch (_) {}
         try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_wallet VARCHAR(100)`); } catch (_) {}
+        // Online tracking
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -137,6 +139,7 @@ export async function upsertTelegramUser(user: InsertTelegramUser) {
     if (user.isBanned !== undefined) updateSet.isBanned = user.isBanned;
     if (user.tonWallet !== undefined) updateSet.tonWallet = user.tonWallet;
     if (user.usdtWallet !== undefined) updateSet.usdtWallet = user.usdtWallet;
+    updateSet.lastSeenAt = new Date();
 
     const safeUser = {
       ...user,
@@ -418,16 +421,43 @@ export async function getAdminStats() {
         balance: telegramUsers.balance,
       }).from(telegramUsers).orderBy(desc(telegramUsers.totalEarned)).limit(5),
     ]);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const [{ onlineNow }] = await db.select({ onlineNow: count() })
+      .from(telegramUsers)
+      .where(gte(telegramUsers.lastSeenAt, fiveMinutesAgo));
+
     return {
       totalUsers, bannedUsers, pendingWithdrawals, pendingStars,
       totalTransactions, totalPoints,
       totalAdViews, todayAds, totalSpins, totalWithdrawals,
       newUsersToday, totalStarsWithdrawn,
-      topUsers,
+      topUsers, onlineNow,
     };
   } catch (err) {
     console.error("[Database] getAdminStats failed:", err);
     return null;
+  }
+}
+
+export async function getOnlineUsers(minutesAgo: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const since = new Date(Date.now() - minutesAgo * 60 * 1000);
+    return await db.select({
+      telegramId: telegramUsers.telegramId,
+      firstName: telegramUsers.firstName,
+      username: telegramUsers.username,
+      balance: telegramUsers.balance,
+      country: telegramUsers.country,
+      lastSeenAt: telegramUsers.lastSeenAt,
+    }).from(telegramUsers)
+      .where(gte(telegramUsers.lastSeenAt, since))
+      .orderBy(desc(telegramUsers.lastSeenAt))
+      .limit(100);
+  } catch (err) {
+    console.error("[Database] getOnlineUsers failed:", err);
+    return [];
   }
 }
 
