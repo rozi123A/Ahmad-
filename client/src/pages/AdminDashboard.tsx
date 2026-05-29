@@ -918,7 +918,7 @@ export default function AdminDashboard() {
                               >
                                 {deleteCodeLoading === c.id
                                   ? <div style={{ width: 10, height: 10, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                                  : <Trash2 size={11} />}
+                                  : <Trash size={11} />}
                               </button>
                             )}
                           </div>
