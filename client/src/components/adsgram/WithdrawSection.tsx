@@ -39,22 +39,23 @@ import { useState, useEffect } from "react";
     const numAmount = parseFloat(amount) || 0;
     const starsWorth = Math.floor(numAmount / user.starsRate);
     const canWithdraw = numAmount >= user.minWithdraw && numAmount <= user.balance;
+    const hasEnoughBalance = user.balance >= user.minWithdraw;
 
     const methodInfo: Record<WithdrawalMethod, { icon: string; label: string; desc: string; color: string }> = {
       telegram_stars: { 
-        icon: "", 
+        icon: "⭐", 
         label: t.withdraw_method_stars, 
         desc: t.withdraw_method_stars_desc, 
         color: "#FFD700" 
       },
       ton: { 
-        icon: "", 
+        icon: "💎", 
         label: t.withdraw_method_ton, 
         desc: t.withdraw_method_ton_desc, 
         color: "#10B981" 
       },
       usdt: { 
-        icon: "", 
+        icon: "💵", 
         label: t.withdraw_method_usdt, 
         desc: t.withdraw_method_usdt_desc, 
         color: "#60A5FA" 
@@ -62,15 +63,21 @@ import { useState, useEffect } from "react";
     };
 
     const handleSaveWallets = async () => {
+      const walletValue = method === "ton" ? tonWallet : usdtWallet;
+      if (!walletValue.trim()) {
+        toast({ title: t.error, description: t.withdraw_no_wallet_error || "الرجاء إدخال عنوان المحفظة", variant: "destructive" });
+        return;
+      }
       try {
-        if (tonWallet) {
+        if (method === "ton" && tonWallet) {
           await updateTonWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: tonWallet });
         }
-        if (usdtWallet) {
+        if (method === "usdt" && usdtWallet) {
           await updateUsdtWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: usdtWallet });
         }
         toast({ title: t.withdraw_wallet_saved_success, description: t.withdraw_wallet_can_use });
         setShowWalletSetup(false);
+        walletsQuery.refetch();
       } catch (e: any) {
         toast({ title: t.error, description: e.message || t.withdraw_save_failed, variant: "destructive" });
       }
@@ -79,12 +86,12 @@ import { useState, useEffect } from "react";
     const handleWithdraw = async () => {
       // Check if user has wallet for selected method
       if (method === "ton" && !tonWallet) {
-        toast({ title: " " + t.withdraw_ton_wallet, description: t.withdraw_no_wallet_error, variant: "destructive" });
+        toast({ title: "💎 " + t.withdraw_ton_wallet, description: t.withdraw_no_wallet_error, variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
       if (method === "usdt" && !usdtWallet) {
-        toast({ title: " " + t.withdraw_usdt_wallet, description: t.withdraw_no_usdt_error, variant: "destructive" });
+        toast({ title: "💵 " + t.withdraw_usdt_wallet, description: t.withdraw_no_usdt_error, variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
@@ -129,7 +136,7 @@ import { useState, useEffect } from "react";
             </div>
             <div style={{ textAlign: "right" }}>
               <p style={{ fontSize: 9, color: "rgba(16,185,129,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{t.stars_equivalent}</p>
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}> {Math.floor(user.balance / user.starsRate)}</p>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}>⭐ {Math.floor(user.balance / user.starsRate)}</p>
             </div>
           </div>
 
@@ -145,7 +152,7 @@ import { useState, useEffect } from "react";
           </div>
         </div>
 
-        {user.balance < user.minWithdraw && (
+        {!hasEnoughBalance && (
           <div style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 16, padding: "14px 16px", display: "flex", gap: 12, alignItems: "flex-start" }}>
             <Warning size={20} style={{ color: "#F59E0B", flexShrink: 0, marginTop: 1 }} />
             <div>
@@ -155,110 +162,111 @@ import { useState, useEffect } from "react";
           </div>
         )}
 
-        {/* Withdrawal Method Selector */}
-        {user.balance >= user.minWithdraw && (
-          <>
-            <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
-              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>{t.withdraw_method_title}</p>
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {(["telegram_stars", "ton", "usdt"] as WithdrawalMethod[]).map(m => (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      setMethod(m);
-                      if (m === "ton" && !tonWallet) setShowWalletSetup(true);
-                      if (m === "usdt" && !usdtWallet) setShowWalletSetup(true);
-                    }}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-                      borderRadius: 12, border: `2px solid ${method === m ? methodInfo[m].color : "rgba(255,255,255,0.08)"}`,
-                      background: method === m ? `${methodInfo[m].color}15` : "rgba(255,255,255,0.02)",
-                      cursor: "pointer", transition: "all 0.2s", textAlign: "left"
-                    }}
-                  >
-                    <span style={{ fontSize: 20 }}>{methodInfo[m].icon}</span>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: method === m ? methodInfo[m].color : "#fff", marginBottom: 2 }}>{methodInfo[m].label}</p>
-                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>{methodInfo[m].desc}</p>
-                    </div>
-                    {method === m && <Check size={18} color={methodInfo[m].color} />}
-                    {(m === "ton" || m === "usdt") && (
-                      <div style={{ 
-                        fontSize: 9, padding: "3px 8px", borderRadius: 6,
-                        background: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
-                        color: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "#10B981" : "rgba(255,255,255,0.3)"
-                      }}>
-                        {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? t.withdraw_wallet_saved : t.withdraw_wallet_add}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Wallet Setup Section */}
-            {(method === "ton" || method === "usdt") && (
-              <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <Wallet size={16} style={{ color: methodInfo[method].color }} />
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                      {method === "ton" ? (t.withdraw_ton_wallet) : (t.withdraw_usdt_wallet)}
-                    </p>
-                  </div>
-                  <button 
-                    onClick={() => setShowWalletSetup(!showWalletSetup)}
-                    style={{ fontSize: 10, color: methodInfo[method].color, background: "none", border: "none", cursor: "pointer" }}
-                  >
-                    {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : (tonWallet || usdtWallet) ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add)}
-                  </button>
+        {/* Withdrawal Method Selector — always visible so users can set up wallets early */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: "14px 16px" }}>
+          <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>{t.withdraw_method_title}</p>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(["telegram_stars", "ton", "usdt"] as WithdrawalMethod[]).map(m => (
+              <button
+                key={m}
+                onClick={() => {
+                  setMethod(m);
+                  if (m === "ton" && !tonWallet) setShowWalletSetup(true);
+                  if (m === "usdt" && !usdtWallet) setShowWalletSetup(true);
+                  if (m === "telegram_stars") setShowWalletSetup(false);
+                }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                  borderRadius: 12, border: `2px solid ${method === m ? methodInfo[m].color : "rgba(255,255,255,0.08)"}`,
+                  background: method === m ? `${methodInfo[m].color}15` : "rgba(255,255,255,0.02)",
+                  cursor: "pointer", transition: "all 0.2s", textAlign: "left"
+                }}
+              >
+                <span style={{ fontSize: 20 }}>{methodInfo[m].icon}</span>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: method === m ? methodInfo[m].color : "#fff", marginBottom: 2 }}>{methodInfo[m].label}</p>
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>{methodInfo[m].desc}</p>
                 </div>
-
-                {(method === "ton" ? tonWallet : usdtWallet) && !showWalletSetup ? (
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.1)", borderRadius: 10 }}>
-                    <code style={{ fontSize: 11, color: "#10B981", flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {method === "ton" ? tonWallet : usdtWallet}
-                    </code>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(method === "ton" ? tonWallet : usdtWallet);
-                        toast({ title: t.success, description: t.withdraw_wallet_copied });
-                      }}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                    >
-                      <Copy size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
-                    </button>
-                  </div>
-                ) : showWalletSetup && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <input
-                      type="text"
-                      placeholder={method === "ton" ? (t.withdraw_wallet_placeholder_ton || "EQxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") : (t.withdraw_wallet_placeholder_usdt)}
-                      value={method === "ton" ? tonWallet : usdtWallet}
-                      onChange={e => method === "ton" ? setTonWallet(e.target.value) : setUsdtWallet(e.target.value)}
-                      style={{ 
-                        width: "100%", padding: "12px 14px", borderRadius: 12, 
-                        background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#fff", fontSize: 12, outline: "none"
-                      }}
-                    />
-                    <button
-                      onClick={handleSaveWallets}
-                      style={{
-                        padding: "10px 16px", borderRadius: 10, border: "none",
-                        background: "linear-gradient(135deg, #10B981, #059669)",
-                        color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
-                      }}
-                    >
-                      {t.withdraw_save_wallet}
-                    </button>
+                {method === m && <Check size={18} color={methodInfo[m].color} />}
+                {(m === "ton" || m === "usdt") && (
+                  <div style={{ 
+                    fontSize: 9, padding: "3px 8px", borderRadius: 6,
+                    background: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
+                    color: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "#10B981" : "rgba(255,255,255,0.3)"
+                  }}>
+                    {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? t.withdraw_wallet_saved : t.withdraw_wallet_add}
                   </div>
                 )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Wallet Setup Section — always visible for TON/USDT */}
+        {(method === "ton" || method === "usdt") && (
+          <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Wallet size={16} style={{ color: methodInfo[method].color }} />
+                <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
+                  {method === "ton" ? (t.withdraw_ton_wallet) : (t.withdraw_usdt_wallet)}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowWalletSetup(!showWalletSetup)}
+                style={{ fontSize: 10, color: methodInfo[method].color, background: "none", border: "none", cursor: "pointer" }}
+              >
+                {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : (method === "ton" ? tonWallet : usdtWallet) ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add)}
+              </button>
+            </div>
+
+            {(method === "ton" ? tonWallet : usdtWallet) && !showWalletSetup ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.1)", borderRadius: 10 }}>
+                <code style={{ fontSize: 11, color: "#10B981", flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {method === "ton" ? tonWallet : usdtWallet}
+                </code>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(method === "ton" ? tonWallet : usdtWallet);
+                    toast({ title: t.success, description: t.withdraw_wallet_copied });
+                  }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                >
+                  <Copy size={14} style={{ color: "rgba(255,255,255,0.4)" }} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <input
+                  type="text"
+                  placeholder={method === "ton" ? (t.withdraw_wallet_placeholder_ton || "EQxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") : (t.withdraw_wallet_placeholder_usdt || "TRxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")}
+                  value={method === "ton" ? tonWallet : usdtWallet}
+                  onChange={e => method === "ton" ? setTonWallet(e.target.value) : setUsdtWallet(e.target.value)}
+                  style={{ 
+                    width: "100%", padding: "12px 14px", borderRadius: 12, 
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                    color: "#fff", fontSize: 12, outline: "none", boxSizing: "border-box"
+                  }}
+                />
+                <button
+                  onClick={handleSaveWallets}
+                  style={{
+                    padding: "10px 16px", borderRadius: 10, border: "none",
+                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
+                  }}
+                >
+                  {t.withdraw_save_wallet}
+                </button>
               </div>
             )}
+          </div>
+        )}
 
-            {/* Input */}
+        {/* Amount Input + CTA — only when balance is enough */}
+        {hasEnoughBalance && (
+          <>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <div>
                 <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>{t.withdraw_select_amount}</p>
@@ -286,31 +294,28 @@ import { useState, useEffect } from "react";
                 ))}
               </div>
             </div>
-          </>
-        )}
 
-        {/* CTA */}
-        {user.balance >= user.minWithdraw && (
-          <button
-            onClick={handleWithdraw}
-            disabled={!canWithdraw || loading}
-            style={{
-              width: "100%", height: 60, borderRadius: 20, border: "none",
-              cursor: canWithdraw && !loading ? "pointer" : "not-allowed",
-              fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
-              background: canWithdraw && !loading ? `linear-gradient(135deg, ${methodInfo[method].color}, ${methodInfo[method].color}cc)` : "rgba(255,255,255,0.05)",
-              color: canWithdraw && !loading ? "#fff" : "rgba(255,255,255,0.25)",
-              boxShadow: canWithdraw && !loading ? `0 6px 24px ${methodInfo[method].color}40` : "none",
-              transition: "all 0.3s",
-            }}
-          >
-            {loading ? (
-              <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-            ) : (
-              <PaperPlaneTilt size={20} />
-            )}
-            {loading ? (t.withdraw_sending) : `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
-          </button>
+            <button
+              onClick={handleWithdraw}
+              disabled={!canWithdraw || loading}
+              style={{
+                width: "100%", height: 60, borderRadius: 20, border: "none",
+                cursor: canWithdraw && !loading ? "pointer" : "not-allowed",
+                fontWeight: 900, fontSize: 15, display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                background: canWithdraw && !loading ? `linear-gradient(135deg, ${methodInfo[method].color}, ${methodInfo[method].color}cc)` : "rgba(255,255,255,0.05)",
+                color: canWithdraw && !loading ? "#fff" : "rgba(255,255,255,0.25)",
+                boxShadow: canWithdraw && !loading ? `0 6px 24px ${methodInfo[method].color}40` : "none",
+                transition: "all 0.3s",
+              }}
+            >
+              {loading ? (
+                <div style={{ width: 22, height: 22, border: "3px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              ) : (
+                <PaperPlaneTilt size={20} />
+              )}
+              {loading ? (t.withdraw_sending) : `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}`}
+            </button>
+          </>
         )}
 
         {/* Info cards */}
@@ -328,4 +333,3 @@ import { useState, useEffect } from "react";
       </div>
     );
   }
-  
