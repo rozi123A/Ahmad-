@@ -590,7 +590,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 }}
               >
                 <ShoppingCart size={15} />
-                t.spin_buy_more
+                {t.spin_buy_more}
               </button>
               <p className="text-[10px] text-gray-500 text-center uppercase tracking-widest font-bold">
                 {t.daily_spins_info}
@@ -631,7 +631,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
                 }}
               >
                 <ShoppingCart size={16} />
-                t.spin_buy_with_points
+                {t.spin_buy_with_points}
               </button>
             </div>
           )}
