@@ -1,4 +1,5 @@
 import { randomInt, timingSafeEqual } from "crypto";
+import { isFostpayEnabled, fostpaySendTon, fostpaySendUsdt } from "./fostpay";
 
 function safeCompareSecret(input: string, expected: string): boolean {
   if (!expected || expected.length === 0) return false;
@@ -1196,90 +1197,224 @@ export const appRouter = router({
                 }
 
               } else if (method === "ton") {
-                // ── إشعار الأدمن لمعالجة TON يدوياً ──
-                if (adminId) {
+                // ── إرسال TON تلقائياً عبر Fostpay (أو يدوياً إذا لم يُفعَّل) ──
+                const tonAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
+                const tonWallet = w.user_wallet || "";
+
+                if (isFostpayEnabled() && tonWallet) {
+                  // ── Fostpay: إرسال تلقائي ──
+                  const payResult = await fostpaySendTon(tonWallet, tonAmount, `سحب #${w.id}`);
+
+                  if (payResult.success) {
+                    // نجح الإرسال التلقائي — أشعر المستخدم والأدمن
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: w.telegramId,
+                        text:
+                          `✅ *تم إرسال TON تلقائياً!*\n\n` +
+                          `💎 المبلغ: *${tonAmount} TON*\n` +
+                          `🔗 المحفظة: \`${tonWallet}\`\n` +
+                          (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`\n` : "") +
+                          `\nشكراً لك! 🚀`,
+                        parse_mode: "Markdown",
+                      }),
+                    }).catch(() => {});
+                    if (adminId) {
+                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          chat_id: adminId,
+                          text:
+                            `✅ *تم إرسال TON تلقائياً عبر Fostpay*\n\n` +
+                            `👤 ${userName} (${userTag})\n` +
+                            `💎 ${tonAmount} TON → \`${tonWallet}\`\n` +
+                            (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
+                          parse_mode: "Markdown",
+                        }),
+                      }).catch(() => {});
+                    }
+                  } else {
+                    // فشل Fostpay — تراجع للإشعار اليدوي
+                    console.error("[Fostpay] TON payout failed:", payResult.error);
+                    if (adminId) {
+                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          chat_id: adminId,
+                          text:
+                            `⚠️ *فشل إرسال TON تلقائياً — يلزم تدخل يدوي*\n\n` +
+                            `👤 ${userName} (${userTag})\n` +
+                            `💎 ${tonAmount} TON → \`${tonWallet}\`\n` +
+                            `❌ السبب: ${payResult.error || "خطأ غير معروف"}`,
+                          parse_mode: "Markdown",
+                          reply_markup: JSON.stringify({
+                            inline_keyboard: [[
+                              { text: "✅ تم الإرسال يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                              { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                            ]],
+                          }),
+                        }),
+                      }).catch(() => {});
+                    }
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: w.telegramId,
+                        text: `✅ *تمت الموافقة على طلب السحب!*\n\n💎 ${tonAmount} TON\n⏰ سيصلك خلال 24 ساعة\n\nشكراً لك! 🚀`,
+                        parse_mode: "Markdown",
+                      }),
+                    }).catch(() => {});
+                  }
+                } else {
+                  // ── لا يوجد Fostpay — إشعار يدوي كالمعتاد ──
+                  if (adminId) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: adminId,
+                        text:
+                          `💎 *طلب سحب TON جديد*\n\n` +
+                          `👤 ${userName} (${userTag})\n` +
+                          `🆔 ID: \`${w.telegramId}\`\n` +
+                          `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
+                          `💎 TON: ${tonAmount}\n` +
+                          `🔗 المحفظة: \`${tonWallet || "غير موجودة"}\`\n\n` +
+                          `📋 أرسل TON يدوياً ثم اضغط "تم الإرسال"`,
+                        parse_mode: "Markdown",
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: [[
+                            { text: "✅ تم إرسال TON", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                            { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                          ]],
+                        }),
+                      }),
+                    }).catch(() => {});
+                  }
                   fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      chat_id: adminId,
-                      text:
-                        `💎 *طلب سحب TON جديد*\n\n` +
-                        `👤 المستخدم: *${userName}* (${userTag})\n` +
-                        `🆔 ID: \`${w.telegramId}\`\n` +
-                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💎 TON المطلوب: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} TON\n` +
-                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 15000 × 0.05\n` +
-                        `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
-                        `📋 أرسل TON يدوياً ثم اضغط "تم الإرسال"`,
+                      chat_id: w.telegramId,
+                      text: `✅ *تمت الموافقة على طلب السحب!*\n\n💎 ${tonAmount} TON\n🔗 \`${tonWallet}\`\n\n⏰ سيتم إرسال TON خلال 24 ساعة\n\nشكراً! 🚀`,
                       parse_mode: "Markdown",
-                      reply_markup: JSON.stringify({
-                        inline_keyboard: [[
-                          { text: `✅ تم إرسال TON`, callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                          { text: `❌ رفض الطلب`, callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                        ]],
-                      }),
                     }),
                   }).catch(() => {});
                 }
-                // إشعار المستخدم
-                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    chat_id: w.telegramId,
-                    text:
-                      `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💎 المبلغ: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} TON\n` +
-                      `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
-                      `⏰ سيتم إرسال TON خلال 24 ساعة\n\n` +
-                      `شكراً لك! 🚀`,
-                    parse_mode: "Markdown",
-                  }),
-                }).catch(() => {});
 
               } else if (method === "usdt") {
-                // ── إشعار الأدمن لمعالجة USDT يدوياً ──
-                if (adminId) {
+                // ── إرسال USDT تلقائياً عبر Fostpay (أو يدوياً إذا لم يُفعَّل) ──
+                const usdtAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
+                const usdtWallet = w.user_wallet || "";
+
+                if (isFostpayEnabled() && usdtWallet) {
+                  // ── Fostpay: إرسال تلقائي ──
+                  const payResult = await fostpaySendUsdt(usdtWallet, usdtAmount, `سحب #${w.id}`);
+
+                  if (payResult.success) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: w.telegramId,
+                        text:
+                          `✅ *تم إرسال USDT تلقائياً!*\n\n` +
+                          `💵 المبلغ: *${usdtAmount} USDT*\n` +
+                          `🔗 المحفظة: \`${usdtWallet}\`\n` +
+                          (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`\n` : "") +
+                          `\nشكراً لك! 🚀`,
+                        parse_mode: "Markdown",
+                      }),
+                    }).catch(() => {});
+                    if (adminId) {
+                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          chat_id: adminId,
+                          text:
+                            `✅ *تم إرسال USDT تلقائياً عبر Fostpay*\n\n` +
+                            `👤 ${userName} (${userTag})\n` +
+                            `💵 ${usdtAmount} USDT → \`${usdtWallet}\`\n` +
+                            (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
+                          parse_mode: "Markdown",
+                        }),
+                      }).catch(() => {});
+                    }
+                  } else {
+                    console.error("[Fostpay] USDT payout failed:", payResult.error);
+                    if (adminId) {
+                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          chat_id: adminId,
+                          text:
+                            `⚠️ *فشل إرسال USDT تلقائياً — يلزم تدخل يدوي*\n\n` +
+                            `👤 ${userName} (${userTag})\n` +
+                            `💵 ${usdtAmount} USDT → \`${usdtWallet}\`\n` +
+                            `❌ السبب: ${payResult.error || "خطأ غير معروف"}`,
+                          parse_mode: "Markdown",
+                          reply_markup: JSON.stringify({
+                            inline_keyboard: [[
+                              { text: "✅ تم الإرسال يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                              { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                            ]],
+                          }),
+                        }),
+                      }).catch(() => {});
+                    }
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: w.telegramId,
+                        text: `✅ *تمت الموافقة على طلب السحب!*\n\n💵 ${usdtAmount} USDT\n⏰ سيصلك خلال 24 ساعة\n\nشكراً لك! 🚀`,
+                        parse_mode: "Markdown",
+                      }),
+                    }).catch(() => {});
+                  }
+                } else {
+                  // ── لا يوجد Fostpay — إشعار يدوي كالمعتاد ──
+                  if (adminId) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: adminId,
+                        text:
+                          `💵 *طلب سحب USDT (TRC-20) جديد*\n\n` +
+                          `👤 ${userName} (${userTag})\n` +
+                          `🆔 ID: \`${w.telegramId}\`\n` +
+                          `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
+                          `💵 USDT: ${usdtAmount}\n` +
+                          `🔗 المحفظة: \`${usdtWallet || "غير موجودة"}\`\n\n` +
+                          `📋 أرسل USDT يدوياً ثم اضغط "تم الإرسال"`,
+                        parse_mode: "Markdown",
+                        reply_markup: JSON.stringify({
+                          inline_keyboard: [[
+                            { text: "✅ تم إرسال USDT", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                            { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
+                          ]],
+                        }),
+                      }),
+                    }).catch(() => {});
+                  }
                   fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      chat_id: adminId,
-                      text:
-                        `💵 *طلب سحب USDT (TRC-20) جديد*\n\n` +
-                        `👤 المستخدم: *${userName}* (${userTag})\n` +
-                        `🆔 ID: \`${w.telegramId}\`\n` +
-                        `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                        `💵 USDT المطلوب: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} USDT\n` +
-                        `📐 الحساب: ${Number(w.amount).toLocaleString()} ÷ 15000 × 0.05\n` +
-                        `🔗 المحفظة: \`${w.user_wallet || "غير موجودة"}\`\n\n` +
-                        `📋 أرسل USDT يدوياً ثم اضغط "تم الإرسال"`,
+                      chat_id: w.telegramId,
+                      text: `✅ *تمت الموافقة على طلب السحب!*\n\n💵 ${usdtAmount} USDT\n🔗 \`${usdtWallet}\`\n\n⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\nشكراً! 🚀`,
                       parse_mode: "Markdown",
-                      reply_markup: JSON.stringify({
-                        inline_keyboard: [[
-                          { text: `✅ تم إرسال USDT`, callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                          { text: `❌ رفض الطلب`, callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                        ]],
-                      }),
                     }),
                   }).catch(() => {});
                 }
-                // إشعار المستخدم
-                fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    chat_id: w.telegramId,
-                    text:
-                      `✅ *تمت الموافقة على طلب السحب!*\n\n` +
-                      `💵 المبلغ: ${parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} USDT\n` +
-                      `🔗 المحفظة: \`${w.user_wallet || ""}\`\n\n` +
-                      `⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\n` +
-                      `شكراً لك! 🚀`,
-                    parse_mode: "Markdown",
-                  }),
-                }).catch(() => {});
               }
 
             } else {
