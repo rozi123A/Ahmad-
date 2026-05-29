@@ -21,7 +21,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel, sendStarsGift } from "./bot";
 import { z } from "zod";
-import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals,
+import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
   getUserWallets, updateUserTonWallet, updateUserUsdtWallet } from "./db";
@@ -1485,6 +1485,16 @@ export const appRouter = router({
           const limit = 20;
           const offset = (input.page - 1) * limit;
           const users = await getAllTelegramUsersAdmin(limit, offset);
+          return { success: true, users };
+        }),
+
+      // Who is online now (active in last 5 min)
+      getOnlineUsers: publicProcedure
+        .input(z.object({ secret: z.string() }))
+        .query(async ({ input }) => {
+          const adminSecret = process.env.ADMIN_SECRET || "";
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, users: [] };
+          const users = await getOnlineUsers(5);
           return { success: true, users };
         }),
 
