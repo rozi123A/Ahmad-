@@ -549,7 +549,7 @@ export default function ComponentsShowcase() {
                               { value: "vue", label: "Vue" },
                               { value: "angular", label: "Angular" },
                               { value: "svelte", label: "Svelte" },
-                              { value: "nextjs", label: "Next.js" },
+                              { value: "nextjs", label: "Next.js },
                               { value: "nuxt", label: "Nuxt" },
                               { value: "remix", label: "Remix" },
                             ].find(fw => fw.value === selectedFramework)?.label
@@ -568,7 +568,7 @@ export default function ComponentsShowcase() {
                               { value: "vue", label: "Vue" },
                               { value: "angular", label: "Angular" },
                               { value: "svelte", label: "Svelte" },
-                              { value: "nextjs", label: "Next.js" },
+                              { value: "nextjs", label: "Next.js },
                               { value: "nuxt", label: "Nuxt" },
                               { value: "remix", label: "Remix" },
                             ].map(framework => (
@@ -608,7 +608,7 @@ export default function ComponentsShowcase() {
                           { value: "vue", label: "Vue" },
                           { value: "angular", label: "Angular" },
                           { value: "svelte", label: "Svelte" },
-                          { value: "nextjs", label: "Next.js" },
+                          { value: "nextjs", label: "Next.js },
                           { value: "nuxt", label: "Nuxt" },
                           { value: "remix", label: "Remix" },
                         ].find(fw => fw.value === selectedFramework)?.label
