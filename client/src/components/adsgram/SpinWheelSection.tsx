@@ -318,6 +318,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
           rewardLabel={t.spin_extra}
           onClaim={handleAdClaim}
           onClose={() => { setShowAdOverlay(false); setPendingToken(null); onUnlock?.(); }}
+          lang={lang}
         />
       )}
 
