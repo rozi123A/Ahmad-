@@ -482,7 +482,7 @@ export default function AdminDashboard() {
                   <StatCard emoji="🆕" label="مستخدمون جدد اليوم" value={stats.newUsersToday ?? 0} color="#10B981" sub="اليوم" />
                 </div>
                 <Card>
-                  <CardHead icon={<TrendingUp size={16} />} title="أفضل 5 مستخدمين" color="#FFD700" />
+                  <CardHead icon={<TrendUp size={16} />} title="أفضل 5 مستخدمين" color="#FFD700" />
                   <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                     {(stats.topUsers || []).map((u: any, i: number) => (
                       <div key={u.telegramId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", background: "rgba(255,255,255,0.02)", borderRadius: 12 }}>
@@ -508,7 +508,7 @@ export default function AdminDashboard() {
         {tab === "users" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ position: "relative" }}>
-              <Search size={15} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)" }} />
+              <MagnifyingGlass size={15} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "rgba(255,255,255,0.3)" }} />
               <input
                 value={userSearch}
                 onChange={e => setUserSearch(e.target.value)}
@@ -538,7 +538,7 @@ export default function AdminDashboard() {
                       </p>
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      <button onClick={() => openTelegramChat(u.telegramId, u.username, u.firstName, u.lastName)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><MessageCircle size={14} /></button>
+                      <button onClick={() => openTelegramChat(u.telegramId, u.username, u.firstName, u.lastName)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChatCircle size={14} /></button>
                       <button onClick={() => handleBan(u.telegramId, !u.isBanned)} style={{ height: 34, borderRadius: 10, border: "none", background: !!u.isBanned ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.12)", color: !!u.isBanned ? "#34D399" : "#FCA5A5", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 10px", display: "flex", alignItems: "center", gap: 5 }}>
                         {!!u.isBanned ? <CheckCircle size={13} /> : <Ban size={13} />}
                         {!!u.isBanned ? "رفع" : "حظر"}
@@ -647,7 +647,7 @@ export default function AdminDashboard() {
                         onClick={() => openTelegramChat(w.telegramId, w.username, w.firstName, w.lastName)}
                         style={{ width: 42, height: 42, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                       >
-                        <MessageCircle size={15} />
+                        <ChatCircle size={15} />
                       </button>
 
                       {w.status === "pending" && (
