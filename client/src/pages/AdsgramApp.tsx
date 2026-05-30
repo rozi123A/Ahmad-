@@ -504,8 +504,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         { id: "friends",     label: t.friends_title,                    color: "#3B82F6", bannedAllowed: false },
         { id: "leaderboard", label: t.leaderboard,                      color: "#FFD700", bannedAllowed: true  },
         { id: "withdraw",    label: t.withdraw,                         color: "#10B981", bannedAllowed: false },
-        { id: "stats",       label: (t as any).stats_title || "إحصائيات", color: "#A78BFA", bannedAllowed: true  },
-        { id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true },
+        { id: "admin",       label: "إدارة",                            color: "#7C3AED", bannedAllowed: true  },
       ];
       const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
 
