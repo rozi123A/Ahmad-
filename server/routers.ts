@@ -1018,6 +1018,7 @@ export const appRouter = router({
 
           // 3. Create withdrawal record with method and wallet
           const userWallet = input.method === "dgb" ? user.tonWallet : null;
+          const cryptoAmount = parseFloat(((input.amount / 15000) * 0.05).toFixed(4));
           const displayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
           await client.query(
             `INSERT INTO withdrawals (telegram_id, amount, stars, status, method, user_wallet)
@@ -1276,7 +1277,7 @@ export const appRouter = router({
               } else if (method === "dgb") {
                 // ── إرسال DGB تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
                 const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
-                const dgbWallet = w.user_wallet || "";
+                const dgbWallet = w.userWallet || "";
 
                 if (isFostpayEnabled() && dgbWallet) {
                   const payResult = await fostpaySendDgb(dgbWallet, dgbAmount, `سحب #${w.id}`);

@@ -15,8 +15,7 @@ import { useState, useEffect } from "react";
     const [showMethodMenu, setShowMethodMenu] = useState(false);
     const [showWalletSetup, setShowWalletSetup] = useState(false);
     const [method, setMethod] = useState<WithdrawalMethod>("telegram_stars");
-    const [tonWallet, setTonWallet] = useState("");
-    const [usdtWallet, setUsdtWallet] = useState("");
+    const [dgbWallet, setDgbWallet] = useState("");
     const { toast } = useToast();
     const t = translations[lang];
 
@@ -201,7 +200,7 @@ import { useState, useEffect } from "react";
                 onClick={() => setShowWalletSetup(!showWalletSetup)}
                 style={{ fontSize: 10, color: methodInfo[method].color, background: "none", border: "none", cursor: "pointer" }}
               >
-                {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : (method === "ton" ? tonWallet : usdtWallet) ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add)}
+                {showWalletSetup ? (t.withdraw_wallet_hide || "إخفاء") : dgbWallet ? (t.withdraw_wallet_edit || "تعديل") : (t.withdraw_wallet_add)}
               </button>
             </div>
 
@@ -265,7 +264,7 @@ import { useState, useEffect } from "react";
                 </div>
                 {numAmount > 0 && (
                   <p style={{ fontSize: 11, color: methodInfo[method].color, fontWeight: 600, marginTop: 6 }}>
-                    {methodInfo[method].icon} ≈ {method === "telegram_stars" ? `${starsWorth} Telegram Stars` : method === "ton" ? `${cryptoAmount} TON` : `${cryptoAmount} USDT`}
+                    {methodInfo[method].icon} ≈ {method === "telegram_stars" ? `${starsWorth} Telegram Stars` : `${cryptoAmount} DGB`}
                   </p>
                 )}
               </div>
