@@ -46,6 +46,9 @@ export async function getDb() {
         try { await _pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_wallet VARCHAR(100)`); } catch (_) {}
         // Online tracking
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP`); } catch (_) {}
+        // Anti-cheat tracking
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS cheat_strikes INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS ban_reason TEXT`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -487,13 +490,55 @@ export async function getAllUsersForBroadcast(limit: number = 500) {
   }
 }
 
-export async function banTelegramUser(telegramId: number, ban: boolean) {
+export async function banTelegramUser(telegramId: number, ban: boolean, reason?: string) {
   const db = await getDb();
   if (!db) return;
   try {
-    await db.update(telegramUsers).set({ isBanned: ban }).where(eq(telegramUsers.telegramId, telegramId));
+    const updateData: any = { isBanned: ban, updatedAt: new Date() };
+    if (ban && reason) updateData.banReason = reason;
+    if (!ban) updateData.banReason = null;
+    await db.update(telegramUsers).set(updateData).where(eq(telegramUsers.telegramId, telegramId));
   } catch (err) {
     console.error("[Database] banTelegramUser failed:", err);
+  }
+}
+
+export async function addCheatStrike(telegramId: number, reason: string): Promise<{ strikes: number; banned: boolean }> {
+  const db = await getDb();
+  if (!db) return { strikes: 0, banned: false };
+  try {
+    const user = await getTelegramUser(telegramId);
+    if (!user) return { strikes: 0, banned: false };
+    const newStrikes = (Number(user.cheatStrikes) || 0) + 1;
+    const shouldBan = newStrikes >= 3;
+    const updateData: any = { cheatStrikes: newStrikes, updatedAt: new Date() };
+    if (shouldBan) { updateData.isBanned = true; updateData.banReason = reason; }
+    await db.update(telegramUsers).set(updateData).where(eq(telegramUsers.telegramId, telegramId));
+    return { strikes: newStrikes, banned: shouldBan };
+  } catch (err) {
+    console.error("[Database] addCheatStrike failed:", err);
+    return { strikes: 0, banned: false };
+  }
+}
+
+export async function getBannedUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select({
+      telegramId: telegramUsers.telegramId,
+      firstName: telegramUsers.firstName,
+      username: telegramUsers.username,
+      cheatStrikes: telegramUsers.cheatStrikes,
+      banReason: telegramUsers.banReason,
+      updatedAt: telegramUsers.updatedAt,
+    }).from(telegramUsers)
+      .where(eq(telegramUsers.isBanned, true))
+      .orderBy(desc(telegramUsers.updatedAt))
+      .limit(200);
+  } catch (err) {
+    console.error("[Database] getBannedUsers failed:", err);
+    return [];
   }
 }
 
