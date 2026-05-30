@@ -21,7 +21,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel, sendStarsGift } from "./bot";
 import { z } from "zod";
-import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, addCheatStrike, getBannedUsers,
+import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, getDailyActiveUsers, addCheatStrike, getBannedUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
   getUserWallets, updateUserTonWallet, updateUserUsdtWallet } from "./db";
@@ -1517,6 +1517,16 @@ export const appRouter = router({
           if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, users: [] };
           const users = await getOnlineUsers(5);
           return { success: true, users };
+        }),
+
+      // Who was active today (since midnight)
+      getTodayActiveUsers: publicProcedure
+        .input(z.object({ secret: z.string() }))
+        .query(async ({ input }) => {
+          const adminSecret = process.env.ADMIN_SECRET || "";
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, users: [], count: 0 };
+          const users = await getDailyActiveUsers();
+          return { success: true, users, count: users.length };
         }),
 
       // All withdrawals (with optional status filter)
