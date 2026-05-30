@@ -697,6 +697,42 @@ export async function startBot(app?: Express) {
     const ADMIN_ID = Number(process.env.ADMIN_TELEGRAM_ID) || 5279238199;
     const data = (ctx.callbackQuery as any).data || "";
 
+    // withdraw_done_dgb_<withdrawalId>_<userTelegramId>
+    if (data.startsWith("withdraw_done_dgb_")) {
+      if (fromId !== ADMIN_ID) {
+        await ctx.answerCbQuery("❌ غير مصرح").catch(() => {});
+        return;
+      }
+      const parts = data.split("_"); // [withdraw, done, dgb, id, telegramId]
+      const withdrawalId = parseInt(parts[3] || "0");
+      const userTelegramId = parseInt(parts[4] || "0");
+      const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
+
+      try {
+        const { updateWithdrawalStatus } = await import("./db");
+        await updateWithdrawalStatus(withdrawalId, "completed");
+
+        // إشعار المستخدم بنجاح الإرسال
+        await bot.telegram.sendMessage(
+          userTelegramId,
+          `🎉 *تم إرسال DigiByte (DGB) بنجاح!*\n\n` +
+          `🟦 تم تحويل المبلغ إلى محفظتك المسجلة لدينا.\n\n` +
+          `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
+          {
+            parse_mode: "Markdown",
+            ...(webappUrl ? { reply_markup: { inline_keyboard: [[{ text: "🎮 افتح التطبيق", web_app: { url: webappUrl } }]] } } : {}),
+          }
+        ).catch(() => {});
+
+        // تحديث رسالة الأدمن
+        await ctx.editMessageReplyMarkup({ inline_keyboard: [[{ text: "✅ تم إرسال DGB — مكتمل", callback_data: "noop" }]] }).catch(() => {});
+        await ctx.answerCbQuery("✅ تم إشعار المستخدم بنجاح إرسال DGB").catch(() => {});
+      } catch (e: any) {
+        await ctx.answerCbQuery("❌ خطأ: " + (e?.message || "فشل")).catch(() => {});
+      }
+      return;
+    }
+
     // withdraw_done_<withdrawalId>_<userTelegramId>_<stars>
     if (data.startsWith("withdraw_done_")) {
       if (fromId !== ADMIN_ID) {
