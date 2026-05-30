@@ -457,7 +457,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const safeUser = user || DEFAULT_DEMO_USER;
       const ADMIN_TELEGRAM_ID = 5279238199;
       const tgUserId = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
-      const isAdmin = safeUser.isAdmin === true || tgUserId === ADMIN_TELEGRAM_ID;
+      const isAdmin = safeUser.isAdmin === true || Number(tgUserId) === ADMIN_TELEGRAM_ID;
       const starsEquivalent = Math.floor(safeUser.balance / safeUser.starsRate);
 
       if (safeUser.isBanned && !isAdmin) return (
@@ -505,7 +505,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         { id: "leaderboard", label: t.leaderboard,                      color: "#FFD700", bannedAllowed: true  },
         { id: "withdraw",    label: t.withdraw,                         color: "#10B981", bannedAllowed: false },
         { id: "stats",       label: (t as any).stats_title || "إحصائيات", color: "#A78BFA", bannedAllowed: true  },
-        { id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true },
+        ...(isAdmin ? [{ id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true }] : []),
       ];
       const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
 
