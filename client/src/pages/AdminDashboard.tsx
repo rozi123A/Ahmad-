@@ -5,7 +5,7 @@ import { translations } from "@/lib/i18n";
 import {
   Users, TrendUp, Wallet, PaperPlaneTilt, Shield, ChartBar,
   Eye, EyeSlash, ArrowCounterClockwise, Prohibit, CheckCircle,
-  Broadcast, SignOut, ChatCircle, XCircle, MagnifyingGlass, Bell, Gift, Trash, Copy, MagicWand
+  Broadcast, SignOut, ChatCircle, XCircle, MagnifyingGlass, Bell, Gift, Trash, Copy, MagicWand, Calendar
 } from "@phosphor-icons/react";
 
 const fmtN = (n: number) => n?.toLocaleString() ?? "0";
@@ -196,6 +196,7 @@ export default function AdminDashboard() {
 
   const statsQ = trpc.admin.getStats.useQuery({ secret }, { enabled: authed, refetchInterval: 30000 });
   const onlineQ = trpc.admin.getOnlineUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 15000 });
+  const todayQ = trpc.admin.getTodayActiveUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 60000 });
   const bannedQ = trpc.admin.getBannedUsers.useQuery({ secret }, { enabled: authed && tab === "banned", refetchInterval: 10000 });
   const usersQ = trpc.admin.getUsers.useQuery({ secret, page: userPage }, { enabled: authed && tab === "users" });
   const withdrawQ = trpc.admin.getWithdrawals.useQuery({ secret, status: withdrawFilter }, { enabled: authed && tab === "withdrawals" });
@@ -522,6 +523,34 @@ export default function AdminDashboard() {
                     </div>
                   </Card>
                 )}
+
+                {/* Who was active today */}
+                <Card>
+                  <CardHead icon={<Calendar size={16} />} title={`زوار اليوم — ${todayQ.data?.count ?? 0} مستخدم`} color="#60A5FA" />
+                  <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+                    {(todayQ.data?.users ?? []).length === 0 && (
+                      <p style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", padding: 16, fontSize: 12 }}>لا بيانات لليوم بعد</p>
+                    )}
+                    {(todayQ.data?.users ?? []).map((u: any) => {
+                      const secsAgo = Math.floor((Date.now() - new Date(u.lastSeenAt).getTime()) / 1000);
+                      const minsAgo = Math.floor(secsAgo / 60);
+                      const timeLabel = secsAgo < 60 ? `${secsAgo}ث` : minsAgo < 60 ? `${minsAgo}د` : `${Math.floor(minsAgo / 60)}س`;
+                      return (
+                        <div key={u.telegramId} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "rgba(96,165,250,0.05)", border: "1px solid rgba(96,165,250,0.1)", borderRadius: 12 }}>
+                          <div style={{ width: 7, height: 7, borderRadius: "50%", background: secsAgo < 300 ? "#10B981" : "#60A5FA", flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, color: "#E2E8F0", margin: 0 }}>{u.firstName || u.username || `#${u.telegramId}`}</p>
+                            {u.username && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>@{u.username}</p>}
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <p style={{ fontSize: 11, fontWeight: 800, color: "#FFD700", margin: 0 }}>{Number(u.balance).toLocaleString()} ⭐</p>
+                            <p style={{ fontSize: 9, color: "rgba(96,165,250,0.6)", margin: 0 }}>منذ {timeLabel}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
 
                 <Card>
                   <CardHead icon={<TrendUp size={16} />} title="أفضل 5 مستخدمين" color="#FFD700" />
