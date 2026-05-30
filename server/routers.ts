@@ -21,7 +21,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { notifyWithdrawReady, notifyNearWithdraw, postCodeToChannel, sendStarsGift } from "./bot";
 import { z } from "zod";
-import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers,
+import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, addCheatStrike, getBannedUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
   getUserWallets, updateUserTonWallet, updateUserUsdtWallet } from "./db";
@@ -503,7 +503,9 @@ export const appRouter = router({
         // Spin-type ads bypass the daily points-ad limit (they have their own 5/day limit on the client)
         if (input.type !== "spin" && user.todayAds >= 50) return { success: false, message: "Daily limit reached" };
         if (!checkRateLimit(input.telegramId)) {
-          return { success: false, message: "طلبات كثيرة جداً — انتظر دقيقة" };
+          // Rate abuse = cheat strike
+          addCheatStrike(input.telegramId, "طلبات مفرطة — يطلب توكنات بشكل آلي").catch(() => {});
+          return { success: false, message: "تم تسجيل نشاط مشبوه في حسابك" };
         }
 
         const token = uuidv4();
@@ -530,12 +532,21 @@ export const appRouter = router({
         // ── Anti-bot: enforce minimum viewing time ──
         const tokenAge = (Date.now() - new Date(adToken.createdAt).getTime()) / 1000;
         if (tokenAge < INSTANT_BAN_SECONDS) {
-          // Claimed too fast — warn only, do NOT permanently ban
+          // Claimed in < 8s — clear script sign → instant permanent ban
           await markAdTokenUsed(input.token);
-          return { success: false, message: `يجب مشاهدة الإعلان كاملاً (${MIN_AD_SECONDS} ثانية) للحصول على النقاط` };
+          const banReason = `سكريبت اختراق — طالب النقاط خلال ${tokenAge.toFixed(1)} ثانية فقط (الحد الأدنى ${MIN_AD_SECONDS}ث)`;
+          await banTelegramUser(input.telegramId, true, banReason);
+          return { success: false, message: "🚫 تم حظرك نهائياً بسبب استخدام سكريبت اختراق" };
         }
         if (tokenAge < MIN_AD_SECONDS) {
-          return { success: false, message: `يجب مشاهدة الإعلان ${MIN_AD_SECONDS} ثانية على الأقل` };
+          // Between 8-15s → add strike, 3 strikes = auto-ban
+          await markAdTokenUsed(input.token);
+          const reason = `مشاهدة الإعلان ${tokenAge.toFixed(1)} ثانية فقط بدلاً من ${MIN_AD_SECONDS}ث`;
+          const strike = await addCheatStrike(input.telegramId, reason);
+          const msg = strike.banned
+            ? "🚫 تم حظرك نهائياً بسبب تكرار محاولات التحايل"
+            : `⚠️ تحذير ${strike.strikes}/3 — يجب مشاهدة الإعلان ${MIN_AD_SECONDS} ثانية كاملة`;
+          return { success: false, message: msg };
         }
 
         await markAdTokenUsed(input.token);
@@ -1485,6 +1496,16 @@ export const appRouter = router({
           const limit = 20;
           const offset = (input.page - 1) * limit;
           const users = await getAllTelegramUsersAdmin(limit, offset);
+          return { success: true, users };
+        }),
+
+      // Banned / cheaters list
+      getBannedUsers: publicProcedure
+        .input(z.object({ secret: z.string() }))
+        .query(async ({ input }) => {
+          const adminSecret = process.env.ADMIN_SECRET || "";
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, users: [] };
+          const users = await getBannedUsers();
           return { success: true, users };
         }),
 
