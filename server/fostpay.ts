@@ -1,16 +1,15 @@
 /**
- * Fostpay Integration — Auto Payout for TON & USDT
+ * FaucetPay Integration — Auto Payout for USDT (TRC-20)
  *
  * HOW TO ACTIVATE:
- *   1. Set FOSTPAY_API_KEY in your environment variables
- *   2. Set FOSTPAY_WALLET_TON  — your TON wallet address (source)
- *   3. Set FOSTPAY_WALLET_USDT — your USDT (TRC-20) wallet address (source)
- *   Done! Payouts will be sent automatically on withdrawal approval.
+ *   1. Set FAUCETPAY_API_KEY in Render environment variables
+ *   Done! USDT withdrawals will be sent automatically on approval.
  *
- * If FOSTPAY_API_KEY is not set, the system falls back to manual admin notification.
+ * NOTE: FaucetPay does not support TON — TON withdrawals fall back to manual admin notification.
+ * If FAUCETPAY_API_KEY is not set, all payouts fall back to manual.
  */
 
-const FOSTPAY_BASE_URL = "https://api.fostpay.io/v1"; // Update if Fostpay gives a different URL
+const FAUCETPAY_BASE_URL = "https://faucetpay.io/api/v1";
 
 export interface FostpayPayoutResult {
   success: boolean;
@@ -19,109 +18,72 @@ export interface FostpayPayoutResult {
   fallbackToManual?: boolean;
 }
 
-function getFostpayConfig() {
-  const apiKey = process.env.FOSTPAY_API_KEY;
+function getFaucetPayConfig() {
+  const apiKey = process.env.FAUCETPAY_API_KEY;
   if (!apiKey) return null;
-  return {
-    apiKey,
-    walletTon: process.env.FOSTPAY_WALLET_TON || "",
-    walletUsdt: process.env.FOSTPAY_WALLET_USDT || "",
-  };
+  return { apiKey };
 }
 
 export function isFostpayEnabled(): boolean {
-  return !!process.env.FOSTPAY_API_KEY;
+  return !!process.env.FAUCETPAY_API_KEY;
 }
 
 /**
- * Send TON automatically to a user's wallet via Fostpay
+ * TON is NOT supported by FaucetPay — always falls back to manual admin payout.
  */
 export async function fostpaySendTon(
-  toWallet: string,
-  amount: number, // in TON (e.g. 0.05)
-  memo?: string
+  _toWallet: string,
+  _amount: number,
+  _memo?: string
 ): Promise<FostpayPayoutResult> {
-  const config = getFostpayConfig();
-  if (!config) {
-    return { success: false, fallbackToManual: true, error: "FOSTPAY_API_KEY not configured" };
-  }
-
-  try {
-    const res = await fetch(`${FOSTPAY_BASE_URL}/payout/ton`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        to: toWallet,
-        amount: amount.toFixed(4),
-        currency: "TON",
-        memo: memo || "Reward withdrawal",
-        from_wallet: config.walletTon || undefined,
-      }),
-    });
-
-    const data = await res.json() as any;
-
-    if (res.ok && data.success !== false) {
-      return {
-        success: true,
-        txHash: data.tx_hash || data.txHash || data.transaction_id || "",
-      };
-    }
-
-    return {
-      success: false,
-      error: data.message || data.error || `HTTP ${res.status}`,
-    };
-  } catch (err: any) {
-    return { success: false, error: err?.message || "Network error" };
-  }
+  return {
+    success: false,
+    fallbackToManual: true,
+    error: "TON غير مدعوم من FaucetPay — يلزم إرسال يدوي",
+  };
 }
 
 /**
- * Send USDT (TRC-20) automatically to a user's wallet via Fostpay
+ * Send USDT (TRC-20) automatically via FaucetPay API
+ * Docs: https://faucetpay.io/page/merchant-api
  */
 export async function fostpaySendUsdt(
   toWallet: string,
-  amount: number, // in USDT (e.g. 0.05)
+  amount: number,
   memo?: string
 ): Promise<FostpayPayoutResult> {
-  const config = getFostpayConfig();
+  const config = getFaucetPayConfig();
   if (!config) {
-    return { success: false, fallbackToManual: true, error: "FOSTPAY_API_KEY not configured" };
+    return { success: false, fallbackToManual: true, error: "FAUCETPAY_API_KEY not configured" };
   }
 
   try {
-    const res = await fetch(`${FOSTPAY_BASE_URL}/payout/usdt`, {
+    const params = new URLSearchParams({
+      api_key: config.apiKey,
+      to: toWallet,
+      amount: String(Math.round(amount * 100) / 100),
+      currency: "USDT",
+    });
+    if (memo) params.append("referral", memo.slice(0, 50));
+
+    const res = await fetch(`${FAUCETPAY_BASE_URL}/send`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify({
-        to: toWallet,
-        amount: amount.toFixed(4),
-        currency: "USDT",
-        network: "TRC20",
-        memo: memo || "Reward withdrawal",
-        from_wallet: config.walletUsdt || undefined,
-      }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
     });
 
     const data = await res.json() as any;
 
-    if (res.ok && data.success !== false) {
+    if (data.status === 200) {
       return {
         success: true,
-        txHash: data.tx_hash || data.txHash || data.transaction_id || "",
+        txHash: data.payment_id ? String(data.payment_id) : (data.payout_user_hash || ""),
       };
     }
 
     return {
       success: false,
-      error: data.message || data.error || `HTTP ${res.status}`,
+      error: data.message || `FaucetPay error: status ${data.status}`,
     };
   } catch (err: any) {
     return { success: false, error: err?.message || "Network error" };
@@ -129,21 +91,24 @@ export async function fostpaySendUsdt(
 }
 
 /**
- * Check Fostpay wallet balance (to verify funds before payout)
+ * Check FaucetPay USDT balance
  */
 export async function fostpayGetBalance(): Promise<{ ton: number; usdt: number } | null> {
-  const config = getFostpayConfig();
+  const config = getFaucetPayConfig();
   if (!config) return null;
 
   try {
-    const res = await fetch(`${FOSTPAY_BASE_URL}/wallet/balance`, {
-      headers: { "Authorization": `Bearer ${config.apiKey}` },
+    const params = new URLSearchParams({ api_key: config.apiKey, currency: "USDT" });
+    const res = await fetch(`${FAUCETPAY_BASE_URL}/balance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
     });
     const data = await res.json() as any;
-    return {
-      ton: Number(data.ton || data.TON || 0),
-      usdt: Number(data.usdt || data.USDT || 0),
-    };
+    if (data.status === 200) {
+      return { ton: 0, usdt: Number(data.balance || 0) };
+    }
+    return null;
   } catch {
     return null;
   }
