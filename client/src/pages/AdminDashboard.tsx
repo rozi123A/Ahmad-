@@ -117,7 +117,7 @@ export default function AdminDashboard() {
   const [authed, setAuthed] = useState(false);
   const [myTelegramId, setMyTelegramId] = useState<number>(0);
   const [authLoading, setAuthLoading] = useState(false);
-  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes">("stats");
+  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes" | "banned">("stats");
   const [userPage, setUserPage] = useState(1);
   const [userSearch, setUserSearch] = useState("");
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -196,6 +196,7 @@ export default function AdminDashboard() {
 
   const statsQ = trpc.admin.getStats.useQuery({ secret }, { enabled: authed, refetchInterval: 30000 });
   const onlineQ = trpc.admin.getOnlineUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 15000 });
+  const bannedQ = trpc.admin.getBannedUsers.useQuery({ secret }, { enabled: authed && tab === "banned", refetchInterval: 10000 });
   const usersQ = trpc.admin.getUsers.useQuery({ secret, page: userPage }, { enabled: authed && tab === "users" });
   const withdrawQ = trpc.admin.getWithdrawals.useQuery({ secret, status: withdrawFilter }, { enabled: authed && tab === "withdrawals" });
 
@@ -416,6 +417,7 @@ export default function AdminDashboard() {
     { id: "withdrawals" as const, icon: <Wallet size={16} />, label: "السحوبات", emoji: "💸" },
     { id: "broadcast" as const, icon: <Broadcast size={16} />, label: "الإشعارات", emoji: "📣" },
     { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "" },
+    { id: "banned" as const, icon: <Prohibit size={16} />, label: "المحظورون", emoji: "🚫" },
   ];
 
   const filteredUsers = (usersQ.data?.users || []).filter((u: any) => {
@@ -1073,6 +1075,79 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* ── BANNED TAB ── */}
+        {tab === "banned" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ borderRadius: 16, padding: "14px 16px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 24 }}>🚫</span>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 800, color: "#FCA5A5", margin: 0 }}>المحظورون بسبب الاختراق</p>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>يتم الحظر تلقائياً عند الكشف عن سكريبت اختراق</p>
+              </div>
+              <span style={{ marginRight: "auto", fontSize: 22, fontWeight: 900, color: "#EF4444" }}>{bannedQ.data?.users?.length ?? 0}</span>
+            </div>
+
+            <Card>
+              <CardHead icon={<Prohibit size={16} />} title="قائمة المحظورين" color="#EF4444" />
+              <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                {bannedQ.isLoading ? (
+                  <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>{SPINNER}</div>
+                ) : (bannedQ.data?.users?.length ?? 0) === 0 ? (
+                  <div style={{ textAlign: "center", padding: "32px 0" }}>
+                    <p style={{ fontSize: 28, margin: 0 }}>✅</p>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", marginTop: 8 }}>لا يوجد محظورون — لم يُكشف أي اختراق</p>
+                  </div>
+                ) : bannedQ.data!.users!.map((u: any) => (
+                  <div key={u.telegramId} style={{ borderRadius: 14, border: "1px solid rgba(239,68,68,0.15)", background: "rgba(239,68,68,0.05)", overflow: "hidden" }}>
+                    {/* Header row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px" }}>
+                      <div style={{ width: 38, height: 38, borderRadius: 12, background: "rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>🤖</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 800, color: "#FCA5A5", margin: 0 }}>{u.firstName || u.username || "مجهول"}</p>
+                        {u.username && <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>@{u.username}</p>}
+                      </div>
+                      {/* Strike badges */}
+                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                        {[1,2,3].map(i => (
+                          <div key={i} style={{ width: 20, height: 20, borderRadius: "50%", background: i <= (u.cheatStrikes || 3) ? "#EF4444" : "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 800, color: "#fff" }}>!</div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Telegram ID — copyable */}
+                    <div style={{ margin: "0 14px 10px", padding: "8px 12px", background: "rgba(0,0,0,0.3)", borderRadius: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>Telegram ID:</span>
+                      <code style={{ fontSize: 12, color: "#60A5FA", fontWeight: 800, flex: 1 }}>{u.telegramId}</code>
+                      <button onClick={() => { navigator.clipboard.writeText(String(u.telegramId)); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.4)", fontSize: 11 }}>نسخ</button>
+                    </div>
+                    {/* Ban reason */}
+                    {u.banReason && (
+                      <div style={{ margin: "0 14px 10px", padding: "8px 12px", background: "rgba(239,68,68,0.1)", borderRadius: 10 }}>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, margin: 0, marginBottom: 3 }}>سبب الحظر:</p>
+                        <p style={{ fontSize: 11, color: "#FCA5A5", margin: 0, lineHeight: 1.5 }}>{u.banReason}</p>
+                      </div>
+                    )}
+                    {/* Actions */}
+                    <div style={{ padding: "0 14px 12px", display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => handleBan(u.telegramId, false)}
+                        style={{ flex: 1, height: 34, borderRadius: 10, border: "none", background: "rgba(16,185,129,0.15)", color: "#34D399", fontWeight: 700, fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}
+                      >
+                        <CheckCircle size={13} /> رفع الحظر
+                      </button>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(`#${u.telegramId} — ${u.firstName || u.username || "مجهول"}\n${u.banReason || ""}`)}
+                        style={{ height: 34, borderRadius: 10, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.4)", fontWeight: 700, fontSize: 11, cursor: "pointer", padding: "0 12px" }}
+                      >
+                        نسخ التقرير
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
           </div>
         )}
 
