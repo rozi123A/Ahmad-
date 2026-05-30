@@ -9,7 +9,7 @@ const WEBAPP_URL = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process
 const BOT_USERNAME = process.env.TELEGRAM_BOT || process.env.VITE_BOT_USER_NAME || process.env.BOT_USERNAME || "";
 
 // Minimum points to trigger withdrawal notification
-const WITHDRAW_THRESHOLD = 10000;
+const WITHDRAW_THRESHOLD = 15000;
 
 // Track which users already received the withdrawal notification this session
 const notifiedWithdraw = new Set<number>();
