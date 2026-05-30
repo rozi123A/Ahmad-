@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
   interface UserData { telegramId: number; balance: number; minWithdraw: number; starsRate: number; }
   interface WithdrawSectionProps { user: UserData; lang: Language; onSuccess: () => void; }
 
-  type WithdrawalMethod = "telegram_stars" | "ton" | "usdt";
+  type WithdrawalMethod = "telegram_stars" | "dgb";
 
   export default function WithdrawSection({ user, lang, onSuccess }: WithdrawSectionProps) {
     const [amount, setAmount] = useState("");
@@ -25,22 +25,20 @@ import { useState, useEffect } from "react";
       telegramId: user.telegramId, 
       initData: window.Telegram?.WebApp?.initData || "" 
     });
-    const updateTonWallet = trpc.withdraw.updateTonWallet.useMutation();
-    const updateUsdtWallet = trpc.withdraw.updateUsdtWallet.useMutation();
+    const updateDgbWallet = trpc.withdraw.updateDgbWallet.useMutation();
 
     // Load saved wallets
     useEffect(() => {
       if (walletsQuery.data) {
-        setTonWallet(walletsQuery.data.tonWallet || "");
-        setUsdtWallet(walletsQuery.data.usdtWallet || "");
+        setDgbWallet((walletsQuery.data as any).dgbWallet || "");
       }
     }, [walletsQuery.data]);
 
     const numAmount = parseFloat(amount) || 0;
     const starsWorth = Math.floor(numAmount / user.starsRate);
-    // Accurate: 1500 points = 0.05 TON/USDT
+    // 15000 points = 1 DGB
     const CRYPTO_BASE_POINTS = 15000;
-    const CRYPTO_BASE_AMOUNT = 0.05;
+    const CRYPTO_BASE_AMOUNT = 1;
     const cryptoAmount = numAmount > 0 ? parseFloat(((numAmount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4)) : 0;
     const canWithdraw = numAmount >= user.minWithdraw && numAmount <= user.balance;
     const hasEnoughBalance = user.balance >= user.minWithdraw;
@@ -48,54 +46,37 @@ import { useState, useEffect } from "react";
     const methodInfo: Record<WithdrawalMethod, { icon: string; label: string; desc: string; color: string }> = {
       telegram_stars: { 
         icon: "⭐", 
-        label: t.withdraw_method_stars, 
-        desc: t.withdraw_method_stars_desc, 
+        label: t.withdraw_method_stars || "Telegram Stars", 
+        desc: t.withdraw_method_stars_desc || "استلم نجوم تيليغرام مباشرة", 
         color: "#FFD700" 
       },
-      ton: { 
-        icon: "💎", 
-        label: t.withdraw_method_ton, 
-        desc: t.withdraw_method_ton_desc, 
-        color: "#10B981" 
-      },
-      usdt: { 
-        icon: "💵", 
-        label: t.withdraw_method_usdt, 
-        desc: t.withdraw_method_usdt_desc, 
-        color: "#60A5FA" 
+      dgb: { 
+        icon: "🟦", 
+        label: "DigiByte (DGB)", 
+        desc: "سحب عبر محفظة DigiByte", 
+        color: "#0066CC" 
       },
     };
 
     const handleSaveWallets = async () => {
-      const walletValue = method === "ton" ? tonWallet : usdtWallet;
-      if (!walletValue.trim()) {
+      if (!dgbWallet.trim()) {
         toast({ title: t.error, description: t.withdraw_no_wallet_error || "الرجاء إدخال عنوان المحفظة", variant: "destructive" });
         return;
       }
       try {
-        if (method === "ton" && tonWallet) {
-          await updateTonWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: tonWallet });
-        }
-        if (method === "usdt" && usdtWallet) {
-          await updateUsdtWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: usdtWallet });
-        }
-        toast({ title: t.withdraw_wallet_saved_success, description: t.withdraw_wallet_can_use });
+        await updateDgbWallet.mutateAsync({ telegramId: user.telegramId, initData: window.Telegram?.WebApp?.initData || "", wallet: dgbWallet });
+        toast({ title: t.withdraw_wallet_saved_success || "تم الحفظ", description: t.withdraw_wallet_can_use || "يمكنك الآن السحب" });
         setShowWalletSetup(false);
         walletsQuery.refetch();
       } catch (e: any) {
-        toast({ title: t.error, description: e.message || t.withdraw_save_failed, variant: "destructive" });
+        toast({ title: t.error, description: e.message || t.withdraw_save_failed || "فشل الحفظ", variant: "destructive" });
       }
     };
 
     const handleWithdraw = async () => {
-      // Check if user has wallet for selected method
-      if (method === "ton" && !tonWallet) {
-        toast({ title: "💎 " + t.withdraw_ton_wallet, description: t.withdraw_no_wallet_error, variant: "destructive" });
-        setShowWalletSetup(true);
-        return;
-      }
-      if (method === "usdt" && !usdtWallet) {
-        toast({ title: "💵 " + t.withdraw_usdt_wallet, description: t.withdraw_no_usdt_error, variant: "destructive" });
+      // Check if user has wallet for DGB method
+      if (method === "dgb" && !dgbWallet) {
+        toast({ title: "🟦 DigiByte", description: t.withdraw_no_wallet_error || "أضف عنوان محفظة DigiByte أولاً", variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
@@ -171,13 +152,12 @@ import { useState, useEffect } from "react";
           <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>{t.withdraw_method_title}</p>
           
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {(["telegram_stars", "ton", "usdt"] as WithdrawalMethod[]).map(m => (
+            {(["telegram_stars", "dgb"] as WithdrawalMethod[]).map(m => (
               <button
                 key={m}
                 onClick={() => {
                   setMethod(m);
-                  if (m === "ton" && !tonWallet) setShowWalletSetup(true);
-                  if (m === "usdt" && !usdtWallet) setShowWalletSetup(true);
+                  if (m === "dgb" && !dgbWallet) setShowWalletSetup(true);
                   if (m === "telegram_stars") setShowWalletSetup(false);
                 }}
                 style={{
@@ -193,13 +173,13 @@ import { useState, useEffect } from "react";
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>{methodInfo[m].desc}</p>
                 </div>
                 {method === m && <Check size={18} color={methodInfo[m].color} />}
-                {(m === "ton" || m === "usdt") && (
+                {m === "dgb" && (
                   <div style={{ 
                     fontSize: 9, padding: "3px 8px", borderRadius: 6,
-                    background: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)",
-                    color: (m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? "#10B981" : "rgba(255,255,255,0.3)"
+                    background: dgbWallet ? "rgba(0,102,204,0.2)" : "rgba(255,255,255,0.06)",
+                    color: dgbWallet ? "#0099FF" : "rgba(255,255,255,0.3)"
                   }}>
-                    {(m === "ton" && tonWallet) || (m === "usdt" && usdtWallet) ? t.withdraw_wallet_saved : t.withdraw_wallet_add}
+                    {dgbWallet ? (t.withdraw_wallet_saved || "محفوظ") : (t.withdraw_wallet_add || "أضف")}
                   </div>
                 )}
               </button>
@@ -208,13 +188,13 @@ import { useState, useEffect } from "react";
         </div>
 
         {/* Wallet Setup Section — always visible for TON/USDT */}
-        {(method === "ton" || method === "usdt") && (
+        {method === "dgb" && (
           <div style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 16, padding: "16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Wallet size={16} style={{ color: methodInfo[method].color }} />
                 <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                  {method === "ton" ? (t.withdraw_ton_wallet) : (t.withdraw_usdt_wallet)}
+                  🟦 محفظة DigiByte (DGB)
                 </p>
               </div>
               <button 
@@ -225,15 +205,15 @@ import { useState, useEffect } from "react";
               </button>
             </div>
 
-            {(method === "ton" ? tonWallet : usdtWallet) && !showWalletSetup ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(16,185,129,0.1)", borderRadius: 10 }}>
-                <code style={{ fontSize: 11, color: "#10B981", flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {method === "ton" ? tonWallet : usdtWallet}
+            {dgbWallet && !showWalletSetup ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "rgba(0,102,204,0.1)", borderRadius: 10 }}>
+                <code style={{ fontSize: 11, color: "#0099FF", flex: 1, overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {dgbWallet}
                 </code>
                 <button 
                   onClick={() => {
-                    navigator.clipboard.writeText(method === "ton" ? tonWallet : usdtWallet);
-                    toast({ title: t.success, description: t.withdraw_wallet_copied });
+                    navigator.clipboard.writeText(dgbWallet);
+                    toast({ title: t.success || "تم", description: t.withdraw_wallet_copied || "تم نسخ العنوان" });
                   }}
                   style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
                 >
@@ -244,9 +224,9 @@ import { useState, useEffect } from "react";
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <input
                   type="text"
-                  placeholder={method === "ton" ? (t.withdraw_wallet_placeholder_ton || "EQxxxxxxxxxxxxxxxxxxxxxxxxxxxxx") : (t.withdraw_wallet_placeholder_usdt || "TRxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")}
-                  value={method === "ton" ? tonWallet : usdtWallet}
-                  onChange={e => method === "ton" ? setTonWallet(e.target.value) : setUsdtWallet(e.target.value)}
+                  placeholder="D7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={dgbWallet}
+                  onChange={e => setDgbWallet(e.target.value)}
                   style={{ 
                     width: "100%", padding: "12px 14px", borderRadius: 12, 
                     background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
@@ -257,7 +237,7 @@ import { useState, useEffect } from "react";
                   onClick={handleSaveWallets}
                   style={{
                     padding: "10px 16px", borderRadius: 10, border: "none",
-                    background: "linear-gradient(135deg, #10B981, #059669)",
+                    background: "linear-gradient(135deg, #0066CC, #0052A3)",
                     color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer"
                   }}
                 >
@@ -317,7 +297,7 @@ import { useState, useEffect } from "react";
               ) : (
                 <PaperPlaneTilt size={20} />
               )}
-              {loading ? (t.withdraw_sending) : method === "telegram_stars" ? `${t.withdraw} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}` : `${t.withdraw} ${cryptoAmount > 0 ? cryptoAmount : "?"} ${methodInfo[method].label}`}
+              {loading ? (t.withdraw_sending || "جاري الإرسال...") : method === "telegram_stars" ? `${t.withdraw || "سحب"} ${starsWorth > 0 ? starsWorth : "?"} ${methodInfo[method].label}` : `${t.withdraw || "سحب"} ${cryptoAmount > 0 ? cryptoAmount : "?"} ${methodInfo[method].label}`}
             </button>
           </>
         )}
@@ -325,7 +305,7 @@ import { useState, useEffect } from "react";
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { label: t.withdraw_conversion_rate, value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⭐` : `15000 ${t.points} = 0.05 ${method === "ton" ? "TON" : "USDT"}`, color: "#A78BFA" },
+            { label: t.withdraw_conversion_rate || "سعر التحويل", value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⭐` : `15000 ${t.points} = 1 DGB`, color: "#A78BFA" },
             { label: t.withdraw_minimum_amount, value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>
