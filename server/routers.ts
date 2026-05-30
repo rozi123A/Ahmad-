@@ -1296,12 +1296,12 @@ export const appRouter = router({
                 }
 
               } else if (method === "ton") {
-                // ── إرسال TON تلقائياً عبر Fostpay (أو يدوياً إذا لم يُفعَّل) ──
+                // ── إرسال TON تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
                 const tonAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
                 const tonWallet = w.user_wallet || "";
 
                 if (isFostpayEnabled() && tonWallet) {
-                  // ── Fostpay: إرسال تلقائي ──
+                  // ── FaucetPay: إرسال تلقائي ──
                   const payResult = await fostpaySendTon(tonWallet, tonAmount, `سحب #${w.id}`);
 
                   if (payResult.success) {
@@ -1327,7 +1327,7 @@ export const appRouter = router({
                         body: JSON.stringify({
                           chat_id: adminId,
                           text:
-                            `✅ *تم إرسال TON تلقائياً عبر Fostpay*\n\n` +
+                            `✅ *تم إرسال TON تلقائياً عبر FaucetPay*\n\n` +
                             `👤 ${userName} (${userTag})\n` +
                             `💎 ${tonAmount} TON → \`${tonWallet}\`\n` +
                             (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
@@ -1336,8 +1336,8 @@ export const appRouter = router({
                       }).catch(() => {});
                     }
                   } else {
-                    // فشل Fostpay — تراجع للإشعار اليدوي
-                    console.error("[Fostpay] TON payout failed:", payResult.error);
+                    // فشل FaucetPay — تراجع للإشعار اليدوي
+                    console.error("[FaucetPay] TON payout failed:", payResult.error);
                     if (adminId) {
                       fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: "POST",
@@ -1370,7 +1370,7 @@ export const appRouter = router({
                     }).catch(() => {});
                   }
                 } else {
-                  // ── لا يوجد Fostpay — إشعار يدوي كالمعتاد ──
+                  // ── لا يوجد FaucetPay — إشعار يدوي كالمعتاد ──
                   if (adminId) {
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                       method: "POST",
@@ -1407,12 +1407,12 @@ export const appRouter = router({
                 }
 
               } else if (method === "usdt") {
-                // ── إرسال USDT تلقائياً عبر Fostpay (أو يدوياً إذا لم يُفعَّل) ──
+                // ── إرسال USDT تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
                 const usdtAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
                 const usdtWallet = w.user_wallet || "";
 
                 if (isFostpayEnabled() && usdtWallet) {
-                  // ── Fostpay: إرسال تلقائي ──
+                  // ── FaucetPay: إرسال تلقائي ──
                   const payResult = await fostpaySendUsdt(usdtWallet, usdtAmount, `سحب #${w.id}`);
 
                   if (payResult.success) {
@@ -1437,7 +1437,7 @@ export const appRouter = router({
                         body: JSON.stringify({
                           chat_id: adminId,
                           text:
-                            `✅ *تم إرسال USDT تلقائياً عبر Fostpay*\n\n` +
+                            `✅ *تم إرسال USDT تلقائياً عبر FaucetPay*\n\n` +
                             `👤 ${userName} (${userTag})\n` +
                             `💵 ${usdtAmount} USDT → \`${usdtWallet}\`\n` +
                             (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
@@ -1446,7 +1446,7 @@ export const appRouter = router({
                       }).catch(() => {});
                     }
                   } else {
-                    console.error("[Fostpay] USDT payout failed:", payResult.error);
+                    console.error("[FaucetPay] USDT payout failed:", payResult.error);
                     if (adminId) {
                       fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: "POST",
@@ -1479,7 +1479,7 @@ export const appRouter = router({
                     }).catch(() => {});
                   }
                 } else {
-                  // ── لا يوجد Fostpay — إشعار يدوي كالمعتاد ──
+                  // ── لا يوجد FaucetPay — إشعار يدوي كالمعتاد ──
                   if (adminId) {
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                       method: "POST",
