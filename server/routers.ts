@@ -1379,6 +1379,7 @@ export const appRouter = router({
                     }),
                   }).catch(() => {});
                 }
+              }
             } else {
               // ── رسالة رفض الطلب ──
               fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
