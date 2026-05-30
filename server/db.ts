@@ -464,6 +464,29 @@ export async function getOnlineUsers(minutesAgo: number = 5) {
   }
 }
 
+export async function getDailyActiveUsers() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const todayMidnight = new Date();
+    todayMidnight.setHours(0, 0, 0, 0);
+    return await db.select({
+      telegramId: telegramUsers.telegramId,
+      firstName: telegramUsers.firstName,
+      username: telegramUsers.username,
+      balance: telegramUsers.balance,
+      country: telegramUsers.country,
+      lastSeenAt: telegramUsers.lastSeenAt,
+    }).from(telegramUsers)
+      .where(gte(telegramUsers.lastSeenAt, todayMidnight))
+      .orderBy(desc(telegramUsers.lastSeenAt))
+      .limit(500);
+  } catch (err) {
+    console.error("[Database] getDailyActiveUsers failed:", err);
+    return [];
+  }
+}
+
 export async function getAllTelegramUsersAdmin(limit: number = 50, offset: number = 0) {
   const db = await getDb();
   if (!db) return [];
