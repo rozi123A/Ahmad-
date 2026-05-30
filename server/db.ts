@@ -887,17 +887,17 @@ export async function deactivateRedeemCode(id: number): Promise<void> {
 
 // ── Wallet Management ──────────────────────────────────────────────────────
 
-export async function getUserWallets(telegramId: number): Promise<{ tonWallet: string | null; usdtWallet: string | null }> {
+export async function getUserWallets(telegramId: number): Promise<{ dgbWallet: string | null }> {
   const db = await getDb();
-  if (!db) return { tonWallet: null, usdtWallet: null };
-  const rows = await db.select({ tonWallet: telegramUsers.tonWallet, usdtWallet: telegramUsers.usdtWallet })
+  if (!db) return { dgbWallet: null };
+  const rows = await db.select({ dgbWallet: telegramUsers.tonWallet })
     .from(telegramUsers)
     .where(eq(telegramUsers.telegramId, telegramId))
     .limit(1);
-  return rows[0] ?? { tonWallet: null, usdtWallet: null };
+  return rows[0] ?? { dgbWallet: null };
 }
 
-export async function updateUserTonWallet(telegramId: number, wallet: string): Promise<void> {
+export async function updateUserDgbWallet(telegramId: number, wallet: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
   // Validate TON address format (basic check: starts with EQ or E and is ~48 chars)
@@ -905,18 +905,9 @@ export async function updateUserTonWallet(telegramId: number, wallet: string): P
   if (!normalized.startsWith("eq") && !normalized.startsWith("uq") && !normalized.startsWith("0_")) {
     throw new Error("عنوان TON غير صالح — يجب أن يبدأ بـ EQ أو UQ");
   }
-  await db.update(telegramUsers).set({ tonWallet: normalized, updatedAt: new Date() })
+  await db.update(telegramUsers).set({ tonWallet: normalized, updatedAt: new Date() }) // dgbWallet stored in ton_wallet column
     .where(eq(telegramUsers.telegramId, telegramId));
 }
 
-export async function updateUserUsdtWallet(telegramId: number, wallet: string): Promise<void> {
-  const db = await getDb();
-  if (!db) return;
-  // Validate TRC-20 USDT address (starts with T, 34 chars)
-  const normalized = wallet.trim();
-  if (!normalized.startsWith("T") || normalized.length !== 34) {
-    throw new Error("عنوان USDT (TRC-20) غير صالح — يجب أن يبدأ بـ T وطوله 34 حرف");
-  }
-  await db.update(telegramUsers).set({ usdtWallet: normalized, updatedAt: new Date() })
-    .where(eq(telegramUsers.telegramId, telegramId));
-}
+// updateUserUsdtWallet removed — use updateUserDgbWallet instead
+
