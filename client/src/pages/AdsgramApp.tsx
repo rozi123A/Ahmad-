@@ -257,11 +257,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
                   }
                 }
               } catch { /* ignore */ }
+  const deviceInfo = `${navigator.userAgent} | ${navigator.language} | ${screen.width}x${screen.height}`;
   const data = await getUserMutation.mutateAsync({
                   telegramId: telegramUser.id,
                   initData: initData || "",
                   referredBy: startParam ? parseInt(startParam.replace(/^ref_/i, "")) || undefined : undefined,
                   country: userCountry,
+                  deviceInfo,
                 }).catch(() => ({ success: false, user: null }));
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });

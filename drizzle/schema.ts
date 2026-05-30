@@ -41,6 +41,8 @@ export const telegramUsers = pgTable("telegram_users", {
   lastSeenAt: timestamp("last_seen_at"),
   cheatStrikes: integer("cheat_strikes").default(0).notNull(),
   banReason: text("ban_reason"),
+  lastIp: varchar("last_ip", { length: 100 }),
+  deviceInfo: text("device_info"),
   // Streak & Badges
   dailyStreak: integer("daily_streak").default(0).notNull(),
   lastLoginDate: varchar("last_login_date", { length: 10 }),

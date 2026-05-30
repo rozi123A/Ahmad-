@@ -198,9 +198,12 @@ export const appRouter = router({
         telegramId: z.number(), 
         initData: z.string(),
         referredBy: z.number().optional(),
-        country: z.string().optional()
+        country: z.string().optional(),
+        deviceInfo: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        const clientIp = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
+        const ipString = Array.isArray(clientIp) ? clientIp[0] : clientIp;
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) {
           return { success: false, message: "Invalid Telegram data" };
@@ -228,6 +231,8 @@ export const appRouter = router({
             spinsLeft: 5,
             spinsDate: toDateString(now),
             referredBy: input.referredBy && input.referredBy !== input.telegramId ? input.referredBy : null,
+            lastIp: ipString,
+            deviceInfo: input.deviceInfo,
           });
 
           // Create registration log
@@ -335,9 +340,14 @@ export const appRouter = router({
             }
           }
         } else {
-          if (detectedCountry && needsCountryUpdate) {
-            await upsertTelegramUser({ telegramId: input.telegramId, country: detectedCountry });
-            user = { ...user, country: detectedCountry };
+          if ((detectedCountry && needsCountryUpdate) || ipString || input.deviceInfo) {
+            const updates: any = { telegramId: input.telegramId };
+            if (detectedCountry && needsCountryUpdate) updates.country = detectedCountry;
+            if (ipString) updates.lastIp = ipString;
+            if (input.deviceInfo) updates.deviceInfo = input.deviceInfo;
+            
+            await upsertTelegramUser(updates);
+            user = { ...user, ...updates };
           }
           // ── Process referral for existing users who haven't been credited yet ──
           if (input.referredBy && input.referredBy !== input.telegramId) {

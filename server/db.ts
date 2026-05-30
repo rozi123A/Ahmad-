@@ -49,6 +49,8 @@ export async function getDb() {
         // Anti-cheat tracking
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS cheat_strikes INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS ban_reason TEXT`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_ip VARCHAR(100)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS device_info TEXT`); } catch (_) {}
         // Streak & Badges
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_login_date VARCHAR(10)`); } catch (_) {}

@@ -619,6 +619,17 @@ export default function AdminDashboard() {
                       <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>
                         {u.username ? `@${u.username} · ` : ""} {fmtN(Number(u.balance))} · #{u.telegramId}{u.country ? ` · 🌍 ${u.country}` : ""}
                       </p>
+                      {u.lastIp && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                          <span style={{ fontSize: 8, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", padding: "2px 5px", borderRadius: 4 }}>IP: {u.lastIp}</span>
+                          {filteredUsers.filter((other: any) => other.telegramId !== u.telegramId && other.lastIp === u.lastIp).length > 0 && (
+                            <span style={{ fontSize: 8, color: "#EF4444", background: "rgba(239,68,68,0.1)", padding: "2px 5px", borderRadius: 4, fontWeight: 700 }}>⚠️ حسابات متعددة (IP)</span>
+                          )}
+                          {u.deviceInfo && filteredUsers.filter((other: any) => other.telegramId !== u.telegramId && other.deviceInfo === u.deviceInfo).length > 0 && (
+                            <span style={{ fontSize: 8, color: "#F59E0B", background: "rgba(245,158,11,0.1)", padding: "2px 5px", borderRadius: 4, fontWeight: 700 }}>⚠️ حسابات متعددة (الجهاز)</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <button onClick={() => openTelegramChat(u.telegramId, u.username, u.firstName, u.lastName)} style={{ width: 34, height: 34, borderRadius: 10, border: "1px solid rgba(96,165,250,0.3)", background: "rgba(96,165,250,0.1)", color: "#60A5FA", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><ChatCircle size={14} /></button>
