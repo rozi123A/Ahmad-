@@ -41,18 +41,23 @@ import { v4 as uuidv4 } from "uuid";
 import { ENV } from "./_core/env";
 
 // ── Anti-bot: in-memory rate limiter ──
-// NOTE: Resets on server restart — migrate to Redis for persistent rate limiting.
+// In-memory rate limiter — also persists abuse to DB via cheat strikes
 const tokenRateMap = new Map<number, { count: number; windowStart: number }>();
+const spinRateMap  = new Map<number, { count: number; windowStart: number }>();
 const MIN_AD_SECONDS = 15;
 const INSTANT_BAN_SECONDS = 8;
 const RATE_WINDOW_MS = 120_000;
-const MAX_TOKENS_PER_MIN = 3;
+const MAX_TOKENS_PER_WIN = 3;
+const MAX_SPINS_PER_WIN  = 6; // max 6 spins per 2 minutes (normal user has 5/day)
 
 // Purge stale entries every 5 minutes to prevent memory leaks
 setInterval(() => {
   const now = Date.now();
   for (const [key, rec] of tokenRateMap.entries()) {
     if (now - rec.windowStart > RATE_WINDOW_MS * 2) tokenRateMap.delete(key);
+  }
+  for (const [key, rec] of spinRateMap.entries()) {
+    if (now - rec.windowStart > RATE_WINDOW_MS * 2) spinRateMap.delete(key);
   }
 }, 5 * 60 * 1000).unref();
 
@@ -63,7 +68,19 @@ function checkRateLimit(telegramId: number): boolean {
     tokenRateMap.set(telegramId, { count: 1, windowStart: now });
     return true;
   }
-  if (rec.count >= MAX_TOKENS_PER_MIN) return false;
+  if (rec.count >= MAX_TOKENS_PER_WIN) return false;
+  rec.count++;
+  return true;
+}
+
+function checkSpinRateLimit(telegramId: number): boolean {
+  const now = Date.now();
+  const rec = spinRateMap.get(telegramId);
+  if (!rec || now - rec.windowStart > RATE_WINDOW_MS) {
+    spinRateMap.set(telegramId, { count: 1, windowStart: now });
+    return true;
+  }
+  if (rec.count >= MAX_SPINS_PER_WIN) return false;
   rec.count++;
   return true;
 }
@@ -666,7 +683,18 @@ export const appRouter = router({
         if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
 
         let user = await getTelegramUser(input.telegramId);
-        if (!user || user.spinsLeft <= 0) return { success: false, message: "No spins left" };
+        if (!user) return { success: false, message: "User not found" };
+
+        // ── Anti-bot: ban check ──
+        if (user.isBanned) return { success: false, message: "تم تعليق حسابك بسبب نشاط مشبوه" };
+
+        // ── Anti-bot: spin rate limit ──
+        if (!checkSpinRateLimit(input.telegramId)) {
+          addCheatStrike(input.telegramId, "طلبات سبين مفرطة — سكريبت آلي مشتبه به").catch(() => {});
+          return { success: false, message: "تم تسجيل نشاط مشبوه في حسابك" };
+        }
+
+        if (user.spinsLeft <= 0) return { success: false, message: "No spins left" };
 
         const prizes = [50, 75, 100, 150, 200, 250, 500, 1000];
         const weights = [40, 25, 15, 10, 5, 3, 1.5, 0.5];
