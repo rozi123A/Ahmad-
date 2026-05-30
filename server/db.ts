@@ -49,6 +49,10 @@ export async function getDb() {
         // Anti-cheat tracking
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS cheat_strikes INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
         try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS ban_reason TEXT`); } catch (_) {}
+        // Streak & Badges
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS last_login_date VARCHAR(10)`); } catch (_) {}
+        try { await _pool.query(`ALTER TABLE telegram_users ADD COLUMN IF NOT EXISTS badges TEXT`); } catch (_) {}
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -142,6 +146,9 @@ export async function upsertTelegramUser(user: InsertTelegramUser) {
     if (user.isBanned !== undefined) updateSet.isBanned = user.isBanned;
     if (user.tonWallet !== undefined) updateSet.tonWallet = user.tonWallet;
     if (user.usdtWallet !== undefined) updateSet.usdtWallet = user.usdtWallet;
+    if (user.dailyStreak !== undefined) updateSet.dailyStreak = user.dailyStreak;
+    if (user.lastLoginDate !== undefined) updateSet.lastLoginDate = user.lastLoginDate;
+    if (user.badges !== undefined) updateSet.badges = user.badges;
     updateSet.lastSeenAt = new Date();
 
     const safeUser = {
@@ -362,6 +369,16 @@ export async function updateLastReminded(telegramId: number) {
   } catch (error) {
     console.error("[Database] Failed to update lastRemindedAt:", error);
   }
+}
+
+export async function countAdTransactions(telegramId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const result = await db.select({ c: count() }).from(transactions)
+      .where(and(eq(transactions.telegramId, telegramId), eq(transactions.type, "ad")));
+    return Number(result[0]?.c ?? 0);
+  } catch { return 0; }
 }
 
 export async function getLeaderboard(limit = 20) {

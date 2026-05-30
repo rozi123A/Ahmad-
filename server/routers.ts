@@ -24,7 +24,7 @@ import { z } from "zod";
 import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, getDailyActiveUsers, addCheatStrike, getBannedUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
-  getUserWallets, updateUserTonWallet, updateUserUsdtWallet } from "./db";
+  getUserWallets, updateUserTonWallet, updateUserUsdtWallet, countAdTransactions } from "./db";
 import { eq } from "drizzle-orm";
 import { telegramUsers, withdrawals, transactions } from "../drizzle/schema";
 import crypto from "crypto";
@@ -400,6 +400,54 @@ export const appRouter = router({
         const starsRate = await getSetting("starsRate", 1000);
         const minWithdraw = await getSetting("minWithdraw", 15000);
 
+        // ── Daily Streak ──
+        const today = toDateString(new Date());
+        const yesterday = toDateString(new Date(Date.now() - 86_400_000));
+        const lastLogin = user.lastLoginDate ?? "";
+        let newStreak = user.dailyStreak ?? 0;
+        let streakUpdated = false;
+
+        if (lastLogin !== today) {
+          newStreak = lastLogin === yesterday ? newStreak + 1 : 1;
+          streakUpdated = true;
+        }
+
+        if (streakUpdated) {
+          const STREAK_BONUSES: Record<number, number> = { 3: 50, 7: 150, 14: 300, 30: 500 };
+          const bonus = STREAK_BONUSES[newStreak] ?? 0;
+          const streakPatch: any = { telegramId: user.telegramId, dailyStreak: newStreak, lastLoginDate: today };
+          if (bonus > 0) {
+            streakPatch.balance = Number(user.balance) + bonus;
+            streakPatch.totalEarned = Number(user.totalEarned) + bonus;
+            createTransaction({ telegramId: user.telegramId, type: "streak_bonus", points: bonus,
+              metadata: JSON.stringify({ streak: newStreak }) }).catch(() => {});
+          }
+          user = await upsertTelegramUser({ ...user, ...streakPatch }) ?? user;
+        }
+
+        // ── Badge Checking ──
+        const [adCount, referralStats] = await Promise.all([
+          countAdTransactions(user.telegramId),
+          getReferralStats(user.telegramId),
+        ]);
+        const currentBadges: string[] = user.badges ? JSON.parse(user.badges) : [];
+        const newBadges: string[] = [];
+
+        const checkBadge = (id: string, cond: boolean) => { if (cond && !currentBadges.includes(id)) newBadges.push(id); };
+        checkBadge("first_ad",        adCount >= 1);
+        checkBadge("ad_fan",          adCount >= 10);
+        checkBadge("ad_star",         adCount >= 50);
+        checkBadge("recruiter",       referralStats.count >= 1);
+        checkBadge("super_recruiter", referralStats.count >= 5);
+        checkBadge("streak_3",        newStreak >= 3);
+        checkBadge("streak_7",        newStreak >= 7);
+        checkBadge("streak_30",       newStreak >= 30);
+
+        if (newBadges.length > 0) {
+          const updatedBadges = JSON.stringify([...currentBadges, ...newBadges]);
+          user = await upsertTelegramUser({ ...user, badges: updatedBadges }) ?? user;
+        }
+
         return {
           success: true,
           user: {
@@ -412,6 +460,9 @@ export const appRouter = router({
             lastAdTime: user?.lastAdTime ? new Date(user.lastAdTime).getTime() : null,
             isAdmin: ENV.adminTelegramId ? ENV.adminTelegramId === input.telegramId : false,
             isBanned: !!user?.isBanned,
+            dailyStreak: newStreak,
+            badges: [...currentBadges, ...newBadges],
+            newBadges,
           },
         };
       }),
@@ -2007,7 +2058,7 @@ export const appRouter = router({
         }
       }),
 
-    // User: redeem a code
+    // User: redeem a code (kept below)
     redeem: publicProcedure
       .input(z.object({ telegramId: z.number(), initData: z.string(), code: z.string() }))
       .mutation(async ({ input }) => {
@@ -2038,6 +2089,37 @@ export const appRouter = router({
         }
 
         return { success: true, message: `🎉 تهانينا! ربحت ${rc.reward.toLocaleString()} نقطة`, reward: rc.reward, balance: newBalance };
+      }),
+  }),
+
+  // ── Stats & Badges ──
+  stats: router({
+    get: publicProcedure
+      .input(z.object({ telegramId: z.number(), initData: z.string() }))
+      .query(async ({ input }) => {
+        const verified = verifyTelegramWebApp(input.initData);
+        if (!verified || verified.id !== input.telegramId) return null;
+        const user = await getTelegramUser(input.telegramId);
+        if (!user) return null;
+        const [adCount, referralStats] = await Promise.all([
+          countAdTransactions(input.telegramId),
+          getReferralStats(input.telegramId),
+        ]);
+        const daysSinceJoin = Math.max(0, Math.floor((Date.now() - new Date(user.createdAt).getTime()) / 86_400_000));
+        const last7Days = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(Date.now() - (6 - i) * 86_400_000);
+          return d.toISOString().split("T")[0];
+        });
+        return {
+          streak: user.dailyStreak ?? 0,
+          lastLoginDate: user.lastLoginDate ?? "",
+          badges: user.badges ? JSON.parse(user.badges) : [] as string[],
+          adCount,
+          referralCount: referralStats.count,
+          daysSinceJoin,
+          totalEarned: Number(user.totalEarned),
+          last7Days,
+        };
       }),
   }),
 

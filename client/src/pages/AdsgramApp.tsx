@@ -7,6 +7,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
     import ReferralSection from "@/components/adsgram/ReferralSection";
     import DailyGiftBox from "@/components/adsgram/DailyGiftBox";
     import LeaderboardSection from "@/components/adsgram/LeaderboardSection";
+    import StreakBanner from "@/components/adsgram/StreakBanner";
+    import StatsSection from "@/components/adsgram/StatsSection";
     import { useToast } from "@/hooks/use-toast";
     import { trpc } from "@/lib/trpc";
 
@@ -25,6 +27,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
       lastAdTime: number | null;
       isAdmin: boolean;
       isBanned: boolean;
+      dailyStreak: number;
+      badges: string[];
+      newBadges?: string[];
     }
 
     const DEFAULT_DEMO_USER: UserData = {
@@ -42,6 +47,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
       lastAdTime: null,
       isAdmin: false,
       isBanned: false,
+      dailyStreak: 0,
+      badges: [],
     };
 
     function RedeemCodeBox({ telegramId, lang, onReward }: { telegramId: number; lang: Language; onReward: (balance: number) => void }) {
@@ -491,12 +498,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
       );
 
       const NAV_ALL = [
-        { id: "home",        label: t.home,           color: "#8B5CF6", bannedAllowed: true  },
-        { id: "ads",         label: t.ads,            color: "#F59E0B", bannedAllowed: false },
-        { id: "spin",        label: t.spin,           color: "#EC4899", bannedAllowed: false },
-        { id: "friends",     label: t.friends_title,  color: "#3B82F6", bannedAllowed: false },
-        { id: "leaderboard", label: t.leaderboard,    color: "#FFD700", bannedAllowed: true  },
-        { id: "withdraw",    label: t.withdraw,       color: "#10B981", bannedAllowed: false },
+        { id: "home",        label: t.home,                             color: "#8B5CF6", bannedAllowed: true  },
+        { id: "ads",         label: t.ads,                              color: "#F59E0B", bannedAllowed: false },
+        { id: "spin",        label: t.spin,                             color: "#EC4899", bannedAllowed: false },
+        { id: "friends",     label: t.friends_title,                    color: "#3B82F6", bannedAllowed: false },
+        { id: "leaderboard", label: t.leaderboard,                      color: "#FFD700", bannedAllowed: true  },
+        { id: "withdraw",    label: t.withdraw,                         color: "#10B981", bannedAllowed: false },
+        { id: "stats",       label: (t as any).stats_title || "إحصائيات", color: "#A78BFA", bannedAllowed: true  },
         ...(isAdmin ? [{ id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true }] : []),
       ];
       const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
@@ -553,6 +561,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
             <path d="M2 10H22" stroke={c} strokeWidth="2"/>
             <circle cx="16" cy="15" r="2" fill={c}/>
             <path d="M7 3H17" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+        );
+        if (id === "stats") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <rect x="3" y="14" width="4" height="7" rx="1.5" fill={active ? `${color}40` : "none"} stroke={c} strokeWidth="1.8"/>
+            <rect x="10" y="9" width="4" height="12" rx="1.5" fill={active ? `${color}40` : "none"} stroke={c} strokeWidth="1.8"/>
+            <rect x="17" y="4" width="4" height="17" rx="1.5" fill={active ? `${color}40` : "none"} stroke={c} strokeWidth="1.8"/>
           </svg>
         );
         if (id === "admin") return (
@@ -652,6 +667,16 @@ import { useState, useEffect, useCallback, useRef } from "react";
                   </div>
                 </div>
 
+                {/* Streak Banner */}
+                {safeUser.dailyStreak > 0 && (
+                  <StreakBanner
+                    streak={safeUser.dailyStreak}
+                    newBadges={safeUser.newBadges}
+                    lang={lang}
+                    onViewStats={() => setActiveTab("stats")}
+                  />
+                )}
+
                 {/* Quick Actions */}
                 <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, overflow: "hidden" }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -738,6 +763,22 @@ import { useState, useEffect, useCallback, useRef } from "react";
               {activeTab === "leaderboard" && (
                 <div style={{ paddingTop: 6 }}>
                   <LeaderboardSection myTelegramId={safeUser.telegramId} lang={lang} />
+                </div>
+              )}
+
+              {/* STATS TAB */}
+              {activeTab === "stats" && (
+                <div style={{ paddingTop: 6, maxWidth: 480, margin: "0 auto", padding: "6px 14px 0" }}>
+                  <div style={{ marginBottom: 18 }}>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#A78BFA" }}>📊 {(t as any).stats_title || "إحصائياتي"}</h2>
+                  </div>
+                  <StatsSection
+                    telegramId={safeUser.telegramId}
+                    initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Telegram.WebApp.initData || "" : ""}
+                    lang={lang}
+                    streak={safeUser.dailyStreak}
+                    badges={safeUser.badges}
+                  />
                 </div>
               )}
 
