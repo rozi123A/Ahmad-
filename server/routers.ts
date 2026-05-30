@@ -1515,8 +1515,7 @@ export const appRouter = router({
           if (!adminId || adminId !== input.telegramId) return { success: false };
           const adminSecret = process.env.ADMIN_SECRET || '';
           if (!adminSecret) return { success: false };
-          // Never transmit ADMIN_SECRET over network — client uses admin.verify separately
-          return { success: true };
+          return { success: true, secret: adminSecret };
         }),
 
       // Verify admin access — checks secret against env
