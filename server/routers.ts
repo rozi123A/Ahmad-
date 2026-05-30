@@ -1,5 +1,5 @@
 import { randomInt, timingSafeEqual, createHash } from "crypto";
-import { isFostpayEnabled, fostpaySendTon, fostpaySendUsdt } from "./fostpay";
+import { isFostpayEnabled, fostpaySendDgb } from "./fostpay";
 
 function safeCompareSecret(input: string, expected: string): boolean {
   if (!expected || expected.length === 0) return false;
@@ -33,7 +33,7 @@ import { z } from "zod";
 import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, getDailyActiveUsers, addCheatStrike, getBannedUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
-  getUserWallets, updateUserTonWallet, updateUserUsdtWallet, countAdTransactions } from "./db";
+  getUserWallets, updateUserDgbWallet, countAdTransactions } from "./db";
 import { eq } from "drizzle-orm";
 import { telegramUsers, withdrawals, transactions } from "../drizzle/schema";
 import crypto from "crypto";
@@ -922,7 +922,7 @@ export const appRouter = router({
         telegramId: z.number(), 
         amount: z.number().int().positive().min(15000), 
         initData: z.string(),
-        method: z.enum(["telegram_stars", "ton", "usdt"]).default("telegram_stars")
+        method: z.enum(["telegram_stars", "dgb"]).default("telegram_stars")
       }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
@@ -956,20 +956,17 @@ export const appRouter = router({
         }
 
         const stars = Math.floor(input.amount / starsRate);
-        // Crypto amount: 1500 points = 0.05 TON/USDT
+        // Crypto amount: 15000 points = 1 DGB
         const CRYPTO_BASE_POINTS = 15000;
-        const CRYPTO_BASE_AMOUNT = 0.05;
+        const CRYPTO_BASE_AMOUNT = 1;
         const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
         if (stars < 1 && input.method === "telegram_stars") {
           return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
         }
 
-        // Validate wallet for TON/USDT methods
-        if (input.method === "ton" && !user.tonWallet) {
-          return { success: false, message: "⚠️ يجب إضافة عنوان محفظة TON أولاً من الإعدادات" };
-        }
-        if (input.method === "usdt" && !user.usdtWallet) {
-          return { success: false, message: "⚠️ يجب إضافة عنوان محفظة USDT (TRC-20) أولاً من الإعدادات" };
+        // Validate wallet for DGB method
+        if (input.method === "dgb" && !user.tonWallet) {
+          return { success: false, message: "⚠️ يجب إضافة عنوان محفظة DigiByte أولاً من الإعدادات" };
         }
 
         const pool = await getPool();
@@ -995,10 +992,8 @@ export const appRouter = router({
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS method varchar(50) DEFAULT 'telegram_stars'`);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS note text`);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS processed_at timestamp`);
-          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_tx_hash VARCHAR(100)`);
-          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS ton_amount VARCHAR(50)`);
-          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_tx_hash VARCHAR(200)`);
-          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS usdt_amount VARCHAR(50)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS dgb_tx_hash VARCHAR(200)`);
+          await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS dgb_amount VARCHAR(50)`);
           await pool.query(`ALTER TABLE withdrawals ADD COLUMN IF NOT EXISTS user_wallet VARCHAR(100)`);
         } catch (_) {}
 
@@ -1022,8 +1017,8 @@ export const appRouter = router({
           );
 
           // 3. Create withdrawal record with method and wallet
-          const userWallet = input.method === "ton" ? user.tonWallet : input.method === "usdt" ? user.usdtWallet : null;
-          const displayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : input.method === "ton" ? `${cryptoAmount} TON` : `${cryptoAmount} USDT`;
+          const userWallet = input.method === "dgb" ? user.tonWallet : null;
+          const displayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
           await client.query(
             `INSERT INTO withdrawals (telegram_id, amount, stars, status, method, user_wallet)
              VALUES ($1, $2, $3, 'pending', $4, $5)`,
@@ -1053,10 +1048,9 @@ export const appRouter = router({
         if (botToken && adminId) {
           const name = [user.firstName, user.lastName].filter(Boolean).join(" ") || "مجهول";
           const username = user.username ? `@${user.username}` : "بدون username";
-          const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : 
-                              input.method === "ton" ? "💎 TON" : "💵 USDT (TRC-20)";
-          const methodIcon = input.method === "telegram_stars" ? "⭐" : input.method === "ton" ? "💎" : "💵";
-          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : input.method === "ton" ? `${cryptoAmount} TON` : `${cryptoAmount} USDT (TRC-20)`;
+          const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : "🟦 DigiByte (DGB)";
+          const methodIcon = input.method === "telegram_stars" ? "⭐" : "🟦";
+          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
           const msg = [
             `🔔 <b>طلب سحب جديد (${methodLabel})</b>`,
             ``,
@@ -1066,7 +1060,7 @@ export const appRouter = router({
             ``,
             `💰 النقاط: <b>${input.amount.toLocaleString()}</b>`,
             `${methodIcon} المبلغ: <b>${adminDisplayAmount}</b>`,
-            input.method !== "telegram_stars" ? `📐 الحساب: ${input.amount.toLocaleString()} نقطة ÷ 15000 × 0.05` : "",
+            input.method !== "telegram_stars" ? `📐 الحساب: ${input.amount.toLocaleString()} نقطة ÷ 15000 × 1` : "",
             `📦 الطريقة: <b>${methodLabel}</b>`,
             input.method !== "telegram_stars" && userWallet ? `🔗 المحفظة: <code>${userWallet}</code>` : "",
             ``,
@@ -1085,9 +1079,7 @@ export const appRouter = router({
 
         const methodMsg = input.method === "telegram_stars" 
           ? "⏰ سيتم إرسال النجوم خلال 24 ساعة (تصل كهدية في Telegram)"
-          : input.method === "ton" 
-          ? `⏰ سيتم إرسال ${cryptoAmount} TON إلى محفظتك خلال 24 ساعة`
-          : `⏰ سيتم إرسال ${cryptoAmount} USDT (TRC-20) إلى محفظتك خلال 24 ساعة`;
+          : `⏰ سيتم إرسال ${cryptoAmount} DGB إلى محفظتك خلال 24 ساعة`;
 
         return { success: true, stars, method: input.method, message: `✅ تم إرسال طلب السحب بنجاح!\n\n${methodMsg}` };
       }),
@@ -1106,33 +1098,19 @@ export const appRouter = router({
       .input(z.object({ telegramId: z.number(), initData: z.string() }))
       .query(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
-        if (!verified || verified.id !== input.telegramId) return { tonWallet: null, usdtWallet: null };
+        if (!verified || verified.id !== input.telegramId) return { dgbWallet: null };
         return await getUserWallets(input.telegramId);
       }),
 
-    // Update TON wallet address
-    updateTonWallet: publicProcedure
+    // Update DGB wallet address
+    updateDgbWallet: publicProcedure
       .input(z.object({ telegramId: z.number(), initData: z.string(), wallet: z.string().min(20).max(100) }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) return { success: false, message: "غير مصرح" };
         try {
-          await updateUserTonWallet(input.telegramId, input.wallet);
-          return { success: true, message: "✅ تم تحديث محفظة TON بنجاح" };
-        } catch (err: any) {
-          return { success: false, message: err.message || "فشل تحديث المحفظة" };
-        }
-      }),
-
-    // Update USDT wallet address
-    updateUsdtWallet: publicProcedure
-      .input(z.object({ telegramId: z.number(), initData: z.string(), wallet: z.string().min(30).max(50) }))
-      .mutation(async ({ input }) => {
-        const verified = verifyTelegramWebApp(input.initData);
-        if (!verified || verified.id !== input.telegramId) return { success: false, message: "غير مصرح" };
-        try {
-          await updateUserUsdtWallet(input.telegramId, input.wallet);
-          return { success: true, message: "✅ تم تحديث محفظة USDT بنجاح" };
+          await updateUserDgbWallet(input.telegramId, input.wallet);
+          return { success: true, message: "✅ تم تحديث محفظة DigiByte بنجاح" };
         } catch (err: any) {
           return { success: false, message: err.message || "فشل تحديث المحفظة" };
         }
@@ -1295,26 +1273,24 @@ export const appRouter = router({
                   }).catch(() => {});
                 }
 
-              } else if (method === "ton") {
-                // ── إرسال TON تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
-                const tonAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
-                const tonWallet = w.user_wallet || "";
+              } else if (method === "dgb") {
+                // ── إرسال DGB تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
+                const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 1).toFixed(4));
+                const dgbWallet = w.user_wallet || "";
 
-                if (isFostpayEnabled() && tonWallet) {
-                  // ── FaucetPay: إرسال تلقائي ──
-                  const payResult = await fostpaySendTon(tonWallet, tonAmount, `سحب #${w.id}`);
+                if (isFostpayEnabled() && dgbWallet) {
+                  const payResult = await fostpaySendDgb(dgbWallet, dgbAmount, `سحب #${w.id}`);
 
                   if (payResult.success) {
-                    // نجح الإرسال التلقائي — أشعر المستخدم والأدمن
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         chat_id: w.telegramId,
                         text:
-                          `✅ *تم إرسال TON تلقائياً!*\n\n` +
-                          `💎 المبلغ: *${tonAmount} TON*\n` +
-                          `🔗 المحفظة: \`${tonWallet}\`\n` +
+                          `✅ *تم إرسال DigiByte تلقائياً!*\n\n` +
+                          `🟦 المبلغ: *${dgbAmount} DGB*\n` +
+                          `🔗 المحفظة: \`${dgbWallet}\`\n` +
                           (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`\n` : "") +
                           `\nشكراً لك! 🚀`,
                         parse_mode: "Markdown",
@@ -1327,17 +1303,16 @@ export const appRouter = router({
                         body: JSON.stringify({
                           chat_id: adminId,
                           text:
-                            `✅ *تم إرسال TON تلقائياً عبر FaucetPay*\n\n` +
+                            `✅ *تم إرسال DGB تلقائياً عبر FaucetPay*\n\n` +
                             `👤 ${userName} (${userTag})\n` +
-                            `💎 ${tonAmount} TON → \`${tonWallet}\`\n` +
+                            `🟦 ${dgbAmount} DGB → \`${dgbWallet}\`\n` +
                             (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
                           parse_mode: "Markdown",
                         }),
                       }).catch(() => {});
                     }
                   } else {
-                    // فشل FaucetPay — تراجع للإشعار اليدوي
-                    console.error("[FaucetPay] TON payout failed:", payResult.error);
+                    console.error("[FaucetPay] DGB payout failed:", payResult.error);
                     if (adminId) {
                       fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                         method: "POST",
@@ -1345,9 +1320,9 @@ export const appRouter = router({
                         body: JSON.stringify({
                           chat_id: adminId,
                           text:
-                            `⚠️ *فشل إرسال TON تلقائياً — يلزم تدخل يدوي*\n\n` +
+                            `⚠️ *فشل إرسال DGB تلقائياً — يلزم تدخل يدوي*\n\n` +
                             `👤 ${userName} (${userTag})\n` +
-                            `💎 ${tonAmount} TON → \`${tonWallet}\`\n` +
+                            `🟦 ${dgbAmount} DGB → \`${dgbWallet}\`\n` +
                             `❌ السبب: ${payResult.error || "خطأ غير معروف"}`,
                           parse_mode: "Markdown",
                           reply_markup: JSON.stringify({
@@ -1364,13 +1339,12 @@ export const appRouter = router({
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
                         chat_id: w.telegramId,
-                        text: `✅ *تمت الموافقة على طلب السحب!*\n\n💎 ${tonAmount} TON\n⏰ سيصلك خلال 24 ساعة\n\nشكراً لك! 🚀`,
+                        text: `✅ *تمت الموافقة على طلب السحب!*\n\n🟦 ${dgbAmount} DGB\n⏰ سيصلك خلال 24 ساعة\n\nشكراً لك! 🚀`,
                         parse_mode: "Markdown",
                       }),
                     }).catch(() => {});
                   }
                 } else {
-                  // ── لا يوجد FaucetPay — إشعار يدوي كالمعتاد ──
                   if (adminId) {
                     fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
                       method: "POST",
@@ -1378,17 +1352,17 @@ export const appRouter = router({
                       body: JSON.stringify({
                         chat_id: adminId,
                         text:
-                          `💎 *طلب سحب TON جديد*\n\n` +
+                          `🟦 *طلب سحب DigiByte جديد*\n\n` +
                           `👤 ${userName} (${userTag})\n` +
                           `🆔 ID: \`${w.telegramId}\`\n` +
                           `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                          `💎 TON: ${tonAmount}\n` +
-                          `🔗 المحفظة: \`${tonWallet || "غير موجودة"}\`\n\n` +
-                          `📋 أرسل TON يدوياً ثم اضغط "تم الإرسال"`,
+                          `🟦 DGB: ${dgbAmount}\n` +
+                          `🔗 المحفظة: \`${dgbWallet || "غير موجودة"}\`\n\n` +
+                          `📋 أرسل DGB يدوياً ثم اضغط "تم الإرسال"`,
                         parse_mode: "Markdown",
                         reply_markup: JSON.stringify({
                           inline_keyboard: [[
-                            { text: "✅ تم إرسال TON", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                            { text: "✅ تم إرسال DGB", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
                             { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
                           ]],
                         }),
@@ -1400,122 +1374,11 @@ export const appRouter = router({
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                       chat_id: w.telegramId,
-                      text: `✅ *تمت الموافقة على طلب السحب!*\n\n💎 ${tonAmount} TON\n🔗 \`${tonWallet}\`\n\n⏰ سيتم إرسال TON خلال 24 ساعة\n\nشكراً! 🚀`,
+                      text: `✅ *تمت الموافقة على طلب السحب!*\n\n🟦 ${dgbAmount} DGB\n🔗 \`${dgbWallet}\`\n\n⏰ سيتم إرسال DGB خلال 24 ساعة\n\nشكراً! 🚀`,
                       parse_mode: "Markdown",
                     }),
                   }).catch(() => {});
                 }
-
-              } else if (method === "usdt") {
-                // ── إرسال USDT تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
-                const usdtAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
-                const usdtWallet = w.user_wallet || "";
-
-                if (isFostpayEnabled() && usdtWallet) {
-                  // ── FaucetPay: إرسال تلقائي ──
-                  const payResult = await fostpaySendUsdt(usdtWallet, usdtAmount, `سحب #${w.id}`);
-
-                  if (payResult.success) {
-                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chat_id: w.telegramId,
-                        text:
-                          `✅ *تم إرسال USDT تلقائياً!*\n\n` +
-                          `💵 المبلغ: *${usdtAmount} USDT*\n` +
-                          `🔗 المحفظة: \`${usdtWallet}\`\n` +
-                          (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`\n` : "") +
-                          `\nشكراً لك! 🚀`,
-                        parse_mode: "Markdown",
-                      }),
-                    }).catch(() => {});
-                    if (adminId) {
-                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          chat_id: adminId,
-                          text:
-                            `✅ *تم إرسال USDT تلقائياً عبر FaucetPay*\n\n` +
-                            `👤 ${userName} (${userTag})\n` +
-                            `💵 ${usdtAmount} USDT → \`${usdtWallet}\`\n` +
-                            (payResult.txHash ? `📋 TX: \`${payResult.txHash}\`` : ""),
-                          parse_mode: "Markdown",
-                        }),
-                      }).catch(() => {});
-                    }
-                  } else {
-                    console.error("[FaucetPay] USDT payout failed:", payResult.error);
-                    if (adminId) {
-                      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          chat_id: adminId,
-                          text:
-                            `⚠️ *فشل إرسال USDT تلقائياً — يلزم تدخل يدوي*\n\n` +
-                            `👤 ${userName} (${userTag})\n` +
-                            `💵 ${usdtAmount} USDT → \`${usdtWallet}\`\n` +
-                            `❌ السبب: ${payResult.error || "خطأ غير معروف"}`,
-                          parse_mode: "Markdown",
-                          reply_markup: JSON.stringify({
-                            inline_keyboard: [[
-                              { text: "✅ تم الإرسال يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                              { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                            ]],
-                          }),
-                        }),
-                      }).catch(() => {});
-                    }
-                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chat_id: w.telegramId,
-                        text: `✅ *تمت الموافقة على طلب السحب!*\n\n💵 ${usdtAmount} USDT\n⏰ سيصلك خلال 24 ساعة\n\nشكراً لك! 🚀`,
-                        parse_mode: "Markdown",
-                      }),
-                    }).catch(() => {});
-                  }
-                } else {
-                  // ── لا يوجد FaucetPay — إشعار يدوي كالمعتاد ──
-                  if (adminId) {
-                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        chat_id: adminId,
-                        text:
-                          `💵 *طلب سحب USDT (TRC-20) جديد*\n\n` +
-                          `👤 ${userName} (${userTag})\n` +
-                          `🆔 ID: \`${w.telegramId}\`\n` +
-                          `💰 النقاط: ${Number(w.amount).toLocaleString()}\n` +
-                          `💵 USDT: ${usdtAmount}\n` +
-                          `🔗 المحفظة: \`${usdtWallet || "غير موجودة"}\`\n\n` +
-                          `📋 أرسل USDT يدوياً ثم اضغط "تم الإرسال"`,
-                        parse_mode: "Markdown",
-                        reply_markup: JSON.stringify({
-                          inline_keyboard: [[
-                            { text: "✅ تم إرسال USDT", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
-                            { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
-                          ]],
-                        }),
-                      }),
-                    }).catch(() => {});
-                  }
-                  fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      chat_id: w.telegramId,
-                      text: `✅ *تمت الموافقة على طلب السحب!*\n\n💵 ${usdtAmount} USDT\n🔗 \`${usdtWallet}\`\n\n⏰ سيتم إرسال USDT (TRC-20) خلال 24 ساعة\n\nشكراً! 🚀`,
-                      parse_mode: "Markdown",
-                    }),
-                  }).catch(() => {});
-                }
-              }
-
             } else {
               // ── رسالة رفض الطلب ──
               fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -1525,7 +1388,7 @@ export const appRouter = router({
                   chat_id: w.telegramId,
                   text:
                     `❌ *تم رفض طلب السحب*\n\n` +
-                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/1500)*0.05).toFixed(4))} ${method === "ton" ? "TON" : "USDT"}`})\n` +
+                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/1500)*0.05).toFixed(4))} ${"DGB"}`})\n` +
                     `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                     `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                     `تواصل مع الدعم إذا كان لديك استفسار.`,
