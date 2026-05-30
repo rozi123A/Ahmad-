@@ -758,29 +758,30 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 <WithdrawSection user={safeUser} lang={lang} onSuccess={() => refreshUser()} />
               </div>
             )}
-          </div>
-              {/* LEADERBOARD TAB */}
-              {activeTab === "leaderboard" && (
-                <div style={{ paddingTop: 6 }}>
-                  <LeaderboardSection myTelegramId={safeUser.telegramId} lang={lang} />
-                </div>
-              )}
 
-              {/* STATS TAB */}
-              {activeTab === "stats" && (
-                <div style={{ paddingTop: 6, maxWidth: 480, margin: "0 auto", padding: "6px 14px 0" }}>
-                  <div style={{ marginBottom: 18 }}>
-                    <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#A78BFA" }}>📊 {(t as any).stats_title || "إحصائياتي"}</h2>
-                  </div>
-                  <StatsSection
-                    telegramId={safeUser.telegramId}
-                    initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Telegram.WebApp.initData || "" : ""}
-                    lang={lang}
-                    streak={safeUser.dailyStreak}
-                    badges={safeUser.badges}
-                  />
+            {/* LEADERBOARD TAB */}
+            {activeTab === "leaderboard" && (
+              <div style={{ paddingTop: 6 }}>
+                <LeaderboardSection myTelegramId={safeUser.telegramId} lang={lang} />
+              </div>
+            )}
+
+            {/* STATS TAB */}
+            {activeTab === "stats" && (
+              <div style={{ paddingTop: 6, padding: "6px 0 0" }}>
+                <div style={{ marginBottom: 18 }}>
+                  <h2 style={{ fontSize: 24, fontWeight: 900, margin: 0, color: "#A78BFA" }}>📊 {(t as any).stats_title || "إحصائياتي"}</h2>
                 </div>
-              )}
+                <StatsSection
+                  telegramId={safeUser.telegramId}
+                  initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Telegram.WebApp.initData || "" : ""}
+                  lang={lang}
+                  streak={safeUser.dailyStreak}
+                  badges={safeUser.badges}
+                />
+              </div>
+            )}
+          </div>
 
           {/* BOTTOM NAV */}
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "center", padding: "0 10px 12px" }}>
