@@ -39,6 +39,8 @@ export const telegramUsers = pgTable("telegram_users", {
   tonWallet: varchar("ton_wallet", { length: 100 }),
   usdtWallet: varchar("usdt_wallet", { length: 100 }),
   lastSeenAt: timestamp("last_seen_at"),
+  cheatStrikes: integer("cheat_strikes").default(0).notNull(),
+  banReason: text("ban_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
