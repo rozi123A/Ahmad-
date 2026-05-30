@@ -704,10 +704,15 @@ export default function AdminDashboard() {
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <button
-                          onClick={() => copyToClipboard(String(w.stars), `${w.stars} Stars — تم النسخ`)}
-                          style={{ fontSize: 20, fontWeight: 900, color: "#FFD700", background: "rgba(255,215,0,0.1)", border: "1px solid rgba(255,215,0,0.25)", borderRadius: 10, padding: "4px 10px", cursor: "pointer", display: "block", marginBottom: 4 }}
+                          onClick={() => {
+                            const isDgb = w.method === "dgb";
+                            const amount = isDgb ? parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4)) : w.stars;
+                            const label = isDgb ? "DGB" : "Stars";
+                            copyToClipboard(String(amount), `${amount} ${label} — تم النسخ`);
+                          }}
+                          style={{ fontSize: 20, fontWeight: 900, color: w.method === "dgb" ? "#60A5FA" : "#FFD700", background: w.method === "dgb" ? "rgba(96,165,250,0.1)" : "rgba(255,215,0,0.1)", border: `1px solid ${w.method === "dgb" ? "rgba(96,165,250,0.25)" : "rgba(255,215,0,0.25)"}`, borderRadius: 10, padding: "4px 10px", cursor: "pointer", display: "block", marginBottom: 4 }}
                         >
-                           {fmtN(Number(w.stars))}
+                           {w.method === "dgb" ? parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4)) : fmtN(Number(w.stars))}
                         </button>
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", textAlign: "center" }}>{fmtN(Number(w.amount))} نقطة</p>
                       </div>
@@ -729,12 +734,18 @@ export default function AdminDashboard() {
                     {/* Action buttons */}
                     <div style={{ display: "flex", gap: 8 }}>
                       {/*  Send Stars — opens profile */}
-                      <button
-                        onClick={() => openSendStars(w.telegramId, w.username)}
-                        style={{ flex: 2, height: 42, borderRadius: 10, border: "1px solid rgba(255,215,0,0.4)", background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-                      >
-                         أرسل {fmtN(Number(w.stars))} Stars
-                      </button>
+                      {w.method !== "dgb" ? (
+                        <button
+                          onClick={() => openSendStars(w.telegramId, w.username)}
+                          style={{ flex: 2, height: 42, borderRadius: 10, border: "1px solid rgba(255,215,0,0.4)", background: "rgba(255,215,0,0.12)", color: "#FFD700", fontWeight: 800, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
+                        >
+                           أرسل {fmtN(Number(w.stars))} Stars
+                        </button>
+                      ) : (
+                        <div style={{ flex: 2, height: 42, borderRadius: 10, border: "1px solid rgba(96,165,250,0.4)", background: "rgba(96,165,250,0.12)", color: "#60A5FA", fontWeight: 800, fontSize: 12, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                          🟦 {parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4))} DGB
+                        </div>
+                      )}
 
                       {/* Chat button */}
                       <button
