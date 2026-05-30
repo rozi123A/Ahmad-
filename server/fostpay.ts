@@ -1,12 +1,9 @@
 /**
- * FaucetPay Integration — Auto Payout for USDT (TRC-20)
+ * FaucetPay Integration — Auto Payout for DigiByte (DGB)
  *
  * HOW TO ACTIVATE:
- *   1. Set FAUCETPAY_API_KEY in Render environment variables
- *   Done! USDT withdrawals will be sent automatically on approval.
- *
- * NOTE: FaucetPay does not support TON — TON withdrawals fall back to manual admin notification.
- * If FAUCETPAY_API_KEY is not set, all payouts fall back to manual.
+ *   1. Set FAUCETPAY_API_KEY in environment variables
+ *   Done! DGB withdrawals will be sent automatically on approval.
  */
 
 const FAUCETPAY_BASE_URL = "https://faucetpay.io/api/v1";
@@ -29,25 +26,9 @@ export function isFostpayEnabled(): boolean {
 }
 
 /**
- * TON is NOT supported by FaucetPay — always falls back to manual admin payout.
+ * Send DigiByte (DGB) automatically via FaucetPay API
  */
-export async function fostpaySendTon(
-  _toWallet: string,
-  _amount: number,
-  _memo?: string
-): Promise<FostpayPayoutResult> {
-  return {
-    success: false,
-    fallbackToManual: true,
-    error: "TON غير مدعوم من FaucetPay — يلزم إرسال يدوي",
-  };
-}
-
-/**
- * Send USDT (TRC-20) automatically via FaucetPay API
- * Docs: https://faucetpay.io/page/merchant-api
- */
-export async function fostpaySendUsdt(
+export async function fostpaySendDgb(
   toWallet: string,
   amount: number,
   memo?: string
@@ -61,8 +42,8 @@ export async function fostpaySendUsdt(
     const params = new URLSearchParams({
       api_key: config.apiKey,
       to: toWallet,
-      amount: String(Math.round(amount * 100) / 100),
-      currency: "USDT",
+      amount: String(Math.round(amount * 10000) / 10000),
+      currency: "DGB",
     });
     if (memo) params.append("referral", memo.slice(0, 50));
 
@@ -91,14 +72,14 @@ export async function fostpaySendUsdt(
 }
 
 /**
- * Check FaucetPay USDT balance
+ * Check FaucetPay DGB balance
  */
-export async function fostpayGetBalance(): Promise<{ ton: number; usdt: number } | null> {
+export async function fostpayGetBalance(): Promise<{ dgb: number } | null> {
   const config = getFaucetPayConfig();
   if (!config) return null;
 
   try {
-    const params = new URLSearchParams({ api_key: config.apiKey, currency: "USDT" });
+    const params = new URLSearchParams({ api_key: config.apiKey, currency: "DGB" });
     const res = await fetch(`${FAUCETPAY_BASE_URL}/balance`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -106,7 +87,7 @@ export async function fostpayGetBalance(): Promise<{ ton: number; usdt: number }
     });
     const data = await res.json() as any;
     if (data.status === 200) {
-      return { ton: 0, usdt: Number(data.balance || 0) };
+      return { dgb: Number(data.balance || 0) };
     }
     return null;
   } catch {
