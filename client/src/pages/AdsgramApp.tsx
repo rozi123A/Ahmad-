@@ -498,13 +498,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
       );
 
       const NAV_ALL = [
-        { id: "home",        label: t.home,                             color: "#8B5CF6", bannedAllowed: true  },
-        { id: "ads",         label: t.ads,                              color: "#F59E0B", bannedAllowed: false },
-        { id: "spin",        label: t.spin,                             color: "#EC4899", bannedAllowed: false },
-        { id: "friends",     label: t.friends_title,                    color: "#3B82F6", bannedAllowed: false },
-        { id: "leaderboard", label: t.leaderboard,                      color: "#FFD700", bannedAllowed: true  },
-        { id: "withdraw",    label: t.withdraw,                         color: "#10B981", bannedAllowed: false },
-        { id: "admin",       label: "إدارة",                            color: "#7C3AED", bannedAllowed: true  },
+        { id: "home",        label: t.home,                               color: "#8B5CF6", bannedAllowed: true  },
+        { id: "ads",         label: t.ads,                                color: "#F59E0B", bannedAllowed: false },
+        { id: "spin",        label: t.spin,                               color: "#EC4899", bannedAllowed: false },
+        { id: "friends",     label: t.friends_title,                      color: "#3B82F6", bannedAllowed: false },
+        { id: "leaderboard", label: t.leaderboard,                        color: "#FFD700", bannedAllowed: true  },
+        { id: "withdraw",    label: t.withdraw,                           color: "#10B981", bannedAllowed: false },
+        { id: "stats",       label: (t as any).stats_title || "إحصائياتي", color: "#A78BFA", bannedAllowed: true  },
+        { id: "admin",       label: "إدارة",                              color: "#7C3AED", bannedAllowed: true  },
       ];
       const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
 
@@ -784,14 +785,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
           {/* BOTTOM NAV */}
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100, display: "flex", justifyContent: "center", padding: "0 10px 12px" }}>
-            <div style={{ width: "100%", maxWidth: 480, background: "rgba(7,7,17,0.92)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 28, border: "1px solid rgba(255,255,255,0.09)", padding: "8px 6px 6px", display: "flex", justifyContent: "space-around", boxShadow: "0 -4px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
+            <div style={{ width: "100%", maxWidth: 480, background: "rgba(7,7,17,0.92)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 28, border: "1px solid rgba(255,255,255,0.09)", padding: "8px 6px 6px", display: "flex", overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", boxShadow: "0 -4px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(139,92,246,0.1), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
               {NAV.map(({ id, label, color }) => {
                 const active = activeTab === id;
                 return (
                   <button
                     key={id}
                     onClick={() => { if (isNavLocked) return; if (id === "admin") { const s = localStorage.getItem("adminSecret"); window.location.href = s ? "/admin?ak=" + encodeURIComponent(s) : "/admin"; return; } setActiveTab(id); }}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 2px 5px", background: "none", border: "none", cursor: isNavLocked && !active ? "not-allowed" : "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease", opacity: isNavLocked && !active ? 0.35 : 1 }}
+                    style={{ flex: "0 0 auto", minWidth: 56, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 4px 5px", background: "none", border: "none", cursor: isNavLocked && !active ? "not-allowed" : "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease", opacity: isNavLocked && !active ? 0.35 : 1 }}
                   >
                     {active && (
                       <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 32, height: 3, borderRadius: 3, background: `linear-gradient(90deg, ${color}cc, ${color})`, boxShadow: `0 0 8px ${color}88` }} />
