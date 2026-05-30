@@ -2,6 +2,15 @@ import { Telegraf, Markup } from "telegraf";
 import type { Express } from "express";
 import fs from "fs";
 import path from "path";
+import { createHash } from "crypto";
+
+function getEffectiveAdminSecret(): string {
+  const explicit = process.env.ADMIN_SECRET || "";
+  if (explicit) return explicit;
+  const bot = process.env.BOT_TOKEN || "";
+  if (!bot) return "";
+  return createHash("sha256").update("admin:" + bot).digest("hex");
+}
 import { getTelegramUser, upsertTelegramUser, getInactiveUsers, createTransaction, getTransactions, getSetting, updateLastReminded } from "./db";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
