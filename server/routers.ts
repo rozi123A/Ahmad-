@@ -958,7 +958,7 @@ export const appRouter = router({
         const stars = Math.floor(input.amount / starsRate);
         // Crypto amount: 15000 points = 1 DGB
         const CRYPTO_BASE_POINTS = 15000;
-        const CRYPTO_BASE_AMOUNT = 1;
+        const CRYPTO_BASE_AMOUNT = 0.05;
         const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
         if (stars < 1 && input.method === "telegram_stars") {
           return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
@@ -1275,7 +1275,7 @@ export const appRouter = router({
 
               } else if (method === "dgb") {
                 // ── إرسال DGB تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
-                const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 1).toFixed(4));
+                const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
                 const dgbWallet = w.user_wallet || "";
 
                 if (isFostpayEnabled() && dgbWallet) {
