@@ -165,6 +165,18 @@ export default function AdminDashboard() {
       }).catch(() => false);
 
     const tryAutoAuth = async () => {
+      // 0. Try URL ?ak= param first (sent by bot /admin command)
+      const urlParams = new URLSearchParams(window.location.search);
+      const akParam = urlParams.get("ak");
+      if (akParam) {
+        const ok = await tryVerify(akParam);
+        if (ok) {
+          localStorage.setItem("adminSecret", akParam);
+          window.history.replaceState({}, "", window.location.pathname);
+          return;
+        }
+      }
+
       // 1. Try saved secret from localStorage
       const saved = localStorage.getItem("adminSecret");
       if (saved) {
