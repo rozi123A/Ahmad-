@@ -1189,7 +1189,8 @@ export const appRouter = router({
             const userName  = w.firstName || w.username || String(w.telegramId);
             // userWallet is saved ONLY for DGB withdrawals at creation time,
             // so it's the most reliable signal. Use it as override if set.
-            const method    = w.userWallet ? "dgb" : (w.method || "telegram_stars");
+            // Use w.method column first (most reliable), fall back to userWallet presence
+            const method    = (w.method && w.method !== "telegram_stars") ? w.method : (w.userWallet ? "dgb" : "telegram_stars");
 
             // ── الموافقة على السحب ──
             if (input.status === "approved") {
@@ -1293,9 +1294,27 @@ export const appRouter = router({
               } else if (method === "dgb") {
                 // ── إرسال DGB تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
                 const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
-                const dgbWallet = w.userWallet || "";
+                const dgbWallet = w.userWallet || w.dgbWallet || "";
 
-                if (isFostpayEnabled() && dgbWallet) {
+                if (!dgbWallet) {
+                  // لا يوجد عنوان محفظة — أشعر الأدمن
+                  if (adminId) {
+                    fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        chat_id: adminId,
+                        text: `⚠️ *تحذير: لا يوجد عنوان محفظة DGB*
+
+👤 ${userName} (${userTag})
+💰 المبلغ: ${dgbAmount} DGB
+
+المستخدم لم يضف عنوان محفظته. يرجى التواصل معه.`,
+                        parse_mode: "Markdown",
+                      }),
+                    }).catch(() => {});
+                  }
+                } else if (isFostpayEnabled() && dgbWallet) {
                   const payResult = await fostpaySendDgb(dgbWallet, dgbAmount, `سحب #${w.id}`);
 
                   if (payResult.success) {
