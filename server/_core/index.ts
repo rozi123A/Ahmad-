@@ -64,8 +64,31 @@ function startKeepAlive(baseUrl: string) {
   console.log(`[KeepAlive] Started — pinging ${pingUrl} every 14 min`);
 }
 
+async function runMigrations() {
+  try {
+    const { getPool } = await import("../db");
+    const pool = await getPool();
+    if (!pool) return;
+    await pool.query(`
+      ALTER TABLE telegram_users
+        ADD COLUMN IF NOT EXISTS last_ip VARCHAR(100),
+        ADD COLUMN IF NOT EXISTS device_info TEXT,
+        ADD COLUMN IF NOT EXISTS ban_reason TEXT,
+        ADD COLUMN IF NOT EXISTS cheat_strikes INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS daily_streak INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS last_login_date VARCHAR(10),
+        ADD COLUMN IF NOT EXISTS badges TEXT
+    `);
+    console.log("[Migration] ✅ columns verified");
+  } catch (err: any) {
+    console.warn("[Migration] ⚠️", err?.message);
+  }
+}
+
 async function startServer() {
   await initDb();
+  await runMigrations();
 
   const app = express();
   const server = createServer(app);
