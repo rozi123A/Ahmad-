@@ -903,9 +903,9 @@ export async function updateUserDgbWallet(telegramId: number, wallet: string): P
   const db = await getDb();
   if (!db) return;
   // Validate TON address format (basic check: starts with EQ or E and is ~48 chars)
-  const normalized = wallet.trim().toLowerCase();
-  if (!normalized.startsWith("eq") && !normalized.startsWith("uq") && !normalized.startsWith("0_")) {
-    throw new Error("عنوان TON غير صالح — يجب أن يبدأ بـ EQ أو UQ");
+  const normalized = wallet.trim();
+  if (normalized.length < 20 || normalized.length > 100) {
+    throw new Error("عنوان DigiByte غير صالح — يجب أن يكون بين 20 و 100 حرف");
   }
   await db.update(telegramUsers).set({ tonWallet: normalized, updatedAt: new Date() }) // dgbWallet stored in ton_wallet column
     .where(eq(telegramUsers.telegramId, telegramId));
