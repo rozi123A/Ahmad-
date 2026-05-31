@@ -39,10 +39,12 @@ export async function fostpaySendDgb(
   }
 
   try {
+    // FaucetPay expects amount in satoshis (1 DGB = 100,000,000 satoshis)
+    const satoshis = Math.round(amount * 1e8);
     const params = new URLSearchParams({
       api_key: config.apiKey,
       to: toWallet,
-      amount: String(Math.round(amount * 10000) / 10000),
+      amount: String(satoshis),
       currency: "DGB",
     });
     if (memo) params.append("referral", memo.slice(0, 50));
