@@ -117,7 +117,7 @@ export default function AdminDashboard() {
   const [authed, setAuthed] = useState(false);
   const [myTelegramId, setMyTelegramId] = useState<number>(0);
   const [authLoading, setAuthLoading] = useState(false);
-  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes" | "banned">("stats");
+  const [tab, setTab] = useState<"stats" | "users" | "withdrawals" | "broadcast" | "codes" | "banned" | "suspicious">("stats");
   const [userPage, setUserPage] = useState(1);
   const [userSearch, setUserSearch] = useState("");
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -210,6 +210,8 @@ export default function AdminDashboard() {
   const onlineQ = trpc.admin.getOnlineUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 15000 });
   const todayQ = trpc.admin.getTodayActiveUsers.useQuery({ secret }, { enabled: authed && tab === "stats", refetchInterval: 60000 });
   const bannedQ = trpc.admin.getBannedUsers.useQuery({ secret }, { enabled: authed && tab === "banned", refetchInterval: 10000 });
+  const suspiciousQ = trpc.admin.getSuspiciousAccounts.useQuery({ secret }, { enabled: authed && tab === "suspicious", refetchInterval: 15000 });
+  const bulkBanMut = trpc.admin.bulkBanByIp.useMutation({ onSuccess: () => suspiciousQ.refetch() });
   const usersQ = trpc.admin.getUsers.useQuery({ secret, page: userPage }, { enabled: authed && tab === "users" });
   const withdrawQ = trpc.admin.getWithdrawals.useQuery({ secret, status: withdrawFilter }, { enabled: authed && tab === "withdrawals" });
 
@@ -1142,6 +1144,66 @@ export default function AdminDashboard() {
         )}
 
         {/* ── BANNED TAB ── */}
+        {tab === "suspicious" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, padding: "14px 16px" }}>
+              <p style={{ fontSize: 13, fontWeight: 800, color: "#EF4444", marginBottom: 4 }}>🚨 كشف الحسابات المتعددة</p>
+              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)" }}>المستخدمون الذين يشاركون نفس عنوان IP — قد يستخدمون حسابات متعددة للغش</p>
+            </div>
+            {suspiciousQ.isLoading && <p style={{ color: "rgba(255,255,255,0.4)", textAlign: "center", padding: 20 }}>جاري التحميل...</p>}
+            {!suspiciousQ.isLoading && (suspiciousQ.data?.groups || []).length === 0 && (
+              <div style={{ textAlign: "center", padding: 40, color: "rgba(255,255,255,0.3)" }}>
+                <p style={{ fontSize: 32, marginBottom: 8 }}>✅</p>
+                <p style={{ fontSize: 14, fontWeight: 700 }}>لا توجد حسابات مشبوهة</p>
+              </div>
+            )}
+            {(suspiciousQ.data?.groups || []).map((group: any) => (
+              <div key={group.ip} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${group.count >= 4 ? "rgba(239,68,68,0.35)" : "rgba(245,158,11,0.25)"}`, borderRadius: 16, padding: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div>
+                    <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", fontWeight: 600, textTransform: "uppercase" }}>IP مشترك</span>
+                    <p style={{ fontSize: 13, fontWeight: 800, color: group.count >= 4 ? "#EF4444" : "#F59E0B", fontFamily: "monospace", marginTop: 2 }}>{group.ip}</p>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2 }}>{group.count} حساب مشترك</p>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`حظر جميع الحسابات من IP: ${group.ip}?`)) return;
+                        const r = await bulkBanMut.mutateAsync({ secret, ip: group.ip, ban: true });
+                        alert(r.message);
+                      }}
+                      style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: "rgba(239,68,68,0.2)", color: "#EF4444", fontWeight: 800, fontSize: 11, cursor: "pointer" }}
+                    >🚫 حظر الكل</button>
+                    <button
+                      onClick={async () => {
+                        const r = await bulkBanMut.mutateAsync({ secret, ip: group.ip, ban: false });
+                        alert(r.message);
+                      }}
+                      style={{ padding: "8px 14px", borderRadius: 10, border: "none", background: "rgba(16,185,129,0.15)", color: "#10B981", fontWeight: 800, fontSize: 11, cursor: "pointer" }}
+                    >✅ رفع الحظر</button>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {group.accounts.map((acc: any) => (
+                    <div key={acc.telegramId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: acc.isBanned ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.03)", borderRadius: 10, border: `1px solid ${acc.isBanned ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.06)"}` }}>
+                      <div>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: acc.isBanned ? "#EF4444" : "#fff", margin: 0 }}>
+                          {acc.isBanned ? "🚫 " : ""}{acc.firstName || acc.username || "مجهول"}
+                          {acc.username ? <span style={{ color: "rgba(255,255,255,0.4)", fontWeight: 400, fontSize: 10 }}> @{acc.username}</span> : ""}
+                        </p>
+                        <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", marginTop: 2, margin: 0 }}>ID: {acc.telegramId} · {Number(acc.balance).toLocaleString()} نقطة · {new Date(acc.createdAt).toLocaleDateString("ar-SA")}</p>
+                      </div>
+                      <button
+                        onClick={() => { banMut.mutate({ secret, telegramId: acc.telegramId, ban: !acc.isBanned }); setTimeout(() => suspiciousQ.refetch(), 500); }}
+                        style={{ padding: "6px 10px", borderRadius: 8, border: "none", background: acc.isBanned ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)", color: acc.isBanned ? "#10B981" : "#EF4444", fontWeight: 700, fontSize: 10, cursor: "pointer" }}
+                      >{acc.isBanned ? "رفع" : "حظر"}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         {tab === "banned" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ borderRadius: 16, padding: "14px 16px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", gap: 12 }}>
