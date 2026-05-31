@@ -32,6 +32,8 @@ services:
         sync: false
       - key: WEBAPP_URL
         sync: false
+      - key: FAUCETPAY_API_KEY
+        sync: false
       - key: ADSGRAM_BLOCK_ID
         value: "30350"
       - key: AD_REWARD
