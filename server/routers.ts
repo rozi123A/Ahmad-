@@ -973,7 +973,7 @@ export const appRouter = router({
         // Crypto amount: 15000 points = 1 DGB
         const CRYPTO_BASE_POINTS = 15000;
         const CRYPTO_BASE_AMOUNT = 0.05;
-        const cryptoAmountDisplay = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
+        const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
         if (stars < 1 && input.method === "telegram_stars") {
           return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
         }
@@ -1073,7 +1073,7 @@ export const appRouter = router({
           const username = user.username ? `@${user.username}` : "بدون username";
           const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : "🟦 DigiByte (DGB)";
           const methodIcon = input.method === "telegram_stars" ? "⭐" : "🟦";
-          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmountDisplay} DGB`;
+          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
           const msg = [
             `🔔 <b>طلب سحب جديد (${methodLabel})</b>`,
             ``,
