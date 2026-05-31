@@ -1326,7 +1326,6 @@ export const appRouter = router({
                     }),
                   }).catch(() => {});
                 }
-              }
             } else {
               // ── رسالة رفض الطلب ──
               fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -1336,7 +1335,7 @@ export const appRouter = router({
                   chat_id: w.telegramId,
                   text:
                     `❌ *تم رفض طلب السحب*\n\n` +
-                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/1500)*0.05).toFixed(4))} ${"DGB"}`})\n` +
+                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/15000)*0.05).toFixed(4))} ${"DGB"}`})\n` +
                     `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                     `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                     `تواصل مع الدعم إذا كان لديك استفسار.`,
