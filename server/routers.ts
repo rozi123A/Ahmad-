@@ -33,7 +33,7 @@ import { z } from "zod";
 import { getDb, getPool, getTelegramUser, upsertTelegramUser, createTransaction, createWithdrawal, createAdToken, getAdToken, markAdTokenUsed, getSetting, getTransactions, getUserWithdrawals, updateWithdrawalStatus, getPendingWithdrawals, getReferralStats, getAdminStats, getAllTelegramUsersAdmin, getAllUsersForBroadcast, getInactiveUsers, banTelegramUser, getAllWithdrawals, getOnlineUsers, getDailyActiveUsers, addCheatStrike, getBannedUsers,
   getLeaderboard, getTasks, getTaskById, completeUserTask, getUserTaskEntry, removeUserTask, getUserTasks, createTask, updateTask, deleteTask, getAllTasks,
   createRedeemCode, getAllRedeemCodes, getRedeemCodeByCode, hasUserRedeemedCode, recordRedeemCodeUse, deactivateRedeemCode,
-  getUserWallets, updateUserDgbWallet, countAdTransactions } from "./db";
+  getUserWallets, updateUserDgbWallet, countAdTransactions, getSuspiciousAccountGroups, bulkBanByIp as bulkBanUsersByIp } from "./db";
 import { eq } from "drizzle-orm";
 import { telegramUsers, withdrawals, transactions } from "../drizzle/schema";
 import crypto from "crypto";
@@ -203,7 +203,7 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const clientIp = ctx.req.headers['x-forwarded-for'] || ctx.req.socket.remoteAddress || '';
-        const ipString = Array.isArray(clientIp) ? clientIp[0] : clientIp;
+        const ipString = (Array.isArray(clientIp) ? clientIp[0] : String(clientIp)).split(',')[0].trim();
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) {
           return { success: false, message: "Invalid Telegram data" };
@@ -1501,6 +1501,26 @@ export const appRouter = router({
           if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, withdrawals: [] };
           const list = await getAllWithdrawals(input.status);
           return { success: true, withdrawals: list };
+        }),
+
+      // Multi-Account Detection — get suspicious account groups
+      getSuspiciousAccounts: publicProcedure
+        .input(z.object({ secret: z.string() }))
+        .query(async ({ input }) => {
+          const adminSecret = getEffectiveAdminSecret();
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, groups: [] };
+          const groups = await getSuspiciousAccountGroups();
+          return { success: true, groups };
+        }),
+
+      // Bulk ban all accounts sharing the same IP
+      bulkBanByIp: publicProcedure
+        .input(z.object({ secret: z.string(), ip: z.string(), ban: z.boolean() }))
+        .mutation(async ({ input }) => {
+          const adminSecret = getEffectiveAdminSecret();
+          if (!safeCompareSecret(input.secret, adminSecret)) return { success: false, count: 0, message: "غير مصرح" };
+          const count = await bulkBanUsersByIp(input.ip, input.ban, input.ban ? 'حظر الأدمن — حسابات متعددة من نفس IP' : undefined);
+          return { success: true, count, message: input.ban ? `تم حظر ${count} حساب من IP: ${input.ip}` : `تم رفع الحظر عن ${count} حساب` };
         }),
 
       // Ban / unban a user
