@@ -913,3 +913,68 @@ export async function updateUserDgbWallet(telegramId: number, wallet: string): P
 
 // updateUserUsdtWallet removed — use updateUserDgbWallet instead
 
+// ── Multi-Account Detection ─────────────────────────────────────────────────
+
+export async function getUsersByIp(ip: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(telegramUsers)
+    .where(eq(telegramUsers.lastIp, ip));
+}
+
+export async function getSuspiciousAccountGroups(): Promise<Array<{
+  ip: string;
+  count: number;
+  accounts: Array<{
+    telegramId: number;
+    username: string | null;
+    firstName: string | null;
+    balance: number;
+    isBanned: boolean | null;
+    createdAt: Date | null;
+  }>;
+}>> {
+  const pool = await getPool();
+  if (!pool) return [];
+  const result = await pool.query(`
+    SELECT
+      last_ip,
+      COUNT(*)::int AS count,
+      array_agg(telegram_id ORDER BY created_at) AS telegram_ids,
+      array_agg(username ORDER BY created_at) AS usernames,
+      array_agg(first_name ORDER BY created_at) AS first_names,
+      array_agg(balance ORDER BY created_at) AS balances,
+      array_agg(is_banned ORDER BY created_at) AS banned_list,
+      array_agg(created_at ORDER BY created_at) AS created_ats
+    FROM telegram_users
+    WHERE last_ip IS NOT NULL AND last_ip <> ''
+    GROUP BY last_ip
+    HAVING COUNT(*) >= 2
+    ORDER BY count DESC
+    LIMIT 100
+  `);
+  return result.rows.map((row: any) => ({
+    ip: row.last_ip as string,
+    count: row.count as number,
+    accounts: (row.telegram_ids as any[]).map((id: any, i: number) => ({
+      telegramId: Number(id),
+      username: row.usernames[i] as string | null,
+      firstName: row.first_names[i] as string | null,
+      balance: Number(row.balances[i]),
+      isBanned: row.banned_list[i] as boolean | null,
+      createdAt: row.created_ats[i] as Date | null,
+    })),
+  }));
+}
+
+export async function bulkBanByIp(ip: string, ban: boolean, reason?: string): Promise<number> {
+  const pool = await getPool();
+  if (!pool) return 0;
+  const banReason = ban ? (reason ?? 'حظر تلقائي — حسابات متعددة من نفس IP') : null;
+  const res = await pool.query(
+    `UPDATE telegram_users SET is_banned = $1, ban_reason = $2, updated_at = NOW() WHERE last_ip = $3`,
+    [ban, banReason, ip]
+  );
+  return (res.rowCount ?? 0) as number;
+}
+
