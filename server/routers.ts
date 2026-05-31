@@ -1183,7 +1183,9 @@ export const appRouter = router({
             const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
             const userTag   = w.username ? `@${w.username}` : `ID: ${w.telegramId}`;
             const userName  = w.firstName || w.username || String(w.telegramId);
-            const method    = w.method || "telegram_stars";
+            // userWallet is saved ONLY for DGB withdrawals at creation time,
+            // so it's the most reliable signal. Use it as override if set.
+            const method    = w.userWallet ? "dgb" : (w.method || "telegram_stars");
 
             // ── الموافقة على السحب ──
             if (input.status === "approved") {
