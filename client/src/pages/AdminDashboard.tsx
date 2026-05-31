@@ -433,6 +433,7 @@ export default function AdminDashboard() {
     { id: "broadcast" as const, icon: <Broadcast size={16} />, label: "الإشعارات", emoji: "📣" },
     { id: "codes" as const, icon: <Gift size={16} />, label: "الأكواد", emoji: "" },
     { id: "banned" as const, icon: <Prohibit size={16} />, label: "المحظورون", emoji: "🚫" },
+    { id: "suspicious" as const, icon: <span style={{ fontSize: 14 }}>🚨</span>, label: "مشبوه", emoji: "🚨" },
   ];
 
   const filteredUsers = (usersQ.data?.users || []).filter((u: any) => {
