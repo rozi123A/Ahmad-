@@ -934,7 +934,7 @@ export const appRouter = router({
     request: publicProcedure
       .input(z.object({ 
         telegramId: z.number(), 
-        amount: z.number().int().positive().min(15000), 
+        amount: z.number().int().positive().min(1), 
         initData: z.string(),
         method: z.enum(["telegram_stars", "dgb"]).default("telegram_stars")
       }))
@@ -973,7 +973,7 @@ export const appRouter = router({
         // Crypto amount: 15000 points = 1 DGB
         const CRYPTO_BASE_POINTS = 15000;
         const CRYPTO_BASE_AMOUNT = 0.05;
-        const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
+        const cryptoAmountDisplay = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
         if (stars < 1 && input.method === "telegram_stars") {
           return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
         }
@@ -981,6 +981,13 @@ export const appRouter = router({
         // Validate wallet for DGB method
         if (input.method === "dgb" && !user.tonWallet) {
           return { success: false, message: "⚠️ يجب إضافة عنوان محفظة DigiByte أولاً من الإعدادات" };
+        }
+        // Validate DGB address format: starts with D, length 34
+        if (input.method === "dgb" && user.tonWallet) {
+          const dgbAddr = user.tonWallet.trim();
+          if (!dgbAddr.startsWith("D") || dgbAddr.length < 25 || dgbAddr.length > 50) {
+            return { success: false, message: "⚠️ عنوان محفظة DigiByte غير صالح — تأكد أنه يبدأ بحرف D" };
+          }
         }
 
         const pool = await getPool();
@@ -1066,7 +1073,7 @@ export const appRouter = router({
           const username = user.username ? `@${user.username}` : "بدون username";
           const methodLabel = input.method === "telegram_stars" ? "⭐ Telegram Stars" : "🟦 DigiByte (DGB)";
           const methodIcon = input.method === "telegram_stars" ? "⭐" : "🟦";
-          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
+          const adminDisplayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmountDisplay} DGB`;
           const msg = [
             `🔔 <b>طلب سحب جديد (${methodLabel})</b>`,
             ``,
