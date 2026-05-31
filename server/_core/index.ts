@@ -129,21 +129,36 @@ async function startServer() {
   app.use(express.json({ limit: "2mb" }));
   app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
-  // Rate Limiting — global: 200 req/15min per IP
+  // Trust Render's reverse proxy so we get real client IPs from x-forwarded-for
+  app.set("trust proxy", 1);
+
+  // Rate Limiting — use real IP from x-forwarded-for (not proxy IP)
+  const getRealIp = (req: any): string => {
+    const forwarded = req.headers["x-forwarded-for"];
+    if (forwarded) {
+      return (Array.isArray(forwarded) ? forwarded[0] : forwarded).split(",")[0].trim();
+    }
+    return req.ip || req.socket?.remoteAddress || "unknown";
+  };
+
+  // Global: 600 req/15min per real IP (generous for active users)
   app.use(rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 200,
+    max: 600,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: getRealIp,
     message: { error: "Too many requests, please try again later." },
+    skip: (req) => req.path === "/ping" || req.path === "/healthz",
   }));
 
-  // Stricter rate limit for admin endpoints — 20 req/15min per IP
+  // Stricter rate limit for admin endpoints — 100 req/15min per real IP
   app.use("/api/trpc/admin", rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: getRealIp,
     message: { error: "Too many admin requests." },
   }));
 
