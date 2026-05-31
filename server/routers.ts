@@ -438,7 +438,7 @@ export const appRouter = router({
           return { success: false, message: "⭐ سحب Telegram Stars غير متاح حالياً — يرجى استخدام DigiByte (DGB)" };
         }
         const starsRate = await getSetting("starsRate", 1000);
-        const minWithdraw = await getSetting("minWithdraw", 15000);
+        const minWithdraw = process.env.MIN_WITHDRAW ? Number(process.env.MIN_WITHDRAW) : await getSetting("minWithdraw", 15000);
 
         // ── Daily Streak ──
         const today = toDateString(new Date());
@@ -1023,6 +1023,7 @@ export const appRouter = router({
           if (!userRes.rows[0]) throw new Error("المستخدم غير موجود في قاعدة البيانات");
           const currentBal = Number(userRes.rows[0].balance);
           if (currentBal < input.amount) throw new Error("رصيدك غير كافٍ أو حدث خطأ في المزامنة");
+          if (input.amount < minWithdraw) throw new Error(`الحد الأدنى للسحب هو ${minWithdraw.toLocaleString()} نقطة`);
 
           // 2. Deduct balance
           await client.query(
