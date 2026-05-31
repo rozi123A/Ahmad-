@@ -947,7 +947,7 @@ export const appRouter = router({
         const user = await getTelegramUser(input.telegramId);
         if (!user) return { success: false, message: "المستخدم غير موجود" };
 
-        const minWithdraw = await getSetting("minWithdraw", 10000);
+        const minWithdraw = process.env.MIN_WITHDRAW ? Number(process.env.MIN_WITHDRAW) : await getSetting("minWithdraw", 10000);
         const starsRate = await getSetting("starsRate", 1000);
         const currentBalance = Number(user.balance) || 0;
 
