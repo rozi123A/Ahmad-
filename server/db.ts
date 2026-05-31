@@ -151,6 +151,9 @@ export async function upsertTelegramUser(user: InsertTelegramUser) {
     if (user.dailyStreak !== undefined) updateSet.dailyStreak = user.dailyStreak;
     if (user.lastLoginDate !== undefined) updateSet.lastLoginDate = user.lastLoginDate;
     if (user.badges !== undefined) updateSet.badges = user.badges;
+    if (user.lastIp !== undefined) updateSet.lastIp = user.lastIp;
+    if (user.deviceInfo !== undefined) updateSet.deviceInfo = user.deviceInfo;
+    if (user.banReason !== undefined) updateSet.banReason = user.banReason;
     updateSet.lastSeenAt = new Date();
 
     const safeUser = {
