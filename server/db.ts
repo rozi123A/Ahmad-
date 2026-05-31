@@ -905,10 +905,10 @@ export async function getUserWallets(telegramId: number): Promise<{ dgbWallet: s
 export async function updateUserDgbWallet(telegramId: number, wallet: string): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  // Validate TON address format (basic check: starts with EQ or E and is ~48 chars)
+  // Validate DigiByte address format: starts with D, length 25-50 chars
   const normalized = wallet.trim();
-  if (normalized.length < 20 || normalized.length > 100) {
-    throw new Error("عنوان DigiByte غير صالح — يجب أن يكون بين 20 و 100 حرف");
+  if (!normalized.startsWith("D") || normalized.length < 25 || normalized.length > 50) {
+    throw new Error("عنوان DigiByte غير صالح — يجب أن يبدأ بالحرف D ويكون بين 25 و 50 حرفاً");
   }
   await db.update(telegramUsers).set({ tonWallet: normalized, updatedAt: new Date() }) // dgbWallet stored in ton_wallet column
     .where(eq(telegramUsers.telegramId, telegramId));
