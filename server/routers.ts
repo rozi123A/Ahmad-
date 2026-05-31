@@ -438,7 +438,7 @@ export const appRouter = router({
           return { success: false, message: "⭐ سحب Telegram Stars غير متاح حالياً — يرجى استخدام DigiByte (DGB)" };
         }
         const starsRate = await getSetting("starsRate", 1000);
-        const minWithdraw = process.env.MIN_WITHDRAW ? Number(process.env.MIN_WITHDRAW) : await getSetting("minWithdraw", 15000);
+        const minWithdraw = process.env.MIN_WITHDRAW ? Number(process.env.MIN_WITHDRAW) : await getSetting("minWithdraw", 10000);
 
         // ── Daily Streak ──
         const today = toDateString(new Date());
