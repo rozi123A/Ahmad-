@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
     const [loading, setLoading] = useState(false);
     const [showMethodMenu, setShowMethodMenu] = useState(false);
     const [showWalletSetup, setShowWalletSetup] = useState(false);
-    const [method, setMethod] = useState<WithdrawalMethod>("telegram_stars");
+    const [method, setMethod] = useState<WithdrawalMethod>("dgb");
     const [dgbWallet, setDgbWallet] = useState("");
     const { toast } = useToast();
     const t = translations[lang];
@@ -151,7 +151,7 @@ import { useState, useEffect } from "react";
           <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 10 }}>{t.withdraw_method_title}</p>
           
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {(["telegram_stars", "dgb"] as WithdrawalMethod[]).map(m => (
+            {(["dgb"] as WithdrawalMethod[]).map(m => (
               <button
                 key={m}
                 onClick={() => {
