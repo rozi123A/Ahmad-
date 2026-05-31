@@ -433,6 +433,10 @@ export const appRouter = router({
           }
         }
 
+        // ── Stars withdrawal disabled ──
+        if (input.method === "telegram_stars") {
+          return { success: false, message: "⭐ سحب Telegram Stars غير متاح حالياً — يرجى استخدام DigiByte (DGB)" };
+        }
         const starsRate = await getSetting("starsRate", 1000);
         const minWithdraw = await getSetting("minWithdraw", 15000);
 
