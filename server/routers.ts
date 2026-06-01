@@ -936,7 +936,7 @@ export const appRouter = router({
         telegramId: z.number(), 
         amount: z.number().int().positive().min(1), 
         initData: z.string(),
-        method: z.enum(["telegram_stars", "dgb"]).default("telegram_stars")
+        method: z.enum(["dgb"]).default("dgb")
       }))
       .mutation(async ({ input }) => {
         const verified = verifyTelegramWebApp(input.initData);
@@ -956,7 +956,7 @@ export const appRouter = router({
           return { success: false, message: "المبلغ يجب أن يكون عدداً صحيحاً موجباً" };
         }
         if (input.amount < minWithdraw) {
-          return { success: false, message: `الحد الأدنى للسحب ${minWithdraw.toLocaleString()} نقطة (= ${Math.floor(minWithdraw/1000)} نجمة)` };
+          return { success: false, message: `الحد الأدنى للسحب ${minWithdraw.toLocaleString()} نقطة` };
         }
         if (input.amount > currentBalance) {
           return { success: false, message: "رصيدك غير كافٍ" };
@@ -974,9 +974,7 @@ export const appRouter = router({
         const CRYPTO_BASE_POINTS = 15000;
         const CRYPTO_BASE_AMOUNT = 0.05;
         const cryptoAmount = parseFloat(((input.amount / CRYPTO_BASE_POINTS) * CRYPTO_BASE_AMOUNT).toFixed(4));
-        if (stars < 1 && input.method === "telegram_stars") {
-          return { success: false, message: `الحد الأدنى للسحب لـ Telegram Stars هو نقطة واحدة على الأقل` };
-        }
+        // Stars method removed — DGB only
 
         // Validate wallet for DGB method
         if (input.method === "dgb" && !user.tonWallet) {
@@ -1041,7 +1039,7 @@ export const appRouter = router({
           // 3. Create withdrawal record with method and wallet
           const userWallet = input.method === "dgb" ? user.tonWallet : null;
           const cryptoAmount = parseFloat(((input.amount / 15000) * 0.05).toFixed(4));
-          const displayAmount = input.method === "telegram_stars" ? `${stars} نجمة` : `${cryptoAmount} DGB`;
+          const displayAmount = `${cryptoAmount} DGB`;
           await client.query(
             `INSERT INTO withdrawals (telegram_id, amount, stars, status, method, user_wallet)
              VALUES ($1, $2, $3, 'pending', $4, $5)`,
@@ -1100,9 +1098,7 @@ export const appRouter = router({
           }).catch(() => {});
         }
 
-        const methodMsg = input.method === "telegram_stars" 
-          ? "⏰ سيتم إرسال النجوم خلال 24 ساعة (تصل كهدية في Telegram)"
-          : `⏰ سيتم إرسال ${cryptoAmount} DGB إلى محفظتك خلال 24 ساعة`;
+        const methodMsg = `⏰ سيتم إرسال ${cryptoAmount} DGB إلى محفظتك خلال 24 ساعة`;
 
         return { success: true, stars, method: input.method, message: `✅ تم إرسال طلب السحب بنجاح!\n\n${methodMsg}` };
       }),
@@ -1202,7 +1198,7 @@ export const appRouter = router({
 
             // ── الموافقة على السحب ──
             if (input.status === "approved") {
-              // ── DGB عبر FaucetPay فقط (النجوم محذوفة نهائياً) ──
+              // ── إرسال DGB عبر FaucetPay تلقائياً ──
                              // ── إرسال DGB تلقائياً عبر FaucetPay (أو يدوياً إذا لم يُفعَّل) ──
                 const dgbAmount = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
                 const dgbWallet = w.userWallet || w.dgbWallet || "";
@@ -1335,7 +1331,7 @@ export const appRouter = router({
                   chat_id: w.telegramId,
                   text:
                     `❌ *تم رفض طلب السحب*\n\n` +
-                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${method === "telegram_stars" ? `${Number(w.stars)} نجمة` : `${parseFloat(((Number(w.amount)/15000)*0.05).toFixed(4))} ${"DGB"}`})\n` +
+                    `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة (= ${`${parseFloat(((Number(w.amount)/15000)*0.05).toFixed(4))} DGB`})\n` +
                     `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                     `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                     `تواصل مع الدعم إذا كان لديك استفسار.`,
