@@ -1594,10 +1594,35 @@ export const appRouter = router({
             );
           }
 
+          // Handle Automatic Payout via Fostpay (FaucetPay) if approved
+          let payoutTxHash = null;
+          let payoutError = null;
+
+          if (input.status === "approved" && isFostpayEnabled()) {
+            const dgbToWithdraw = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
+            const wallet = w.user_wallet || w.userWallet;
+            
+            if (wallet) {
+              const payout = await fostpaySendDgb(wallet, dgbToWithdraw, `Withdrawal #${w.id}`);
+              if (payout.success) {
+                payoutTxHash = payout.txHash;
+              } else {
+                payoutError = payout.error;
+                // If payout fails, we might want to keep it pending or mark with error
+                // For now, we'll proceed but log the error in the note
+              }
+            }
+          }
+
           // Update withdrawal status
           await pool.query(
-            `UPDATE withdrawals SET status = $1, processed_at = NOW(), note = $2 WHERE id = $3`,
-            [input.status, input.note || null, input.withdrawalId]
+            `UPDATE withdrawals SET status = $1, processed_at = NOW(), note = $2, tx_hash = $3 WHERE id = $4`,
+            [
+              input.status, 
+              payoutError ? `${input.note || ""}\n(Payout Error: ${payoutError})`.trim() : (input.note || null), 
+              payoutTxHash,
+              input.withdrawalId
+            ]
           );
 
           // Notify user via Telegram bot + auto-send stars on approval
