@@ -101,6 +101,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     <>
       {showAd && (
         <AdOverlay
+          blockId={user.adsgramBlockId || undefined}
           seconds={15}
           rewardLabel={`+${user.adReward} ${t.points}`}
           onClaim={handleClaim}
