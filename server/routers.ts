@@ -1615,8 +1615,9 @@ export const appRouter = router({
           }
 
           // Update withdrawal status
+          // Use usdt_tx_hash for DGB tx hash since DGB-specific column doesn't exist yet
           await pool.query(
-            `UPDATE withdrawals SET status = $1, processed_at = NOW(), note = $2, tx_hash = $3 WHERE id = $4`,
+            `UPDATE withdrawals SET status = $1, processed_at = NOW(), note = $2, usdt_tx_hash = $3 WHERE id = $4`,
             [
               input.status, 
               payoutError ? `${input.note || ""}\n(Payout Error: ${payoutError})`.trim() : (input.note || null), 
