@@ -1270,7 +1270,7 @@ export const appRouter = router({
                           parse_mode: "Markdown",
                           reply_markup: JSON.stringify({
                             inline_keyboard: [[
-                              { text: "✅ تم الإرسال يدوياً", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                              { text: "✅ تم إرسال DGB يدوياً", callback_data: `withdraw_done_dgb_${w.id}_${w.telegramId}` },
                               { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
                             ]],
                           }),
@@ -1305,7 +1305,7 @@ export const appRouter = router({
                         parse_mode: "Markdown",
                         reply_markup: JSON.stringify({
                           inline_keyboard: [[
-                            { text: "✅ تم إرسال DGB", callback_data: `withdraw_done_${w.id}_${w.telegramId}_${Number(w.stars)}` },
+                            { text: "✅ تم إرسال DGB", callback_data: `withdraw_done_dgb_${w.id}_${w.telegramId}` },
                             { text: "❌ رفض الطلب", callback_data: `withdraw_reject_${w.id}_${w.telegramId}_${Number(w.amount)}` },
                           ]],
                         }),
