@@ -314,6 +314,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
     <>
       {showAdOverlay && (
         <AdOverlay
+          blockId={user.adsgramBlockId || undefined}
           seconds={15}
           rewardLabel={t.spin_extra}
           onClaim={handleAdClaim}
