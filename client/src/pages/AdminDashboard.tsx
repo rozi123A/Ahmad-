@@ -657,19 +657,19 @@ export default function AdminDashboard() {
         {tab === "withdrawals" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
-            {/* How-to guide */}
-            <div style={{ background: "rgba(255,215,0,0.06)", border: "1px solid rgba(255,215,0,0.2)", borderRadius: 16, padding: "14px 16px" }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: "#FFD700", marginBottom: 10 }}> كيف ترسل Stars يدوياً — 3 خطوات</p>
+            {/* How-to guide — DGB via FaucetPay */}
+            <div style={{ background: "rgba(96,165,250,0.06)", border: "1px solid rgba(96,165,250,0.2)", borderRadius: 16, padding: "14px 16px" }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: "#60A5FA", marginBottom: 10 }}>🟦 كيف يعمل سحب DigiByte (DGB)</p>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {[
-                  ["1️⃣", "اضغط زر", " أرسل Stars", "لفتح ملف المستخدم في تيليجرام"],
-                  ["2️⃣", "في ملفه اضغط", "⋮ النقاط الثلاث", "ثم اختر «Send Stars» وأدخل العدد"],
-                  ["3️⃣", "ارجع هنا واضغط", " تأكيد الإرسال", "لتغيير الحالة إلى «تمت الموافقة»"],
+                  ["1️⃣", "اضغط زر", "✓ تأكيد", "على طلب السحب المعلق"],
+                  ["2️⃣", "السيرفر يرسل DGB", "تلقائياً", "عبر FaucetPay إلى محفظة المستخدم"],
+                  ["3️⃣", "المستخدم يستلم", "إشعار تلقائي", "برقم المعاملة فور الإرسال"],
                 ].map(([num, pre, bold, post]) => (
                   <div key={num as string} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 14 }}>{num}</span>
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", margin: 0 }}>
-                      {pre} <span style={{ color: "#FFD700", fontWeight: 800 }}>{bold}</span> {post}
+                      {pre} <span style={{ color: "#60A5FA", fontWeight: 800 }}>{bold}</span> {post}
                     </p>
                   </div>
                 ))}
