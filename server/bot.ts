@@ -752,9 +752,8 @@ export async function startBot(app?: Express) {
         // إشعار المستخدم بنجاح الإرسال
         await bot.telegram.sendMessage(
           userTelegramId,
-          `🎉 *تم إرسال نجومك بنجاح!*\n\n` +
-          `⭐ وصلتك *${stars} نجمة* على حسابك في تيليغرام\n` +
-          `تحقق من رصيدك في الإعدادات ← نجومي ⭐\n\n` +
+          `🎉 *تم إرسال DigiByte بنجاح!*\n\n` +
+          `🟦 تم تحويل DGB إلى محفظتك المسجلة.\n\n` +
           `شكراً لك، استمر باللعب لتربح المزيد! 🚀`,
           {
             parse_mode: "Markdown",
@@ -807,7 +806,7 @@ export async function startBot(app?: Express) {
         await bot.telegram.sendMessage(
           userTelegramId,
           `❌ *تم رفض طلب السحب*\n\n` +
-          `نأسف، لم يتم إتمام عملية إرسال النجوم.\n` +
+          `نأسف، لم يتم إتمام عملية إرسال DGB.\n` +
           `💰 تم إعادة نقاطك إلى رصيدك تلقائياً.\n\n` +
           `تواصل مع الدعم إذا كان لديك استفسار.`,
           {
