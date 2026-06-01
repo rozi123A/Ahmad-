@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { translations } from "@/lib/i18n";
+import { showMonetagAd } from "@/lib/monetag";
 
 interface AdOverlayProps {
   seconds?: number;
@@ -18,16 +19,12 @@ export default function AdOverlay({
   rewardLabel,
   onClaim,
   onClose,
-  monetagZoneId = "11043107",
-  monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
   const [phase, setPhase] = useState<Phase>("loading");
   const [timeLeft, setTimeLeft] = useState(seconds);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const scriptRef = useRef<HTMLScriptElement | null>(null);
-  const adDoneRef = useRef(false);
 
   const startCountdown = useCallback(() => {
     setPhase("countdown");
@@ -43,59 +40,18 @@ export default function AdOverlay({
     }, 1000);
   }, []);
 
-  const openAdFallback = useCallback(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    const adViewUrl = `${window.location.origin}/ad-view`;
-    adDoneRef.current = false;
-    const handler = () => {
-      if (document.visibilityState === "visible" && !adDoneRef.current) {
-        adDoneRef.current = true;
-        document.removeEventListener("visibilitychange", handler);
-        clearTimeout(fallbackTimer);
-        setTimeout(startCountdown, 400);
-      }
-    };
-    document.addEventListener("visibilitychange", handler);
-    const fallbackTimer = setTimeout(() => {
-      if (!adDoneRef.current) {
-        adDoneRef.current = true;
-        document.removeEventListener("visibilitychange", handler);
-        startCountdown();
-      }
-    }, 12_000);
-    if (tg?.openLink) tg.openLink(adViewUrl);
-    else window.open(adViewUrl, "_blank");
-  }, [startCountdown]);
-
   useEffect(() => {
-    if (scriptRef.current) return;
-
-    // Set zone and load Monetag script immediately — no blocking overlay
-    (window as any).monetag_zone_id = monetagZoneId;
-    const script = document.createElement("script");
-    script.src = `${monetagScriptUrl}?zone=${monetagZoneId}&t=${Date.now()}`;
-    script.async = true;
-    script.setAttribute("data-zone", monetagZoneId);
-
-    // Small delay before countdown so Monetag vignette renders first
-    script.onload = () => { setTimeout(startCountdown, 800); };
-    script.onerror = () => { openAdFallback(); };
-
-    scriptRef.current = script;
-    document.body.appendChild(script);
-
-    // Fallback: if script doesn't fire onload within 5s, start anyway
-    const maxWait = setTimeout(() => {
-      if (phase === "loading") startCountdown();
-    }, 5000);
+    // Use the interstitial ad (zone 11003103) — works inside Telegram WebApp
+    showMonetagAd().then(() => {
+      // Ad triggered — wait a moment then start countdown
+      setTimeout(startCountdown, 600);
+    }).catch(() => {
+      // If ad fails, still start countdown so user isn't stuck
+      setTimeout(startCountdown, 600);
+    });
 
     return () => {
-      clearTimeout(maxWait);
       if (timerRef.current) clearInterval(timerRef.current);
-      if (scriptRef.current) {
-        scriptRef.current.remove();
-        scriptRef.current = null;
-      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -110,7 +66,7 @@ export default function AdOverlay({
   const isReady   = phase === "ready";
   const isClaimed = phase === "claimed";
 
-  // During loading: show a small non-blocking pill at top — do NOT block Monetag
+  // Loading: small non-blocking pill so the interstitial can appear freely
   if (phase === "loading") {
     return (
       <div style={{
@@ -134,15 +90,14 @@ export default function AdOverlay({
     );
   }
 
-  // During countdown / ready / claimed:
-  // Render ONLY floating controls — Monetag's own vignette fills the screen behind
+  // Countdown / ready / claimed — floating controls above the Monetag interstitial
   return (
     <>
-      {/* Countdown badge — top-right, above Monetag's vignette (like screenshot) */}
+      {/* Top-right countdown badge */}
       <div style={{
         position: "fixed", top: 14, right: 14,
         zIndex: 999999,
-        pointerEvents: "auto",
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
       }}>
         <button
           onClick={isReady ? handleClaim : undefined}
@@ -174,10 +129,8 @@ export default function AdOverlay({
           {isClaimed ? "✓" : isReady ? "✕" : timeLeft}
         </button>
 
-        {/* Reward pill below the badge */}
         {isReady && rewardLabel && (
           <div style={{
-            marginTop: 6,
             background: "linear-gradient(135deg,#16a34a,#15803d)",
             borderRadius: 30, padding: "4px 12px",
             color: "#fff", fontSize: 11, fontWeight: 800,
@@ -191,7 +144,7 @@ export default function AdOverlay({
         )}
       </div>
 
-      {/* "Continue without reward" — bottom center, only during countdown */}
+      {/* Skip button — bottom center, only during countdown */}
       {phase === "countdown" && (
         <button
           onClick={onClose}
