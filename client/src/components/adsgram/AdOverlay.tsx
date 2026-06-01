@@ -23,7 +23,9 @@ export default function AdOverlay({
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // 3 states: "loading" | "hidden" | "error"
+  const [state, setState] = useState<"loading" | "hidden" | "error">("loading");
+  const [errorMsg, setErrorMsg] = useState<string>("");
   const doneRef = useRef(false);
 
   useEffect(() => {
@@ -35,11 +37,9 @@ export default function AdOverlay({
     } else {
       runMonetag();
     }
-
-    return () => {};
   }, []);
 
-  async function waitForAdsgram(maxMs = 8000): Promise<boolean> {
+  async function waitForAdsgram(maxMs = 10000): Promise<boolean> {
     const start = Date.now();
     while (!(window as any).Adsgram) {
       if (Date.now() - start > maxMs) return false;
@@ -50,18 +50,30 @@ export default function AdOverlay({
 
   async function runAdsgram(id: string) {
     try {
-      const loaded = await waitForAdsgram(8000);
+      const loaded = await waitForAdsgram(10000);
       if (!loaded) {
         runMonetag();
         return;
       }
+
       const controller = await (window as any).Adsgram.init({ blockId: id });
+
+      // Hide our overlay FIRST, then wait 2 frames for React to flush DOM,
+      // so Adsgram's native UI is not blocked by our overlay (z-index conflict)
+      setState("hidden");
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
       await controller.show();
       onClaim();
     } catch (err: any) {
       const msg = err?.description || err?.message || "";
-      if (msg && typeof msg === "string" && msg.length < 120) setErrorMsg(msg);
-      onClose();
+      if (msg && typeof msg === "string" && msg.length < 120) {
+        setErrorMsg(msg);
+        setState("error");
+        setTimeout(onClose, 2000);
+      } else {
+        onClose();
+      }
     }
   }
 
@@ -77,6 +89,9 @@ export default function AdOverlay({
     setTimeout(onClaim, (seconds + 3) * 1000);
   }
 
+  // Fully remove overlay from DOM when hidden so nothing blocks Adsgram's UI
+  if (state === "hidden") return null;
+
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 9999,
@@ -86,27 +101,35 @@ export default function AdOverlay({
     }}>
       <style>{`@keyframes adSpin { to { transform: rotate(360deg); } }`}</style>
 
-      <div style={{
-        width: 56, height: 56,
-        border: "3.5px solid rgba(139,92,246,0.25)",
-        borderTopColor: "#8B5CF6",
-        borderRadius: "50%",
-        animation: "adSpin 0.9s linear infinite",
-      }} />
+      {state === "loading" && (
+        <>
+          <div style={{
+            width: 56, height: 56,
+            border: "3.5px solid rgba(139,92,246,0.25)",
+            borderTopColor: "#8B5CF6",
+            borderRadius: "50%",
+            animation: "adSpin 0.9s linear infinite",
+          }} />
+          <div style={{ textAlign: "center", padding: "0 32px" }}>
+            <p style={{ color: "#fff", fontSize: 15, fontWeight: 700, margin: 0, marginBottom: 6 }}>
+              {t.ad_loading || "جارٍ تحميل الإعلان..."}
+            </p>
+            {rewardLabel && (
+              <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>
+                {rewardLabel}
+              </p>
+            )}
+          </div>
+        </>
+      )}
 
-      <div style={{ textAlign: "center", padding: "0 32px" }}>
-        <p style={{ color: "#fff", fontSize: 15, fontWeight: 700, margin: 0, marginBottom: 6 }}>
-          {t.ad_loading || "جارٍ تحميل الإعلان..."}
-        </p>
-        {rewardLabel && (
-          <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>
-            {rewardLabel}
+      {state === "error" && (
+        <div style={{ textAlign: "center", padding: "0 32px" }}>
+          <p style={{ color: "#FCA5A5", fontSize: 14, margin: 0 }}>
+            {errorMsg || "حدث خطأ أثناء تحميل الإعلان"}
           </p>
-        )}
-        {errorMsg && (
-          <p style={{ color: "#FCA5A5", fontSize: 12, marginTop: 10, margin: 0 }}>{errorMsg}</p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
