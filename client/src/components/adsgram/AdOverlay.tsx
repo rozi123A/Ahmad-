@@ -1,257 +1,238 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import { translations } from "@/lib/i18n";
+  import { translations } from "@/lib/i18n";
 
-interface AdOverlayProps {
-  seconds?: number;
-  rewardLabel?: string;
-  onClaim: () => void;
-  onClose: () => void;
-  monetagZoneId?: string;
-  monetagScriptUrl?: string;
-  lang?: string;
-}
+  interface AdOverlayProps {
+    seconds?: number;
+    rewardLabel?: string;
+    onClaim: () => void;
+    onClose: () => void;
+    monetagZoneId?: string;
+    monetagScriptUrl?: string;
+    lang?: string;
+  }
 
-type Phase = "waiting" | "countdown" | "ready" | "claimed";
+  type Phase = "loading" | "countdown" | "ready" | "claimed";
 
-export default function AdOverlay({
-  seconds = 15,
-  rewardLabel,
-  onClaim,
-  onClose,
-  lang = "ar",
-}: AdOverlayProps) {
-  const t = translations[lang as keyof typeof translations] || translations["ar"];
-  const [phase, setPhase] = useState<Phase>("waiting");
-  const [timeLeft, setTimeLeft] = useState(seconds);
-  const [showManual, setShowManual] = useState(false);
-  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startedRef = useRef(false);
+  function getDailyThumbnail(): React.ReactNode {
+    const dayIndex = Math.floor(Math.random() * 5);
+    const thumbnails: React.ReactNode[] = [
+      <img src="/ad-thumbnail.png" alt="ad" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />,
+      <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0f0c29,#302b63,#24243e)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
+        <div style={{ fontSize:64 }}>₿</div>
+        <p style={{ color:"#f59e0b", fontWeight:900, fontSize:26, margin:0, textAlign:"center", textShadow:"0 0 20px rgba(245,158,11,0.6)" }}>Earn Crypto Daily!</p>
+        <p style={{ color:"rgba(255,255,255,0.6)", fontSize:15, margin:0 }}>Trade & earn up to 300% APY</p>
+        <div style={{ display:"flex", gap:8, marginTop:6 }}>{["","",""].map((e,i) => <span key={i} style={{ fontSize:28 }}>{e}</span>)}</div>
+      </div>,
+      <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#1a0533,#3d0070,#6a0dad)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
+        <div style={{ fontSize:64 }}></div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:26, margin:0, textAlign:"center" }}>WIN BIG PRIZES!</p>
+        <p style={{ color:"#e879f9", fontSize:15, margin:0 }}>Play & Win up to $10,000</p>
+        <div style={{ background:"linear-gradient(135deg,#a855f7,#ec4899)", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>PLAY FREE NOW</div>
+      </div>,
+      <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0d1b2a,#1b4332,#2d6a4f)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
+        <div style={{ fontSize:64 }}>◈️</div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:24, margin:0, textAlign:"center" }}>MEGA SALE — 90% OFF</p>
+        <p style={{ color:"#6ee7b7", fontSize:15, margin:0 }}>Limited time offer today only!</p>
+        <div style={{ background:"#f59e0b", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#000", fontWeight:900, fontSize:16 }}>SHOP NOW </div>
+      </div>,
+      <div style={{ width:"100%", height:"100%", background:"linear-gradient(135deg,#0ea5e9,#2563eb,#1e1b4b)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:10 }}>
+        <div style={{ fontSize:64 }}></div>
+        <p style={{ color:"#fff", fontWeight:900, fontSize:24, margin:0, textAlign:"center" }}>New App — Install Free</p>
+        <p style={{ color:"rgba(255,255,255,0.7)", fontSize:15, margin:0 }}>  4.9 · 10M+ Downloads</p>
+        <div style={{ background:"#22c55e", borderRadius:20, padding:"8px 24px", marginTop:6, color:"#fff", fontWeight:800, fontSize:16 }}>INSTALL NOW ↓</div>
+      </div>,
+    ];
+    return thumbnails[dayIndex];
+  }
 
-  const startCountdown = useCallback(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    setShowManual(false);
-    setPhase("countdown");
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current!);
-          setPhase("ready");
-          return 0;
+  export default function AdOverlay({
+    seconds = 15,
+    rewardLabel,
+    onClaim,
+    onClose,
+    monetagZoneId = "11043107",
+    monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
+    lang = "ar",
+  }: AdOverlayProps) {
+    const t = translations[lang as keyof typeof translations] || translations["ar"];
+    const [phase, setPhase] = useState<Phase>("loading");
+    const [timeLeft, setTimeLeft] = useState(seconds);
+    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const scriptRef = useRef<HTMLScriptElement | null>(null);
+    const adDoneRef = useRef(false);
+    const dailyThumb = useRef(getDailyThumbnail());
+
+    const startCountdown = useCallback(() => {
+      setPhase("countdown");
+      timerRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current!);
+            setPhase("ready");
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }, []);
+
+    const openAdFallback = useCallback(() => {
+      const tg = (window as any).Telegram?.WebApp;
+      const adViewUrl = `${window.location.origin}/ad-view`;
+      adDoneRef.current = false;
+      const handler = () => {
+        if (document.visibilityState === "visible" && !adDoneRef.current) {
+          adDoneRef.current = true;
+          document.removeEventListener("visibilitychange", handler);
+          clearTimeout(fallbackTimer);
+          setTimeout(startCountdown, 400);
         }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
+      };
+      document.addEventListener("visibilitychange", handler);
+      const fallbackTimer = setTimeout(() => {
+        if (!adDoneRef.current) {
+          adDoneRef.current = true;
+          document.removeEventListener("visibilitychange", handler);
+          startCountdown();
+        }
+      }, 12_000);
+      if (tg?.openLink) tg.openLink(adViewUrl);
+      else window.open(adViewUrl, "_blank");
+    }, [startCountdown]);
 
-  useEffect(() => {
-    const tg = (window as any).Telegram?.WebApp;
-    const adUrl = `${window.location.origin}/ad-view.html`;
+    // Auto-start ad on mount
+    useEffect(() => {
+      if (scriptRef.current) return;
+      (window as any).monetag_zone_id = monetagZoneId;
+      const script = document.createElement("script");
+      script.src = `${monetagScriptUrl}?zone=${monetagZoneId}&t=${Date.now()}`;
+      script.async = true;
+      script.setAttribute("data-zone", monetagZoneId);
+      script.onload = () => { setTimeout(startCountdown, 2000); };
+      script.onerror = () => { openAdFallback(); };
+      scriptRef.current = script;
+      document.body.appendChild(script);
 
-    // Open the ad page in Telegram's browser
-    if (tg?.openLink) {
-      tg.openLink(adUrl);
-    } else {
-      window.open(adUrl, "_blank");
-    }
+      return () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (scriptRef.current) { scriptRef.current.remove(); scriptRef.current = null; }
+      };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-    // ── 1. Telegram WebApp native event (most reliable in Telegram) ──
-    const onActivated = () => {
-      cleanup();
-      setTimeout(startCountdown, 300);
-    };
-    tg?.onEvent?.("activated", onActivated);
+    const handleClaim = useCallback(() => {
+      if (phase !== "ready") return;
+      setPhase("claimed");
+      onClaim();
+      setTimeout(onClose, 400);
+    }, [phase, onClaim, onClose]);
 
-    // ── 2. Page Visibility API ──
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") {
-        cleanup();
-        setTimeout(startCountdown, 300);
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibility);
+    const isReady   = phase === "ready";
+    const isClaimed = phase === "claimed";
 
-    // ── 3. Window focus (desktop / some mobile browsers) ──
-    const onFocus = () => {
-      cleanup();
-      setTimeout(startCountdown, 300);
-    };
-    window.addEventListener("focus", onFocus);
-
-    // ── 4. Show manual button after 4 s (if none of the above fired) ──
-    const manualTimer = setTimeout(() => setShowManual(true), 4000);
-
-    // ── 5. Hard fallback: start countdown after 12 s no matter what ──
-    const maxWait = setTimeout(() => {
-      cleanup();
-      startCountdown();
-    }, 12_000);
-
-    function cleanup() {
-      tg?.offEvent?.("activated", onActivated);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("focus", onFocus);
-      clearTimeout(manualTimer);
-      clearTimeout(maxWait);
-    }
-
-    return () => {
-      cleanup();
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleClaim = useCallback(() => {
-    if (phase !== "ready") return;
-    setPhase("claimed");
-    onClaim();
-    setTimeout(onClose, 400);
-  }, [phase, onClaim, onClose]);
-
-  const isReady   = phase === "ready";
-  const isClaimed = phase === "claimed";
-
-  // ── Waiting screen ──
-  if (phase === "waiting") {
     return (
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 99999,
-        background: "linear-gradient(170deg,#0d1420,#131c35)",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 20,
-        padding: 24,
-      }}>
-        {/* Pulsing TV icon */}
-        <div style={{
-          width: 80, height: 80, borderRadius: "50%",
-          background: "rgba(14,165,233,0.1)",
-          border: "2px solid rgba(14,165,233,0.3)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          animation: "pulse 1.6s ease-in-out infinite",
-        }}>
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-            <rect x="2" y="4" width="20" height="14" rx="3" fill="rgba(14,165,233,0.9)"/>
-            <line x1="8" y1="21" x2="16" y2="21" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeLinecap="round"/>
-            <line x1="12" y1="18" x2="12" y2="21" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
-            <polygon points="9.5,8.5 9.5,13.5 15.5,11" fill="#fff"/>
-          </svg>
-        </div>
-
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: "#fff", fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
-            {t.ad_loading || "جاري فتح الإعلان..."}
+      <>
+        {/* Ad thumbnail shown during countdown / ready */}
+        {(phase === "countdown" || phase === "ready" || phase === "claimed") && (
+          <div style={{
+            position:"fixed", inset:0, zIndex:9999,
+            background:"linear-gradient(170deg,#0d1420 0%,#131c35 100%)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+          }}>
+            {/* thumbnail fills screen */}
+            <div style={{ width:"100%", maxWidth:480, height:"100%", maxHeight:360, overflow:"hidden", borderRadius:0 }}>
+              {dailyThumb.current}
+            </div>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, lineHeight: 1.6 }}>
-            شاهد الإعلان ثم اضغط رجوع
-            <br />للحصول على مكافأتك
-          </div>
-        </div>
+        )}
 
-        {/* Manual button — appears after 4s if events don't fire */}
-        {showManual && (
-          <button
-            onClick={() => { startCountdown(); }}
-            style={{
-              marginTop: 8,
-              padding: "13px 36px", borderRadius: 50, border: "none",
-              background: "linear-gradient(135deg,#0ea5e9,#2563eb)",
-              color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer",
-              boxShadow: "0 8px 24px rgba(14,165,233,0.4)",
-              animation: "readyPop 0.3s ease-out",
-            }}
-          >
-            ✓ شاهدت الإعلان
-          </button>
+        {/* Overlay controls — transparent on top of ad */}
+        {(phase === "countdown" || phase === "ready" || phase === "claimed") && (
+          <div style={{ position:"fixed", inset:0, zIndex:10000, background:"transparent", pointerEvents:"none" }}>
+
+            {/* Top-right badge: countdown → ✕ */}
+            <button
+              onClick={isReady ? handleClaim : undefined}
+              style={{
+                position:"absolute", top:16, right:16,
+                width:50, height:50, borderRadius:"50%", border:"none",
+                background: isClaimed
+                  ? "rgba(22,163,74,0.9)"
+                  : isReady
+                    ? "linear-gradient(135deg,#16a34a,#15803d)"
+                    : "rgba(0,0,0,0.75)",
+                backdropFilter:"blur(8px)",
+                outline: isReady ? "2.5px solid rgba(74,222,128,0.8)" : "2px solid rgba(255,255,255,0.2)",
+                color:"#fff",
+                fontWeight:900,
+                fontSize: isReady ? 24 : 18,
+                cursor: isReady ? "pointer" : "default",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                boxShadow: isReady ? "0 0 24px rgba(22,163,74,0.7)" : "0 2px 14px rgba(0,0,0,0.6)",
+                pointerEvents:"auto",
+                transition:"background 0.3s, box-shadow 0.3s",
+                animation: isReady ? "readyPop 0.35s ease-out, claimGlow 1.2s ease-in-out infinite 0.35s" : "none",
+                fontVariantNumeric:"tabular-nums",
+                lineHeight:1,
+              }}
+            >
+              {isClaimed ? "" : isReady ? "✕" : timeLeft}
+            </button>
+
+            {/* "Continue without reward" — only during countdown */}
+            {phase === "countdown" && (
+              <button
+                onClick={onClose}
+                style={{
+                  position:"absolute", bottom:28, left:"50%", transform:"translateX(-50%)",
+                  background:"rgba(0,0,0,0.6)", backdropFilter:"blur(10px)",
+                  border:"1px solid rgba(255,255,255,0.12)", borderRadius:40,
+                  color:"rgba(255,255,255,0.4)", fontSize:13, fontWeight:600,
+                  padding:"11px 32px", cursor:"pointer", pointerEvents:"auto",
+                  whiteSpace:"nowrap",
+                }}
+              >
+                {t?.redeem_continue_no_reward || "استمر بدون مكافأة"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Loading state: spinner pill */}
+        {phase === "loading" && (
+          <div style={{
+            position:"fixed", inset:0, zIndex:9999,
+            background:"linear-gradient(170deg,#0d1420 0%,#131c35 100%)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            pointerEvents:"none",
+          }}>
+            <div style={{
+              background:"rgba(0,0,0,0.85)", backdropFilter:"blur(14px)",
+              border:"1px solid rgba(255,255,255,0.12)", borderRadius:50,
+              padding:"14px 28px", display:"flex", alignItems:"center", gap:12,
+            }}>
+              <div style={{
+                width:20, height:20,
+                border:"2.5px solid rgba(14,165,233,0.3)", borderTopColor:"#0ea5e9",
+                borderRadius:"50%", animation:"adSpin 0.8s linear infinite", flexShrink:0,
+              }}/>
+              <span style={{ color:"#fff", fontSize:14, fontWeight:700 }}>{t.ad_loading}</span>
+            </div>
+          </div>
         )}
 
         <style>{`
-          @keyframes pulse {
-            0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(14,165,233,0.35); }
-            50%      { transform:scale(1.07); box-shadow:0 0 0 14px rgba(14,165,233,0); }
-          }
+          @keyframes adSpin   { to { transform: rotate(360deg); } }
           @keyframes readyPop {
-            0%   { transform:scale(0.85); opacity:0; }
-            100% { transform:scale(1); opacity:1; }
+            0%  { transform: scale(0.6); }
+            65% { transform: scale(1.25); }
+            100%{ transform: scale(1); }
+          }
+          @keyframes claimGlow {
+            0%,100% { box-shadow: 0 0 24px rgba(22,163,74,0.7); }
+            50%      { box-shadow: 0 0 42px rgba(22,163,74,1); }
           }
         `}</style>
-      </div>
+      </>
     );
   }
-
-  // ── Countdown / ready / claimed screen ──
-  return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 99999,
-      background: "linear-gradient(170deg,#0d1420,#131c35)",
-      display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 28,
-      padding: 24,
-    }}>
-      {isReady ? (
-        <>
-          <div style={{ fontSize: 64 }}>🎉</div>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "#4ade80", fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
-              أحسنت!
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>
-              اضغط الزر لاستلام مكافأتك
-            </div>
-          </div>
-          <button
-            onClick={handleClaim}
-            style={{
-              padding: "16px 52px", borderRadius: 50, border: "none",
-              background: isClaimed ? "#16a34a" : "linear-gradient(135deg,#16a34a,#15803d)",
-              color: "#fff", fontSize: 19, fontWeight: 900, cursor: "pointer",
-              boxShadow: "0 8px 32px rgba(22,163,74,0.5)",
-              animation: "readyPop 0.35s ease-out",
-              display: "flex", alignItems: "center", gap: 10,
-            }}
-          >
-            {isClaimed ? "✓" : "✕"}&nbsp;{rewardLabel || "استلام المكافأة"}
-          </button>
-        </>
-      ) : (
-        <>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, marginBottom: 12 }}>
-              جاري احتساب المكافأة
-            </div>
-            <div style={{
-              fontSize: 80, fontWeight: 900, color: "#fff",
-              fontVariantNumeric: "tabular-nums", lineHeight: 1,
-              textShadow: "0 0 40px rgba(14,165,233,0.4)",
-            }}>
-              {timeLeft}
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, marginTop: 10 }}>
-              ثانية
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "10px 28px", borderRadius: 40,
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.3)", fontSize: 13, fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            {t?.redeem_continue_no_reward || "استمر بدون مكافأة"}
-          </button>
-        </>
-      )}
-
-      <style>{`
-        @keyframes readyPop {
-          0%   { transform:scale(0.75); }
-          70%  { transform:scale(1.06); }
-          100% { transform:scale(1); }
-        }
-      `}</style>
-    </div>
-  );
-}
