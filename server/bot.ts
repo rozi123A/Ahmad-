@@ -48,7 +48,7 @@ export async function notifyNearWithdraw(telegramId: number, balance: number): P
       `🔥 أنت قريب جداً من السحب!\n\n` +
       `💰 رصيدك: ${balance.toLocaleString()} نقطة\n` +
       `🎯 لم يبق إلا ${remaining.toLocaleString()} نقطة للوصول!\n\n` +
-      `العب أكثر واسحب نجومك قريباً ⭐`,
+      `العب أكثر واسحب عملة DigiByte قريباً 🟦`,
       webappUrl ? {
         reply_markup: {
           inline_keyboard: [
@@ -77,7 +77,7 @@ export async function notifyWithdrawReady(telegramId: number, balance: number): 
     await bot.telegram.sendMessage(
       telegramId,
       `💰 رصيدك وصل ${balance.toLocaleString()} نقطة!\n\n` +
-      `🎉 يمكنك الآن سحب نقاطك كـ Telegram Stars ⭐\n\n` +
+      `🟦 يمكنك الآن سحب نقاطك كـ DigiByte (DGB)\n\n` +
       `اضغط الزر أدناه للسحب الآن 👇`,
       webappUrl ? {
         reply_markup: {
