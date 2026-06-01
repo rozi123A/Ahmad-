@@ -1604,22 +1604,18 @@ export const appRouter = router({
           const botToken = ENV.botToken;
           const webappUrl = process.env.WEBAPP_URL || process.env.FRONTEND_URL || process.env.CLIENT_URL || "";
 
-          // النجوم محذوفة — DGB فقط
-          const starsResult2 = { success: false, sent: 0 };
+          // DGB only — Stars removed
+          const dgbAmount2 = parseFloat(((Number(w.amount) / 15000) * 0.05).toFixed(4));
           if (botToken && w) {
             const msg = input.status === "approved"
-              ? false // stars removed
-                ? `✅ *تم إرسال نجومك بنجاح!*\n\n` +
-                  `⭐ لقد أرسلنا لك *${Number(w.stars).toLocaleString()} Stars* إلى حسابك\n` +
-                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
-                : `✅ *تمت الموافقة على طلب السحب*\n\n` +
-                  `⭐ طلبك لسحب *${Number(w.stars).toLocaleString()} Stars* قيد المعالجة\n` +
-                  `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n\n` +
-                  `⚠️ ${starsResult2.error || "سيتم الإرسال يدوياً من الإدارة خلال 24 ساعة"}\n\n` +
-                  `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
+              ? `✅ *تمت الموافقة على طلب السحب*\n\n` +
+                `🟦 سيتم إرسال *${dgbAmount2} DGB* إلى محفظتك\n` +
+                `💰 المبلغ: ${Number(w.amount).toLocaleString()} نقطة\n` +
+                `🔗 المحفظة: \`${w.user_wallet || w.userWallet || "غير مسجّلة"}\`\n\n` +
+                `⏰ سيصلك خلال 24 ساعة\n` +
+                `شكراً لك، استمر باللعب لتربح المزيد! 🚀`
               : `❌ *تم رفض طلب السحب*\n\n` +
-                `نأسف، تم رفض طلبك لسحب *${Number(w.stars).toLocaleString()} ⭐ Stars*\n` +
+                `نأسف، تم رفض طلبك لسحب *${dgbAmount2} DGB*\n` +
                 `${input.note ? `📝 السبب: ${input.note}\n` : ""}` +
                 `💰 تم إعادة نقاطك إلى رصيدك تلقائياً\n\n` +
                 `تواصل مع الدعم إذا كان لديك استفسار.`;
