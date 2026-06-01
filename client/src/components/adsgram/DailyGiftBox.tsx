@@ -93,6 +93,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
     <>
       {showAdOverlay && (
         <AdOverlay
+          blockId={adsgramBlockId || undefined}
           seconds={15}
           rewardLabel={t.daily_gift_title}
           onClaim={handleAdClaim}
