@@ -67,22 +67,35 @@ export default function AdOverlay({
     else window.open(adViewUrl, "_blank");
   }, [startCountdown]);
 
-  // Load Monetag script — it will display its own real ad overlay
   useEffect(() => {
     if (scriptRef.current) return;
+
+    // Set zone and load Monetag script immediately — no blocking overlay
     (window as any).monetag_zone_id = monetagZoneId;
     const script = document.createElement("script");
     script.src = `${monetagScriptUrl}?zone=${monetagZoneId}&t=${Date.now()}`;
     script.async = true;
     script.setAttribute("data-zone", monetagZoneId);
-    script.onload = () => { setTimeout(startCountdown, 2000); };
+
+    // Small delay before countdown so Monetag vignette renders first
+    script.onload = () => { setTimeout(startCountdown, 800); };
     script.onerror = () => { openAdFallback(); };
+
     scriptRef.current = script;
     document.body.appendChild(script);
 
+    // Fallback: if script doesn't fire onload within 5s, start anyway
+    const maxWait = setTimeout(() => {
+      if (phase === "loading") startCountdown();
+    }, 5000);
+
     return () => {
+      clearTimeout(maxWait);
       if (timerRef.current) clearInterval(timerRef.current);
-      if (scriptRef.current) { scriptRef.current.remove(); scriptRef.current = null; }
+      if (scriptRef.current) {
+        scriptRef.current.remove();
+        scriptRef.current = null;
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -97,114 +110,114 @@ export default function AdOverlay({
   const isReady   = phase === "ready";
   const isClaimed = phase === "claimed";
 
+  // During loading: show a small non-blocking pill at top — do NOT block Monetag
+  if (phase === "loading") {
+    return (
+      <div style={{
+        position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)",
+        zIndex: 999999,
+        background: "rgba(0,0,0,0.82)", backdropFilter: "blur(12px)",
+        border: "1px solid rgba(255,255,255,0.12)", borderRadius: 40,
+        padding: "10px 22px", display: "flex", alignItems: "center", gap: 10,
+        pointerEvents: "none",
+      }}>
+        <div style={{
+          width: 16, height: 16,
+          border: "2.5px solid rgba(14,165,233,0.3)", borderTopColor: "#0ea5e9",
+          borderRadius: "50%", animation: "adSpin 0.8s linear infinite", flexShrink: 0,
+        }} />
+        <span style={{ color: "#fff", fontSize: 13, fontWeight: 700 }}>
+          {t.ad_loading || "جاري تحميل الإعلان..."}
+        </span>
+        <style>{`@keyframes adSpin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  // During countdown / ready / claimed:
+  // Render ONLY floating controls — Monetag's own vignette fills the screen behind
   return (
     <>
-      {/* Loading spinner while Monetag loads its real ad */}
-      {phase === "loading" && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 9999,
-          background: "rgba(13,20,32,0.92)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          pointerEvents: "none",
-        }}>
+      {/* Countdown badge — top-right, above Monetag's vignette (like screenshot) */}
+      <div style={{
+        position: "fixed", top: 14, right: 14,
+        zIndex: 999999,
+        pointerEvents: "auto",
+      }}>
+        <button
+          onClick={isReady ? handleClaim : undefined}
+          style={{
+            width: 54, height: 54, borderRadius: "50%", border: "none",
+            background: isClaimed
+              ? "#16a34a"
+              : isReady
+                ? "linear-gradient(135deg,#16a34a,#15803d)"
+                : "rgba(0,0,0,0.82)",
+            backdropFilter: "blur(10px)",
+            outline: isReady ? "2.5px solid rgba(74,222,128,0.85)" : "2px solid rgba(255,255,255,0.22)",
+            color: "#fff",
+            fontWeight: 900,
+            fontSize: isReady ? 22 : 19,
+            cursor: isReady ? "pointer" : "default",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            boxShadow: isReady
+              ? "0 0 28px rgba(22,163,74,0.75)"
+              : "0 2px 16px rgba(0,0,0,0.7)",
+            transition: "background 0.3s, box-shadow 0.3s",
+            animation: isReady
+              ? "readyPop 0.35s ease-out, claimGlow 1.2s ease-in-out infinite 0.35s"
+              : "none",
+            fontVariantNumeric: "tabular-nums",
+            lineHeight: 1,
+          }}
+        >
+          {isClaimed ? "✓" : isReady ? "✕" : timeLeft}
+        </button>
+
+        {/* Reward pill below the badge */}
+        {isReady && rewardLabel && (
           <div style={{
-            background: "rgba(0,0,0,0.85)", backdropFilter: "blur(14px)",
-            border: "1px solid rgba(255,255,255,0.12)", borderRadius: 50,
-            padding: "14px 28px", display: "flex", alignItems: "center", gap: 12,
+            marginTop: 6,
+            background: "linear-gradient(135deg,#16a34a,#15803d)",
+            borderRadius: 30, padding: "4px 12px",
+            color: "#fff", fontSize: 11, fontWeight: 800,
+            textAlign: "center",
+            boxShadow: "0 4px 14px rgba(22,163,74,0.5)",
+            animation: "readyPop 0.4s ease-out",
+            whiteSpace: "nowrap",
           }}>
-            <div style={{
-              width: 20, height: 20,
-              border: "2.5px solid rgba(14,165,233,0.3)", borderTopColor: "#0ea5e9",
-              borderRadius: "50%", animation: "adSpin 0.8s linear infinite", flexShrink: 0,
-            }} />
-            <span style={{ color: "#fff", fontSize: 14, fontWeight: 700 }}>{t.ad_loading}</span>
+            {rewardLabel}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Controls floating on top — transparent so Monetag's real ad shows through */}
-      {(phase === "countdown" || phase === "ready" || phase === "claimed") && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 10000,
-          background: "transparent",
-          pointerEvents: "none",
-        }}>
-          {/* Top-right badge: countdown number → ✕ to claim */}
-          <button
-            onClick={isReady ? handleClaim : undefined}
-            style={{
-              position: "absolute", top: 16, right: 16,
-              width: 52, height: 52, borderRadius: "50%", border: "none",
-              background: isClaimed
-                ? "rgba(22,163,74,0.95)"
-                : isReady
-                  ? "linear-gradient(135deg,#16a34a,#15803d)"
-                  : "rgba(0,0,0,0.80)",
-              backdropFilter: "blur(10px)",
-              outline: isReady ? "2.5px solid rgba(74,222,128,0.8)" : "2px solid rgba(255,255,255,0.2)",
-              color: "#fff",
-              fontWeight: 900,
-              fontSize: isReady ? 22 : 18,
-              cursor: isReady ? "pointer" : "default",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: isReady ? "0 0 24px rgba(22,163,74,0.7)" : "0 2px 14px rgba(0,0,0,0.6)",
-              pointerEvents: "auto",
-              transition: "background 0.3s, box-shadow 0.3s",
-              animation: isReady ? "readyPop 0.35s ease-out, claimGlow 1.2s ease-in-out infinite 0.35s" : "none",
-              fontVariantNumeric: "tabular-nums",
-              lineHeight: 1,
-            }}
-          >
-            {isClaimed ? "✓" : isReady ? "✕" : timeLeft}
-          </button>
-
-          {/* Reward label pill — appears when ready to claim */}
-          {isReady && rewardLabel && (
-            <div style={{
-              position: "absolute", top: 76, right: 8,
-              background: "linear-gradient(135deg,#16a34a,#15803d)",
-              borderRadius: 30, padding: "5px 14px",
-              color: "#fff", fontSize: 12, fontWeight: 800,
-              boxShadow: "0 4px 16px rgba(22,163,74,0.5)",
-              pointerEvents: "none",
-              animation: "readyPop 0.4s ease-out",
-              whiteSpace: "nowrap",
-            }}>
-              {rewardLabel}
-            </div>
-          )}
-
-          {/* "Continue without reward" button — only during countdown */}
-          {phase === "countdown" && (
-            <button
-              onClick={onClose}
-              style={{
-                position: "absolute", bottom: 28, left: "50%", transform: "translateX(-50%)",
-                background: "rgba(0,0,0,0.65)", backdropFilter: "blur(10px)",
-                border: "1px solid rgba(255,255,255,0.14)", borderRadius: 40,
-                color: "rgba(255,255,255,0.45)", fontSize: 13, fontWeight: 600,
-                padding: "11px 32px", cursor: "pointer", pointerEvents: "auto",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {t?.redeem_continue_no_reward || "استمر بدون مكافأة"}
-            </button>
-          )}
-        </div>
+      {/* "Continue without reward" — bottom center, only during countdown */}
+      {phase === "countdown" && (
+        <button
+          onClick={onClose}
+          style={{
+            position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)",
+            zIndex: 999999,
+            background: "rgba(0,0,0,0.68)", backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,0.14)", borderRadius: 40,
+            color: "rgba(255,255,255,0.48)", fontSize: 13, fontWeight: 600,
+            padding: "11px 32px", cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {t?.redeem_continue_no_reward || "استمر بدون مكافأة"}
+        </button>
       )}
 
       <style>{`
-        @keyframes adSpin {
-          to { transform: rotate(360deg); }
-        }
         @keyframes readyPop {
           0%   { transform: scale(0.6); }
           65%  { transform: scale(1.25); }
           100% { transform: scale(1); }
         }
         @keyframes claimGlow {
-          0%,100% { box-shadow: 0 0 24px rgba(22,163,74,0.7); }
-          50%      { box-shadow: 0 0 42px rgba(22,163,74,1); }
+          0%,100% { box-shadow: 0 0 28px rgba(22,163,74,0.75); }
+          50%      { box-shadow: 0 0 44px rgba(22,163,74,1); }
         }
       `}</style>
     </>
