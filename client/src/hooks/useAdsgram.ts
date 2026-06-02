@@ -33,6 +33,13 @@ export function useAdsgram({ blockId, onReward, onError }: useAdsgramParams): ()
         .then((result: ShowPromiseResult) => {
           if (result.done) {
             onReward?.();
+          } else {
+            // Ad dismissed or closed without completing — must unlock nav
+            onError?.({
+              ...result,
+              error: true,
+              description: result.description || 'Ad was closed before completing',
+            });
           }
         })
         .catch((result: ShowPromiseResult) => {
