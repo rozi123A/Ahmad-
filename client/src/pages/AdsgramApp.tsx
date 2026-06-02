@@ -656,7 +656,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 20, overflow: "hidden" }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(139,92,246,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(139,92,246,0.08)" }}>
                     <span style={{ fontSize: 15 }}>🎁</span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#C4B5FD", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.daily_gift_title}}</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#C4B5FD", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.daily_gift_title}</span>
                   </div>
                   <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
                     <DailyGiftBox
