@@ -122,7 +122,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     <>
       {showAdOverlay && (
         <AdOverlay
-          blockId={user.adsgramBlockId || undefined}
+          blockId={undefined}
           monetagZoneId={user.monetagZoneId || "11003103"}
           monetagScriptUrl={user.monetagScriptUrl || "https://al5sm.com/tag.min.js"}
           seconds={15}
