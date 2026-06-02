@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { translations } from "@/lib/i18n";
 
+const ADSGRAM_SDK = "https://sad.adsgram.ai/js/sad.min.js";
+
 interface AdOverlayProps {
   blockId?: string;
   seconds?: number;
@@ -12,14 +14,48 @@ interface AdOverlayProps {
   lang?: string;
 }
 
+function loadAdsgramSDK(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Adsgram) { resolve(); return; }
+    const existing = document.getElementById("adsgram-sdk");
+    if (existing) { existing.remove(); }
+    const s = document.createElement("script");
+    s.id = "adsgram-sdk";
+    s.src = ADSGRAM_SDK;
+    s.async = true;
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
+    }, 8000);
+    s.onload = () => {
+      let tries = 0;
+      const poll = setInterval(() => {
+        tries++;
+        if ((window as any).Adsgram) {
+          clearInterval(poll); clearTimeout(timeout);
+          if (!settled) { settled = true; resolve(); }
+        } else if (tries > 30) {
+          clearInterval(poll); clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error("Adsgram not ready")); }
+        }
+      }, 200);
+    };
+    s.onerror = () => {
+      clearTimeout(timeout);
+      if (!settled) { settled = true; reject(new Error("Adsgram load failed")); }
+    };
+    document.head.appendChild(s);
+  });
+}
+
 export default function AdOverlay({
   blockId,
   seconds = 15,
   rewardLabel,
   onClaim,
   onClose,
-  monetagZoneId = "11003103",
-  monetagScriptUrl = "https://al5sm.com/tag.min.js",
+  monetagZoneId = "11043107",
+  monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
@@ -44,49 +80,40 @@ export default function AdOverlay({
   useEffect(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    runMonetag();
+    if (blockId) runAdsgram(blockId);
+    else runMonetag();
   }, []);
 
-  function runMonetag() {
-    const zoneId = monetagZoneId;
-    const showFnName = "show_" + zoneId;
-
-    // If script already loaded and show function exists, call it immediately
-    if (typeof (window as any)[showFnName] === "function") {
-      try { (window as any)[showFnName](); } catch {}
-      // Give the ad time to be seen, then claim
-      setTimeout(safeClaim, (seconds + 2) * 1000);
-      // Absolute safety fallback
-      setTimeout(safeClaim, (seconds + 5) * 1000);
-      return;
+  async function runAdsgram(id: string) {
+    try {
+      await loadAdsgramSDK();
+      const AdController = (window as any).Adsgram.init({ blockId: id });
+      // Hide our overlay so Adsgram can show its own full-screen ad
+      setState("gone");
+      const result = await AdController.show();
+      if (result?.done) {
+        safeClaim();
+      } else {
+        safeClose();
+      }
+    } catch {
+      // Adsgram failed or no fill — fall back to Monetag
+      setState("loading");
+      runMonetag();
     }
+  }
 
-    // Load the Monetag script
+  function runMonetag() {
+    const existing = document.querySelector(`script[data-zone="${monetagZoneId}"]`);
+    if (existing) existing.remove();
     const s = document.createElement("script");
-    s.setAttribute("data-zone", zoneId);
+    s.setAttribute("data-zone", monetagZoneId);
     s.src = monetagScriptUrl;
     s.async = true;
-
-    s.onload = () => {
-      // Small delay for script to initialise its global
-      setTimeout(() => {
-        if (typeof (window as any)[showFnName] === "function") {
-          try { (window as any)[showFnName](); } catch {}
-        }
-        // Wait for the ad to be seen, then claim
-        setTimeout(safeClaim, (seconds + 2) * 1000);
-      }, 400);
-    };
-
-    s.onerror = () => {
-      // Script failed to load — still reward user after short delay
-      setTimeout(safeClaim, 3000);
-    };
-
+    s.onload = () => { setTimeout(safeClaim, (seconds + 3) * 1000); };
+    s.onerror = () => { setTimeout(safeClaim, 3000); };
     document.body.appendChild(s);
-
-    // Absolute safety timeout — always claim, never leave user stuck
-    setTimeout(safeClaim, (seconds + 8) * 1000);
+    setTimeout(safeClaim, (seconds + 10) * 1000);
   }
 
   if (state === "gone") return null;
