@@ -24,6 +24,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
       starsRate: number;
       adCooldown: number;
       adsgramBlockId: string;
+      monetagZoneId?: string;
+      monetagScriptUrl?: string;
       lastAdTime: number | null;
       isAdmin: boolean;
       isBanned: boolean;
@@ -44,6 +46,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
       starsRate: 1000,
       adCooldown: 30,
       adsgramBlockId: "",
+      monetagZoneId: "",
+      monetagScriptUrl: "",
       lastAdTime: null,
       isAdmin: false,
       isBanned: false,
