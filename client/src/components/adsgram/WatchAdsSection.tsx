@@ -123,7 +123,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       {showAdOverlay && (
         <AdOverlay
           blockId={user.adsgramBlockId || "33769"}
-          monetagZoneId={user.monetagZoneId || "11043107"}
+          monetagZoneId={user.monetagZoneId || "11092330"}
           monetagScriptUrl={user.monetagScriptUrl || "https://n6wxm.com/vignette.min.js"}
           seconds={15}
           rewardLabel={"+" + user.adReward + " " + t.points}
