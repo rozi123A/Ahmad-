@@ -156,7 +156,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   }
 
   const showAdsgramForSpin = useAdsgram({
-    blockId: user.adsgramBlockId || "YOUR_DEFAULT_BLOCK_ID",
+    blockId: user.adsgramBlockId || "33769",
     onReward: () => handleAdClaim(),
     onError: (err) => {
       toast({ title: t.error, description: err.description || t.ad_load_failed, variant: "destructive" });

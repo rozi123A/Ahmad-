@@ -49,7 +49,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
   }, [user.lastAdTime, user.adCooldown]);
 
   const showAdsgram = useAdsgram({
-    blockId: user.adsgramBlockId || "YOUR_DEFAULT_BLOCK_ID",
+    blockId: user.adsgramBlockId || "33769",
     onReward: () => handleClaim(),
     onError: (err) => {
       toast({ title: t.error, description: err.description || t.ad_error_desc, variant: "destructive" });
