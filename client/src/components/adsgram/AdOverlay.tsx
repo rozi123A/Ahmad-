@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { translations } from "@/lib/i18n";
 
+const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/sad.min.js";
+
 interface AdOverlayProps {
   blockId?: string;
   seconds?: number;
@@ -10,6 +12,46 @@ interface AdOverlayProps {
   monetagZoneId?: string;
   monetagScriptUrl?: string;
   lang?: string;
+}
+
+function loadAdsgramSDK(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Adsgram) { resolve(); return; }
+
+    const old = document.getElementById("adsgram-sdk");
+    if (old) old.remove();
+
+    const script = document.createElement("script");
+    script.id = "adsgram-sdk";
+    script.src = ADSGRAM_SDK_URL;
+    script.async = true;
+
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
+    }, 10000);
+
+    script.onload = () => {
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if ((window as any).Adsgram) {
+          clearInterval(poll); clearTimeout(timeout);
+          if (!settled) { settled = true; resolve(); }
+        } else if (attempts > 40) {
+          clearInterval(poll); clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error("window.Adsgram not ready")); }
+        }
+      }, 250);
+    };
+
+    script.onerror = () => {
+      clearTimeout(timeout);
+      if (!settled) { settled = true; reject(new Error("Failed to load Adsgram SDK")); }
+    };
+
+    document.head.appendChild(script);
+  });
 }
 
 export default function AdOverlay({
@@ -30,56 +72,36 @@ export default function AdOverlay({
   useEffect(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-
-    if (blockId) {
-      runAdsgram(blockId);
-    } else {
-      runMonetag();
-    }
+    if (blockId) runAdsgram(blockId);
+    else runMonetag();
   }, []);
-
-  async function waitForAdsgram(maxMs = 10000): Promise<boolean> {
-    const start = Date.now();
-    while (!(window as any).Adsgram) {
-      if (Date.now() - start > maxMs) return false;
-      await new Promise(r => setTimeout(r, 200));
-    }
-    return true;
-  }
 
   async function runAdsgram(id: string) {
     try {
-      const loaded = await waitForAdsgram(10000);
-      if (!loaded) {
-        runMonetag();
-        return;
-      }
+      // Load SDK dynamically — works even if index.html preload failed
+      await loadAdsgramSDK();
 
-      // Adsgram.init() is SYNCHRONOUS — do NOT await it
+      // init() is SYNCHRONOUS
       const AdController = (window as any).Adsgram.init({ blockId: id });
 
-      // Remove our overlay COMPLETELY before Adsgram shows its own UI
+      // Remove our overlay so Adsgram's native UI renders freely
       setState("gone");
-
-      // Wait 2 animation frames so React flushes DOM and our overlay is gone
       await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
 
-      // Now let Adsgram show its native full-screen ad
-      await AdController.show();
-
-      onClaim();
-    } catch (err: any) {
-      const description = err?.description || err?.message || "";
-      const isBannerNotFound = description?.toLowerCase?.().includes("banner") ||
-                               description?.toLowerCase?.().includes("no ads");
-
-      if (isBannerNotFound || !description) {
-        // No ads available right now — silently close
-        onClose();
+      const result = await AdController.show();
+      if (result?.done) {
+        onClaim();
       } else {
-        setErrorMsg(description.slice(0, 120));
+        onClose();
+      }
+    } catch (err: any) {
+      const msg = err?.description || err?.message || "";
+      if (msg && msg.length < 120) {
+        setErrorMsg(msg);
         setState("error");
         setTimeout(onClose, 2500);
+      } else {
+        onClose();
       }
     }
   }
@@ -87,7 +109,7 @@ export default function AdOverlay({
   function runMonetag() {
     (window as any).monetag_zone_id = monetagZoneId;
     const script = document.createElement("script");
-    script.src = `${monetagScriptUrl}?zone=${monetagZoneId}&t=${Date.now()}`;
+    script.src = monetagScriptUrl + "?zone=" + monetagZoneId + "&t=" + Date.now();
     script.async = true;
     script.setAttribute("data-zone", monetagZoneId);
     script.onload = () => { setTimeout(onClaim, (seconds + 2) * 1000); };
@@ -96,7 +118,6 @@ export default function AdOverlay({
     setTimeout(onClaim, (seconds + 3) * 1000);
   }
 
-  // Remove from DOM entirely so nothing can block Adsgram's native overlay
   if (state === "gone") return null;
 
   return (
@@ -122,9 +143,7 @@ export default function AdOverlay({
               {t.ad_loading || "جارٍ تحميل الإعلان..."}
             </p>
             {rewardLabel && (
-              <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>
-                {rewardLabel}
-              </p>
+              <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>{rewardLabel}</p>
             )}
           </div>
         </>
@@ -133,7 +152,7 @@ export default function AdOverlay({
       {state === "error" && (
         <div style={{ textAlign: "center", padding: "0 32px" }}>
           <p style={{ color: "#FCA5A5", fontSize: 14, margin: 0 }}>
-            {errorMsg || "لا توجد إعلانات متاحة الآن، حاول لاحقاً"}
+            {errorMsg || "لا توجد إعلانات متاحة الآن"}
           </p>
         </div>
       )}
