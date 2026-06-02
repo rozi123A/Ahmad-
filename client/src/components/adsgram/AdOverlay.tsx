@@ -23,8 +23,7 @@ export default function AdOverlay({
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
-  // 3 states: "loading" | "hidden" | "error"
-  const [state, setState] = useState<"loading" | "hidden" | "error">("loading");
+  const [state, setState] = useState<"loading" | "gone" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState<string>("");
   const doneRef = useRef(false);
 
@@ -56,23 +55,31 @@ export default function AdOverlay({
         return;
       }
 
-      const controller = await (window as any).Adsgram.init({ blockId: id });
+      // Adsgram.init() is SYNCHRONOUS — do NOT await it
+      const AdController = (window as any).Adsgram.init({ blockId: id });
 
-      // Hide our overlay FIRST, then wait 2 frames for React to flush DOM,
-      // so Adsgram's native UI is not blocked by our overlay (z-index conflict)
-      setState("hidden");
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      // Remove our overlay COMPLETELY before Adsgram shows its own UI
+      setState("gone");
 
-      await controller.show();
+      // Wait 2 animation frames so React flushes DOM and our overlay is gone
+      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+      // Now let Adsgram show its native full-screen ad
+      await AdController.show();
+
       onClaim();
     } catch (err: any) {
-      const msg = err?.description || err?.message || "";
-      if (msg && typeof msg === "string" && msg.length < 120) {
-        setErrorMsg(msg);
-        setState("error");
-        setTimeout(onClose, 2000);
-      } else {
+      const description = err?.description || err?.message || "";
+      const isBannerNotFound = description?.toLowerCase?.().includes("banner") ||
+                               description?.toLowerCase?.().includes("no ads");
+
+      if (isBannerNotFound || !description) {
+        // No ads available right now — silently close
         onClose();
+      } else {
+        setErrorMsg(description.slice(0, 120));
+        setState("error");
+        setTimeout(onClose, 2500);
       }
     }
   }
@@ -89,8 +96,8 @@ export default function AdOverlay({
     setTimeout(onClaim, (seconds + 3) * 1000);
   }
 
-  // Fully remove overlay from DOM when hidden so nothing blocks Adsgram's UI
-  if (state === "hidden") return null;
+  // Remove from DOM entirely so nothing can block Adsgram's native overlay
+  if (state === "gone") return null;
 
   return (
     <div style={{
@@ -126,7 +133,7 @@ export default function AdOverlay({
       {state === "error" && (
         <div style={{ textAlign: "center", padding: "0 32px" }}>
           <p style={{ color: "#FCA5A5", fontSize: 14, margin: 0 }}>
-            {errorMsg || "حدث خطأ أثناء تحميل الإعلان"}
+            {errorMsg || "لا توجد إعلانات متاحة الآن، حاول لاحقاً"}
           </p>
         </div>
       )}
