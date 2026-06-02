@@ -54,7 +54,7 @@ export default function AdOverlay({
   rewardLabel,
   onClaim,
   onClose,
-  monetagZoneId = "11043107",
+  monetagZoneId = "11092330",
   monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
   lang = "ar",
 }: AdOverlayProps) {
