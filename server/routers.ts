@@ -47,7 +47,7 @@ const spinRateMap  = new Map<number, { count: number; windowStart: number }>();
 const MIN_AD_SECONDS = 12;
 const INSTANT_BAN_SECONDS = 5;
 const RATE_WINDOW_MS = 120_000;
-const MAX_TOKENS_PER_WIN = 6;
+const MAX_TOKENS_PER_WIN = 3;
 const MAX_SPINS_PER_WIN  = 6; // max 6 spins per 2 minutes (normal user has 5/day)
 
 // Purge stale entries every 5 minutes to prevent memory leaks
@@ -497,6 +497,8 @@ export const appRouter = router({
             starsRate,
             minWithdraw,
             adsgramBlockId: ENV.adsgramBlockId,
+            monetagZoneId: ENV.monetagZoneId,
+            monetagScriptUrl: ENV.monetagScriptUrl,
             lastAdTime: user?.lastAdTime ? new Date(user.lastAdTime).getTime() : null,
             isAdmin: (ENV.adminTelegramId ?? 5279238199) === input.telegramId,
             isBanned: !!user?.isBanned,
