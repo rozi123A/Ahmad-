@@ -93,7 +93,12 @@ export default function AdOverlay({
       const result = await AdController.show();
       if (result?.done) {
         safeClaim();
+      } else if (result?.error) {
+        // No fill / ad error — fall back to Monetag
+        setState("loading");
+        runMonetag();
       } else {
+        // User closed ad early
         safeClose();
       }
     } catch {
