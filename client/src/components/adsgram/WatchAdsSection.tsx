@@ -23,50 +23,52 @@ interface WatchAdsSectionProps {
   onUnlock?: () => void;
 }
 
-// Load Adsgram SDK dynamically and wait for window.Adsgram to be ready
 function loadAdsgramSDK(): Promise<void> {
   return new Promise((resolve, reject) => {
-    // Already loaded
     if ((window as any).Adsgram) { resolve(); return; }
-
-    // Remove any failed previous attempt
     const old = document.getElementById("adsgram-sdk");
     if (old) old.remove();
-
     const script = document.createElement("script");
     script.id = "adsgram-sdk";
     script.src = ADSGRAM_SDK_URL;
     script.async = true;
-
     let settled = false;
     const timeout = setTimeout(() => {
       if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
     }, 10000);
-
     script.onload = () => {
-      // Poll until window.Adsgram is actually set (SDK initialises async internally)
       let attempts = 0;
       const poll = setInterval(() => {
         attempts++;
         if ((window as any).Adsgram) {
-          clearInterval(poll);
-          clearTimeout(timeout);
+          clearInterval(poll); clearTimeout(timeout);
           if (!settled) { settled = true; resolve(); }
         } else if (attempts > 40) {
-          clearInterval(poll);
-          clearTimeout(timeout);
-          if (!settled) { settled = true; reject(new Error("window.Adsgram not defined after load")); }
+          clearInterval(poll); clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error("window.Adsgram not ready")); }
         }
       }, 250);
     };
-
     script.onerror = () => {
       clearTimeout(timeout);
       if (!settled) { settled = true; reject(new Error("Failed to load Adsgram SDK")); }
     };
-
     document.head.appendChild(script);
   });
+}
+
+// Returns true if ad was shown, false if skipped/unavailable (not an error worth reporting)
+async function tryShowAd(blockId: string): Promise<boolean> {
+  try {
+    await loadAdsgramSDK();
+    const AdController = (window as any).Adsgram.init({ blockId, debug: true, debugBannerType: "FullscreenMedia" });
+    const result = await AdController.show();
+    return result?.done === true;
+  } catch (err: any) {
+    // "no ads", user closed early, network error — all treated as "ad not shown"
+    // We do NOT re-throw; reward will be given anyway
+    return false;
+  }
 }
 
 export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock }: WatchAdsSectionProps) {
@@ -108,31 +110,28 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     onLock?.();
 
     try {
-      // 1) Get ad token from server FIRST
+      // 1) Get ad token from server
       const initData = (window as any).Telegram?.WebApp?.initData || "";
       const tokenData = await getTokenMutation.mutateAsync({ telegramId: user.telegramId, initData });
       if (!tokenData.success || !tokenData.token) throw new Error(tokenData.message || t.ad_error_desc);
       const token = tokenData.token;
 
-      // 2) Load Adsgram SDK (dynamically — works even if index.html script failed)
+      // 2) Try to show Adsgram ad — NEVER throws, always returns true/false
       const blockId = user.adsgramBlockId;
       if (blockId) {
-        await loadAdsgramSDK();
-
-        // 3) Init controller — SYNCHRONOUS, no await
-        const AdController = (window as any).Adsgram.init({ blockId, debug: true, debugBannerType: "FullscreenMedia" });
-
-        // 4) Show native Adsgram ad — SDK handles its own full-screen UI
-        const result = await AdController.show();
-
-        // 5) Check result — only reward if ad was fully watched
-        if (!result?.done) {
-          // No ads available — give reward anyway so user is not penalized
-        }
+        await tryShowAd(blockId);
+        // Whether ad shown or not, we ALWAYS proceed to claim
+        // (user pressed the button in good faith)
       }
 
-      // 6) Claim reward
-      const claimData = await claimMutation.mutateAsync({ telegramId: user.telegramId, token, initData, type: "points" });
+      // 3) Claim reward — always runs
+      const claimData = await claimMutation.mutateAsync({
+        telegramId: user.telegramId,
+        token,
+        initData,
+        type: "points",
+      });
+
       if (claimData.success) {
         const newBalance = Number(claimData.balance ?? user.balance + user.adReward);
         toast({ title: "أحسنت! 🎉", description: "ربحت +" + claimData.reward + " " + t.points });
@@ -211,7 +210,6 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
             animation: "shimmer 2.4s infinite", pointerEvents: "none",
           }} />
         )}
-
         <span style={{
           width: 42, height: 42, borderRadius: "50%",
           background: "rgba(0,0,0,0.22)",
@@ -236,7 +234,6 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
             </svg>
           )}
         </span>
-
         <span style={{ letterSpacing: "0.02em" }}>
           {adLoading
             ? "جارٍ تحميل الإعلان..."
@@ -244,7 +241,6 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
               ? t.wait + " " + Math.ceil(cooldownRemaining) + " " + t.seconds
               : t.watch_ad}
         </span>
-
         <style>{`@keyframes shimmer { 0%{left:-75%} 100%{left:125%} }`}</style>
       </button>
 
