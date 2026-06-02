@@ -509,7 +509,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         { id: "stats",       label: (t as any).stats_title || "إحصائياتي", color: "#A78BFA", bannedAllowed: true  },
         ...(isAdmin ? [{ id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true }] : []),
       ];
-      const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed);
+      const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed || safeUser.isAdmin);
 
       const NavIcon = ({ id, active, color }: { id: string; active: boolean; color: string }) => {
         const c = active ? color : "rgba(255,255,255,0.3)";
