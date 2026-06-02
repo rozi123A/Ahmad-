@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { translations } from "@/lib/i18n";
 
-const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/sad.min.js";
-
 interface AdOverlayProps {
   blockId?: string;
   seconds?: number;
@@ -14,109 +12,81 @@ interface AdOverlayProps {
   lang?: string;
 }
 
-function loadAdsgramSDK(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if ((window as any).Adsgram) { resolve(); return; }
-
-    const old = document.getElementById("adsgram-sdk");
-    if (old) old.remove();
-
-    const script = document.createElement("script");
-    script.id = "adsgram-sdk";
-    script.src = ADSGRAM_SDK_URL;
-    script.async = true;
-
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
-    }, 10000);
-
-    script.onload = () => {
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts++;
-        if ((window as any).Adsgram) {
-          clearInterval(poll); clearTimeout(timeout);
-          if (!settled) { settled = true; resolve(); }
-        } else if (attempts > 40) {
-          clearInterval(poll); clearTimeout(timeout);
-          if (!settled) { settled = true; reject(new Error("window.Adsgram not ready")); }
-        }
-      }, 250);
-    };
-
-    script.onerror = () => {
-      clearTimeout(timeout);
-      if (!settled) { settled = true; reject(new Error("Failed to load Adsgram SDK")); }
-    };
-
-    document.head.appendChild(script);
-  });
-}
-
 export default function AdOverlay({
   blockId,
   seconds = 15,
   rewardLabel,
   onClaim,
   onClose,
-  monetagZoneId = "11043107",
-  monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
+  monetagZoneId = "11003103",
+  monetagScriptUrl = "https://al5sm.com/tag.min.js",
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
-  const [state, setState] = useState<"loading" | "gone" | "error">("loading");
-  const [errorMsg, setErrorMsg] = useState<string>("");
+  const [state, setState] = useState<"loading" | "gone">("loading");
   const doneRef = useRef(false);
+  const claimedRef = useRef(false);
+
+  const safeClaim = () => {
+    if (claimedRef.current) return;
+    claimedRef.current = true;
+    setState("gone");
+    onClaim();
+  };
+
+  const safeClose = () => {
+    if (claimedRef.current) return;
+    claimedRef.current = true;
+    setState("gone");
+    onClose();
+  };
 
   useEffect(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    if (blockId) runAdsgram(blockId);
-    else runMonetag();
+    runMonetag();
   }, []);
 
-  async function runAdsgram(id: string) {
-    try {
-      await loadAdsgramSDK();
-      const AdController = (window as any).Adsgram.init({ blockId: id });
-      setState("gone");
-      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-      const result = await AdController.show();
-      if (result?.done) {
-        onClaim();
-      } else {
-        onClose();
-      }
-    } catch (err: any) {
-      // Adsgram failed (no ads available) — fallback to Monetag automatically
-      console.warn("[AdOverlay] Adsgram failed, falling back to Monetag:", err?.message);
-      runMonetag();
-    }
-  }
-
   function runMonetag() {
-    setState("loading");
-    (window as any).monetag_zone_id = monetagZoneId;
-    const script = document.createElement("script");
-    script.src = monetagScriptUrl + "?zone=" + monetagZoneId + "&t=" + Date.now();
-    script.async = true;
-    script.setAttribute("data-zone", monetagZoneId);
-    script.onload = () => {
-      setState("gone");
-      setTimeout(onClaim, (seconds + 2) * 1000);
+    const zoneId = monetagZoneId;
+    const showFnName = "show_" + zoneId;
+
+    // If script already loaded and show function exists, call it immediately
+    if (typeof (window as any)[showFnName] === "function") {
+      try { (window as any)[showFnName](); } catch {}
+      // Give the ad time to be seen, then claim
+      setTimeout(safeClaim, (seconds + 2) * 1000);
+      // Absolute safety fallback
+      setTimeout(safeClaim, (seconds + 5) * 1000);
+      return;
+    }
+
+    // Load the Monetag script
+    const s = document.createElement("script");
+    s.setAttribute("data-zone", zoneId);
+    s.src = monetagScriptUrl;
+    s.async = true;
+
+    s.onload = () => {
+      // Small delay for script to initialise its global
+      setTimeout(() => {
+        if (typeof (window as any)[showFnName] === "function") {
+          try { (window as any)[showFnName](); } catch {}
+        }
+        // Wait for the ad to be seen, then claim
+        setTimeout(safeClaim, (seconds + 2) * 1000);
+      }, 400);
     };
-    script.onerror = () => {
-      // Both Adsgram and Monetag failed — still give reward to not frustrate user
-      setState("gone");
-      setTimeout(onClaim, 3000);
+
+    s.onerror = () => {
+      // Script failed to load — still reward user after short delay
+      setTimeout(safeClaim, 3000);
     };
-    document.body.appendChild(script);
-    // Safety timeout — always claim after seconds+3
-    setTimeout(() => {
-      setState("gone");
-      onClaim();
-    }, (seconds + 3) * 1000);
+
+    document.body.appendChild(s);
+
+    // Absolute safety timeout — always claim, never leave user stuck
+    setTimeout(safeClaim, (seconds + 8) * 1000);
   }
 
   if (state === "gone") return null;
@@ -129,34 +99,24 @@ export default function AdOverlay({
       alignItems: "center", justifyContent: "center", gap: 20,
     }}>
       <style>{`@keyframes adSpin { to { transform: rotate(360deg); } }`}</style>
-
-      {state === "loading" && (
-        <>
-          <div style={{
-            width: 56, height: 56,
-            border: "3.5px solid rgba(139,92,246,0.25)",
-            borderTopColor: "#8B5CF6",
-            borderRadius: "50%",
-            animation: "adSpin 0.9s linear infinite",
-          }} />
-          <div style={{ textAlign: "center", padding: "0 32px" }}>
-            <p style={{ color: "#fff", fontSize: 15, fontWeight: 700, margin: 0, marginBottom: 6 }}>
-              {t.ad_loading || "جارٍ تحميل الإعلان..."}
-            </p>
-            {rewardLabel && (
-              <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>{rewardLabel}</p>
-            )}
-          </div>
-        </>
-      )}
-
-      {state === "error" && (
-        <div style={{ textAlign: "center", padding: "0 32px" }}>
-          <p style={{ color: "#FCA5A5", fontSize: 14, margin: 0 }}>
-            {errorMsg || "لا توجد إعلانات متاحة الآن"}
-          </p>
-        </div>
-      )}
+      <div style={{
+        width: 56, height: 56,
+        border: "3.5px solid rgba(139,92,246,0.25)",
+        borderTopColor: "#8B5CF6",
+        borderRadius: "50%",
+        animation: "adSpin 0.9s linear infinite",
+      }} />
+      <div style={{ textAlign: "center", padding: "0 32px" }}>
+        <p style={{ color: "#fff", fontSize: 15, fontWeight: 700, margin: 0, marginBottom: 6 }}>
+          {t.ad_loading || "جارٍ تحميل الإعلان..."}
+        </p>
+        {rewardLabel && (
+          <p style={{ color: "#A78BFA", fontSize: 13, fontWeight: 600, margin: 0 }}>{rewardLabel}</p>
+        )}
+        <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, margin: "8px 0 0" }}>
+          شاهد الإعلان للحصول على مكافأتك
+        </p>
+      </div>
     </div>
   );
 }
