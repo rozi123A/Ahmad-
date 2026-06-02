@@ -4,6 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";
 
+const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/sad.min.js";
+
 interface UserData {
   telegramId: number;
   balance: number;
@@ -19,6 +21,52 @@ interface WatchAdsSectionProps {
   onReward: (update?: { balance: number; todayAds: number; lastAdTime: number }) => void;
   onLock?: () => void;
   onUnlock?: () => void;
+}
+
+// Load Adsgram SDK dynamically and wait for window.Adsgram to be ready
+function loadAdsgramSDK(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if ((window as any).Adsgram) { resolve(); return; }
+
+    // Remove any failed previous attempt
+    const old = document.getElementById("adsgram-sdk");
+    if (old) old.remove();
+
+    const script = document.createElement("script");
+    script.id = "adsgram-sdk";
+    script.src = ADSGRAM_SDK_URL;
+    script.async = true;
+
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
+    }, 10000);
+
+    script.onload = () => {
+      // Poll until window.Adsgram is actually set (SDK initialises async internally)
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if ((window as any).Adsgram) {
+          clearInterval(poll);
+          clearTimeout(timeout);
+          if (!settled) { settled = true; resolve(); }
+        } else if (attempts > 40) {
+          clearInterval(poll);
+          clearTimeout(timeout);
+          if (!settled) { settled = true; reject(new Error("window.Adsgram not defined after load")); }
+        }
+      }, 250);
+    };
+
+    script.onerror = () => {
+      clearTimeout(timeout);
+      if (!settled) { settled = true; reject(new Error("Failed to load Adsgram SDK")); }
+    };
+
+    document.head.appendChild(script);
+  });
 }
 
 export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock }: WatchAdsSectionProps) {
@@ -46,15 +94,6 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     }
   }, [user.lastAdTime, user.adCooldown]);
 
-  async function waitForAdsgram(maxMs = 8000): Promise<boolean> {
-    const start = Date.now();
-    while (!(window as any).Adsgram) {
-      if (Date.now() - start > maxMs) return false;
-      await new Promise(r => setTimeout(r, 150));
-    }
-    return true;
-  }
-
   const handleWatchAd = async () => {
     if (user.todayAds >= 50) {
       toast({ title: t.notice, description: t.daily_ad_warning, variant: "destructive" });
@@ -69,32 +108,31 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     onLock?.();
 
     try {
-      // 1) Get ad token from server BEFORE showing ad
+      // 1) Get ad token from server FIRST
       const initData = (window as any).Telegram?.WebApp?.initData || "";
       const tokenData = await getTokenMutation.mutateAsync({ telegramId: user.telegramId, initData });
       if (!tokenData.success || !tokenData.token) throw new Error(tokenData.message || t.ad_error_desc);
       const token = tokenData.token;
 
-      // 2) Show Adsgram ad — SDK handles its own native full-screen UI
+      // 2) Load Adsgram SDK (dynamically — works even if index.html script failed)
       const blockId = user.adsgramBlockId;
       if (blockId) {
-        const ready = await waitForAdsgram(8000);
-        if (!ready) throw new Error("Adsgram SDK not loaded");
+        await loadAdsgramSDK();
 
-        // init() is SYNCHRONOUS — do NOT await
+        // 3) Init controller — SYNCHRONOUS, no await
         const AdController = (window as any).Adsgram.init({ blockId });
 
-        // show() is async — Adsgram displays its own native overlay
+        // 4) Show native Adsgram ad — SDK handles its own full-screen UI
         const result = await AdController.show();
 
-        // Only reward if ad was fully watched
+        // 5) Check result — only reward if ad was fully watched
         if (!result?.done) {
           toast({ title: t.notice, description: "لم يتم مشاهدة الإعلان كاملاً", variant: "destructive" });
           return;
         }
       }
 
-      // 3) Claim reward from server
+      // 6) Claim reward
       const claimData = await claimMutation.mutateAsync({ telegramId: user.telegramId, token, initData, type: "points" });
       if (claimData.success) {
         const newBalance = Number(claimData.balance ?? user.balance + user.adReward);
@@ -106,7 +144,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       }
     } catch (error: any) {
       const msg = error?.description || error?.message || t.ad_error_desc;
-      toast({ title: t.error, description: String(msg).slice(0, 100), variant: "destructive" });
+      toast({ title: t.error, description: String(msg).slice(0, 120), variant: "destructive" });
     } finally {
       setAdLoading(false);
       onUnlock?.();
