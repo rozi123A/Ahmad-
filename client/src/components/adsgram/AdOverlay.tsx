@@ -54,18 +54,18 @@ export default function AdOverlay({
   rewardLabel,
   onClaim,
   onClose,
-  monetagZoneId = "11092330",
-  monetagScriptUrl = "https://n6wxm.com/vignette.min.js",
   lang = "ar",
 }: AdOverlayProps) {
   const t = translations[lang as keyof typeof translations] || translations["ar"];
-  const [state, setState] = useState<"loading" | "gone">("loading");
+  const [state, setState] = useState<"loading" | "iframe" | "gone">("loading");
   const doneRef = useRef(false);
   const claimedRef = useRef(false);
+  const iframeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const safeClaim = () => {
     if (claimedRef.current) return;
     claimedRef.current = true;
+    if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
     setState("gone");
     onClaim();
   };
@@ -73,6 +73,7 @@ export default function AdOverlay({
   const safeClose = () => {
     if (claimedRef.current) return;
     claimedRef.current = true;
+    if (iframeTimerRef.current) clearTimeout(iframeTimerRef.current);
     setState("gone");
     onClose();
   };
@@ -88,40 +89,52 @@ export default function AdOverlay({
     try {
       await loadAdsgramSDK();
       const AdController = (window as any).Adsgram.init({ blockId: id });
-      // Hide our overlay so Adsgram can show its own full-screen ad
       setState("gone");
       const result = await AdController.show();
       if (result?.done) {
         safeClaim();
       } else if (result?.error) {
-        // No fill / ad error — fall back to Monetag
-        setState("loading");
-        runMonetag();
+        // No fill — fall back to Monetag iframe
+        setState("iframe");
+        startIframeTimer();
       } else {
         // User closed ad early
         safeClose();
       }
     } catch {
-      // Adsgram failed or no fill — fall back to Monetag
-      setState("loading");
-      runMonetag();
+      // Adsgram failed — fall back to Monetag iframe
+      setState("iframe");
+      startIframeTimer();
     }
   }
 
+  function startIframeTimer() {
+    iframeTimerRef.current = setTimeout(safeClaim, (seconds + 5) * 1000);
+  }
+
   function runMonetag() {
-    const existing = document.querySelector(`script[data-zone="${monetagZoneId}"]`);
-    if (existing) existing.remove();
-    const s = document.createElement("script");
-    s.setAttribute("data-zone", monetagZoneId);
-    s.src = monetagScriptUrl;
-    s.async = true;
-    s.onload = () => { setTimeout(safeClaim, (seconds + 3) * 1000); };
-    s.onerror = () => { setTimeout(safeClaim, 3000); };
-    document.body.appendChild(s);
-    setTimeout(safeClaim, (seconds + 10) * 1000);
+    setState("iframe");
+    startIframeTimer();
   }
 
   if (state === "gone") return null;
+
+  if (state === "iframe") {
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "#0d1420",
+        display: "flex", flexDirection: "column",
+      }}>
+        <iframe
+          src="/ad-view.html"
+          style={{ flex: 1, width: "100%", border: "none" }}
+          allow="autoplay"
+          title="ad"
+        />
+      </div>
+    );
+  }
 
   return (
     <div style={{
