@@ -48,12 +48,19 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     }
   }, [user.lastAdTime, user.adCooldown]);
 
+  // Called whenever ad fails, is dismissed, or errors — always unlocks nav
+  const handleAdError = (description?: string) => {
+    setPendingToken(null);
+    onUnlock?.();
+    if (description) {
+      toast({ title: t.error, description: description.slice(0, 120), variant: "destructive" });
+    }
+  };
+
   const showAdsgram = useAdsgram({
     blockId: user.adsgramBlockId || "33769",
     onReward: () => handleClaim(),
-    onError: (err) => {
-      toast({ title: t.error, description: err.description || t.ad_error_desc, variant: "destructive" });
-    }
+    onError: (err) => handleAdError(err.description || t.ad_error_desc),
   });
 
   const handleWatchAd = async () => {
@@ -65,7 +72,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       toast({ title: t.notice, description: t.wait_before_next + " " + Math.ceil(cooldownRemaining) + " " + t.seconds, variant: "destructive" });
       return;
     }
-    
+
     setTokenLoading(true);
     try {
       const initData = (window as any).Telegram?.WebApp?.initData || "";
@@ -73,10 +80,13 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       if (!tokenData.success || !tokenData.token) throw new Error(tokenData.message || t.ad_error_desc);
       setPendingToken(tokenData.token);
       onLock?.();
-      
-      // Show Adsgram Ad
+
+      // Show Adsgram Ad — any failure/dismissal handled by handleAdError above
       showAdsgram();
     } catch (e: any) {
+      // getToken failed — nav was never locked, just show error
+      setPendingToken(null);
+      onUnlock?.();
       toast({ title: t.error, description: e?.message || t.ad_error_desc, variant: "destructive" });
     } finally {
       setTokenLoading(false);
