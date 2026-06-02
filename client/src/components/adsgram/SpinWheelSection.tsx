@@ -4,7 +4,7 @@ import { Gift, Sparkle, Television, X, ShoppingCart, Lightning } from "@phosphor
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";
-import { useAdsgram } from "@/hooks/useAdsgram";
+import AdOverlay from "@/components/adsgram/AdOverlay";
 
 interface UserData {
   telegramId: number;
@@ -96,6 +96,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   const [pendingToken,      setPendingToken]      = useState<string | null>(null);
   const [tokenLoading,      setTokenLoading]      = useState(false);
   const [showBuyModal,      setShowBuyModal]      = useState(false);
+  const [showAdOverlay,     setShowAdOverlay]     = useState(false);
   const [buyLoading,        setBuyLoading]        = useState(false);
   const [starsLoading,      setStarsLoading]      = useState(false);
   const { toast } = useToast();
@@ -156,18 +157,13 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   }
 
   const handleSpinAdError = (description?: string) => {
+    setShowAdOverlay(false);
     setPendingToken(null);
     onUnlock?.();
     if (description) {
       toast({ title: t.error, description: description.slice(0, 120), variant: 'destructive' });
     }
   };
-
-  const showAdsgramForSpin = useAdsgram({
-    blockId: user.adsgramBlockId || "33769",
-    onReward: () => handleAdClaim(),
-    onError: (err) => handleSpinAdError(err.description || t.ad_load_failed),
-  });
 
   const handleWatchSpinAdClick = async () => {
     setShowNoSpinsModal(false);
@@ -179,8 +175,8 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       setPendingToken(tok.token);
       onLock?.();
       
-      // Show Adsgram Ad
-      showAdsgramForSpin();
+      // Show Ad Overlay (Adsgram → Monetag fallback)
+      setShowAdOverlay(true);
     } catch (e: any) {
       setPendingToken(null);
       onUnlock?.();
@@ -191,6 +187,7 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
   };
 
   const handleAdClaim = async () => {
+    setShowAdOverlay(false);
     if (!pendingToken) return;
     const initData = (window as any).Telegram?.WebApp?.initData || "";
     try {
@@ -328,6 +325,20 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
 
   return (
     <>
+      {/* Ad Overlay — Adsgram with Monetag fallback */}
+      {showAdOverlay && (
+        <AdOverlay
+          blockId={user.adsgramBlockId || "33769"}
+          monetagZoneId="11092330"
+          monetagScriptUrl="https://n6wxm.com/vignette.min.js"
+          seconds={15}
+          rewardLabel={t.spin_ready_desc}
+          lang={lang}
+          onClaim={handleAdClaim}
+          onClose={() => handleSpinAdError()}
+        />
+      )}
+
       {/* Buy Spins Modal */}
       {showBuyModal && (
         <div style={{
