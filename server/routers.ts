@@ -44,8 +44,8 @@ import { ENV } from "./_core/env";
 // In-memory rate limiter — also persists abuse to DB via cheat strikes
 const tokenRateMap = new Map<number, { count: number; windowStart: number }>();
 const spinRateMap  = new Map<number, { count: number; windowStart: number }>();
-const MIN_AD_SECONDS = 15;
-const INSTANT_BAN_SECONDS = 8;
+const MIN_AD_SECONDS = 12;
+const INSTANT_BAN_SECONDS = 5;
 const RATE_WINDOW_MS = 120_000;
 const MAX_TOKENS_PER_WIN = 3;
 const MAX_SPINS_PER_WIN  = 6; // max 6 spins per 2 minutes (normal user has 5/day)
