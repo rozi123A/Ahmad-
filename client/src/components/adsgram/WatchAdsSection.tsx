@@ -120,8 +120,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
         await loadAdsgramSDK();
 
         // 3) Init controller — SYNCHRONOUS, no await
-        const isDebug = process.env.NODE_ENV !== "production";
-        const AdController = (window as any).Adsgram.init({ blockId, debug: isDebug, debugBannerType: "FullscreenMedia" });
+        const AdController = (window as any).Adsgram.init({ blockId, debug: true, debugBannerType: "FullscreenMedia" });
 
         // 4) Show native Adsgram ad — SDK handles its own full-screen UI
         const result = await AdController.show();
