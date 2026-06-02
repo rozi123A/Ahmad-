@@ -467,8 +467,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <div style={{ position: "absolute", top: -100, left: "50%", transform: "translateX(-50%)", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(239,68,68,0.15) 0%, transparent 70%)", pointerEvents: "none" }} />
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22, padding: "36px 28px", textAlign: "center", zIndex: 1 }}>
             <div style={{ position: "relative" }}>
-              <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}></div>
-              <div style={{ position: "absolute", bottom: -4, right: -4, width: 30, height: 30, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}></div>
+              <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(239,68,68,0.1)", border: "2px solid rgba(239,68,68,0.35)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>🚫</div>
+              <div style={{ position: "absolute", bottom: -4, right: -4, width: 30, height: 30, borderRadius: "50%", background: "#EF4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>✕</div>
             </div>
             <div>
               <h1 style={{ color: "#EF4444", fontSize: 24, fontWeight: 900, margin: "0 0 6px", letterSpacing: "-0.5px" }}>Account Permanently Banned</h1>
@@ -636,8 +636,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 {/* Quick Stats */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { emoji: "", label: t.today_ads, value: Math.min(safeUser.todayAds, 50), color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", tab: "ads" },
-                    { emoji: "", label: t.spins, value: `${safeUser.spinsLeft}/5`, color: "#EC4899", bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", tab: "spin" },
+                    { emoji: "📺", label: t.today_ads, value: Math.min(safeUser.todayAds, 50), color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)", tab: "ads" },
+                    { emoji: "🎰", label: t.spins, value: `${safeUser.spinsLeft}/5`, color: "#EC4899", bg: "rgba(236,72,153,0.08)", border: "rgba(236,72,153,0.2)", tab: "spin" },
                   ].map((s, i) => (
                     <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(s.tab); }} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 18, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer", textAlign: "left", transition: "transform 0.15s", width: "100%" }}>
                       <span style={{ fontSize: 26 }}>{s.emoji}</span>
@@ -655,8 +655,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                 {/* Daily Gift */}
                 <div style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 20, overflow: "hidden" }}>
                   <div style={{ padding: "11px 16px", borderBottom: "1px solid rgba(139,92,246,0.12)", display: "flex", alignItems: "center", gap: 8, background: "rgba(139,92,246,0.08)" }}>
-                    <span style={{ fontSize: 15 }}></span>
-                    <span style={{ fontSize: 11, fontWeight: 800, color: "#C4B5FD", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.daily_gift_title}</span>
+                    <span style={{ fontSize: 15 }}>🎁</span>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: "#C4B5FD", textTransform: "uppercase", letterSpacing: "0.1em" }}>{t.daily_gift_title}}</span>
                   </div>
                   <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
                     <DailyGiftBox
@@ -685,8 +685,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                     <span style={{ fontSize: 11, fontWeight: 800, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em" }}>⚡ الإجراءات السريعة</span>
                   </div>
                   {[
-                    { emoji: "", label: t.watch_ad, sub: `+${safeUser.adReward} ${t.points}`, color: "#F59E0B", tab: "ads" },
-                    { emoji: "", label: t.try_luck, sub: t.random_prize, color: "#EC4899", tab: "spin" },
+                    { emoji: "📺", label: t.watch_ad, sub: `+${safeUser.adReward} ${t.points}`, color: "#F59E0B", tab: "ads" },
+                    { emoji: "🎡", label: t.try_luck, sub: t.random_prize, color: "#EC4899", tab: "spin" },
                     { emoji: "👥", label: t.invite_friend, sub: t.extra_reward, color: "#3B82F6", tab: "friends" },
                   ].map((a, i, arr) => (
                     <button key={i} onClick={() => { if (!isNavLocked) setActiveTab(a.tab); }} style={{ width: "100%", padding: "13px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "transparent", border: "none", cursor: "pointer", color: "#fff", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
