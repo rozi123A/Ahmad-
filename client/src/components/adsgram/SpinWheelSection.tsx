@@ -155,12 +155,18 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
     ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.stroke();
   }
 
+  const handleSpinAdError = (description?: string) => {
+    setPendingToken(null);
+    onUnlock?.();
+    if (description) {
+      toast({ title: t.error, description: description.slice(0, 120), variant: 'destructive' });
+    }
+  };
+
   const showAdsgramForSpin = useAdsgram({
     blockId: user.adsgramBlockId || "33769",
     onReward: () => handleAdClaim(),
-    onError: (err) => {
-      toast({ title: t.error, description: err.description || t.ad_load_failed, variant: "destructive" });
-    }
+    onError: (err) => handleSpinAdError(err.description || t.ad_load_failed),
   });
 
   const handleWatchSpinAdClick = async () => {
@@ -176,6 +182,8 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       // Show Adsgram Ad
       showAdsgramForSpin();
     } catch (e: any) {
+      setPendingToken(null);
+      onUnlock?.();
       toast({ title: t.error, description: e?.message || t.ad_load_failed, variant: "destructive" });
     } finally {
       setTokenLoading(false);
