@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Clock } from "@phosphor-icons/react";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import { translations, type Language } from "@/lib/i18n";
-
-const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/sad.min.js";
-// Must match server MIN_AD_SECONDS (15) + 1 buffer
-const MIN_CLAIM_MS = 16_000;
+import { useAdsgram } from "@/hooks/useAdsgram";
 
 interface UserData {
   telegramId: number;
@@ -25,47 +22,10 @@ interface WatchAdsSectionProps {
   onUnlock?: () => void;
 }
 
-function loadAdsgramSDK(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if ((window as any).Adsgram) { resolve(); return; }
-    const old = document.getElementById("adsgram-sdk");
-    if (old) old.remove();
-    const script = document.createElement("script");
-    script.id = "adsgram-sdk";
-    script.src = ADSGRAM_SDK_URL;
-    script.async = true;
-    let settled = false;
-    const timeout = setTimeout(() => {
-      if (!settled) { settled = true; reject(new Error("Adsgram SDK timeout")); }
-    }, 10000);
-    script.onload = () => {
-      let attempts = 0;
-      const poll = setInterval(() => {
-        attempts++;
-        if ((window as any).Adsgram) {
-          clearInterval(poll); clearTimeout(timeout);
-          if (!settled) { settled = true; resolve(); }
-        } else if (attempts > 40) {
-          clearInterval(poll); clearTimeout(timeout);
-          if (!settled) { settled = true; reject(new Error("window.Adsgram not ready")); }
-        }
-      }, 250);
-    };
-    script.onerror = () => {
-      clearTimeout(timeout);
-      if (!settled) { settled = true; reject(new Error("Failed to load Adsgram SDK")); }
-    };
-    document.head.appendChild(script);
-  });
-}
-
 export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock }: WatchAdsSectionProps) {
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
-  const [adLoading, setAdLoading] = useState(false);
-  // "loading" | "watching" | "waiting" | null
-  const [adPhase, setAdPhase] = useState<"loading" | "watching" | "waiting" | null>(null);
-  const [waitCountdown, setWaitCountdown] = useState(0);
-  const waitInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
   const { toast } = useToast();
   const t = translations[lang];
   const getTokenMutation = trpc.ads.getToken.useMutation();
@@ -88,23 +48,13 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     }
   }, [user.lastAdTime, user.adCooldown]);
 
-  // Cleanup wait interval on unmount
-  useEffect(() => () => { if (waitInterval.current) clearInterval(waitInterval.current); }, []);
-
-  const startWaitCountdown = (ms: number) => {
-    setWaitCountdown(Math.ceil(ms / 1000));
-    setAdPhase("waiting");
-    if (waitInterval.current) clearInterval(waitInterval.current);
-    waitInterval.current = setInterval(() => {
-      setWaitCountdown(prev => {
-        if (prev <= 1) {
-          if (waitInterval.current) clearInterval(waitInterval.current);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
+  const showAdsgram = useAdsgram({
+    blockId: user.adsgramBlockId || "YOUR_DEFAULT_BLOCK_ID",
+    onReward: () => handleClaim(),
+    onError: (err) => {
+      toast({ title: t.error, description: err.description || t.ad_error_desc, variant: "destructive" });
+    }
+  });
 
   const handleWatchAd = async () => {
     if (user.todayAds >= 50) {
@@ -115,49 +65,31 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       toast({ title: t.notice, description: t.wait_before_next + " " + Math.ceil(cooldownRemaining) + " " + t.seconds, variant: "destructive" });
       return;
     }
-
-    setAdLoading(true);
-    setAdPhase("loading");
-    onLock?.();
-
+    
+    setTokenLoading(true);
     try {
-      // 1) Get token from server — this starts the clock server-side
       const initData = (window as any).Telegram?.WebApp?.initData || "";
       const tokenData = await getTokenMutation.mutateAsync({ telegramId: user.telegramId, initData });
       if (!tokenData.success || !tokenData.token) throw new Error(tokenData.message || t.ad_error_desc);
-      const token = tokenData.token;
-      const tokenCreatedAt = Date.now();
+      setPendingToken(tokenData.token);
+      onLock?.();
+      
+      // Show Adsgram Ad
+      showAdsgram();
+    } catch (e: any) {
+      toast({ title: t.error, description: e?.message || t.ad_error_desc, variant: "destructive" });
+    } finally {
+      setTokenLoading(false);
+    }
+  };
 
-      // 2) Try to show Adsgram ad
-      const blockId = user.adsgramBlockId;
-      let adWatched = false;
-      if (blockId) {
-        try {
-          setAdPhase("loading");
-          await loadAdsgramSDK();
-          const AdController = (window as any).Adsgram.init({ blockId, debug: true, debugBannerType: "FullscreenMedia" });
-          setAdPhase("watching");
-          const result = await AdController.show();
-          adWatched = result?.done === true;
-        } catch {
-          // No ads available — will wait minimum time below
-          adWatched = false;
-        }
-      }
-
-      // 3) Enforce minimum claim time (server bans if < 15s, instant ban if < 8s)
-      const elapsed = Date.now() - tokenCreatedAt;
-      const remaining = MIN_CLAIM_MS - elapsed;
-      if (remaining > 0) {
-        startWaitCountdown(remaining);
-        await new Promise<void>(resolve => setTimeout(resolve, remaining));
-      }
-      setAdPhase(null);
-
-      // 4) Claim reward — always after minimum wait
+  const handleClaim = async () => {
+    if (!pendingToken) return;
+    try {
+      const initData = (window as any).Telegram?.WebApp?.initData || "";
       const claimData = await claimMutation.mutateAsync({
         telegramId: user.telegramId,
-        token,
+        token: pendingToken,
         initData,
         type: "points",
       });
@@ -174,22 +106,12 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       const msg = error?.description || error?.message || t.ad_error_desc;
       toast({ title: t.error, description: String(msg).slice(0, 120), variant: "destructive" });
     } finally {
-      setAdLoading(false);
-      setAdPhase(null);
-      if (waitInterval.current) clearInterval(waitInterval.current);
+      setPendingToken(null);
       onUnlock?.();
     }
   };
 
-  const canWatch = cooldownRemaining === 0 && user.todayAds < 50 && !adLoading;
-
-  const buttonLabel = () => {
-    if (adPhase === "loading") return "جارٍ تحميل الإعلان...";
-    if (adPhase === "watching") return "شاهد الإعلان كاملاً...";
-    if (adPhase === "waiting") return `يتم التحقق... ${waitCountdown}ث`;
-    if (cooldownRemaining > 0) return t.wait + " " + Math.ceil(cooldownRemaining) + " " + t.seconds;
-    return t.watch_ad;
-  };
+  const canWatch = cooldownRemaining === 0 && user.todayAds < 50 && !tokenLoading;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -220,24 +142,6 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
             <p style={{ fontSize: 20, fontWeight: 900, color: "#EF4444", fontVariantNumeric: "tabular-nums" }}>
               {Math.floor(cooldownRemaining / 60).toString().padStart(2, "0")}:{Math.floor(cooldownRemaining % 60).toString().padStart(2, "0")}
             </p>
-          </div>
-        </div>
-      )}
-
-      {/* Waiting phase: show progress bar */}
-      {adPhase === "waiting" && (
-        <div style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 16, padding: "12px 16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#A78BFA" }}>جارٍ التحقق من مشاهدة الإعلان</p>
-            <p style={{ fontSize: 14, fontWeight: 900, color: "#A78BFA" }}>{waitCountdown}ث</p>
-          </div>
-          <div style={{ height: 4, background: "rgba(139,92,246,0.15)", borderRadius: 2, overflow: "hidden" }}>
-            <div style={{
-              height: "100%", background: "linear-gradient(90deg,#8B5CF6,#A78BFA)",
-              borderRadius: 2,
-              width: `${Math.max(0, 100 - (waitCountdown / 16) * 100)}%`,
-              transition: "width 1s linear",
-            }} />
           </div>
         </div>
       )}
@@ -275,7 +179,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
           flexShrink: 0,
           boxShadow: canWatch ? "0 0 0 3px rgba(255,255,255,0.15)" : "none",
         }}>
-          {adLoading ? (
+          {tokenLoading ? (
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
               <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
                 <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
@@ -292,7 +196,9 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
             </svg>
           )}
         </span>
-        <span style={{ letterSpacing: "0.02em" }}>{buttonLabel()}</span>
+        <span style={{ letterSpacing: "0.02em" }}>
+          {tokenLoading ? "جارٍ التحميل..." : cooldownRemaining > 0 ? t.wait + " " + Math.ceil(cooldownRemaining) + " " + t.seconds : t.watch_ad}
+        </span>
         <style>{`@keyframes shimmer { 0%{left:-75%} 100%{left:125%} }`}</style>
       </button>
 
