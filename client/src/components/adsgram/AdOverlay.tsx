@@ -78,16 +78,10 @@ export default function AdOverlay({
 
   async function runAdsgram(id: string) {
     try {
-      // Load SDK dynamically — works even if index.html preload failed
       await loadAdsgramSDK();
-
-      // init() is SYNCHRONOUS
       const AdController = (window as any).Adsgram.init({ blockId: id });
-
-      // Remove our overlay so Adsgram's native UI renders freely
       setState("gone");
       await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-
       const result = await AdController.show();
       if (result?.done) {
         onClaim();
@@ -95,27 +89,34 @@ export default function AdOverlay({
         onClose();
       }
     } catch (err: any) {
-      const msg = err?.description || err?.message || "";
-      if (msg && msg.length < 120) {
-        setErrorMsg(msg);
-        setState("error");
-        setTimeout(onClose, 2500);
-      } else {
-        onClose();
-      }
+      // Adsgram failed (no ads available) — fallback to Monetag automatically
+      console.warn("[AdOverlay] Adsgram failed, falling back to Monetag:", err?.message);
+      runMonetag();
     }
   }
 
   function runMonetag() {
+    setState("loading");
     (window as any).monetag_zone_id = monetagZoneId;
     const script = document.createElement("script");
     script.src = monetagScriptUrl + "?zone=" + monetagZoneId + "&t=" + Date.now();
     script.async = true;
     script.setAttribute("data-zone", monetagZoneId);
-    script.onload = () => { setTimeout(onClaim, (seconds + 2) * 1000); };
-    script.onerror = () => { onClose(); };
+    script.onload = () => {
+      setState("gone");
+      setTimeout(onClaim, (seconds + 2) * 1000);
+    };
+    script.onerror = () => {
+      // Both Adsgram and Monetag failed — still give reward to not frustrate user
+      setState("gone");
+      setTimeout(onClaim, 3000);
+    };
     document.body.appendChild(script);
-    setTimeout(onClaim, (seconds + 3) * 1000);
+    // Safety timeout — always claim after seconds+3
+    setTimeout(() => {
+      setState("gone");
+      onClaim();
+    }, (seconds + 3) * 1000);
   }
 
   if (state === "gone") return null;
