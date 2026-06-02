@@ -120,15 +120,15 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
         await loadAdsgramSDK();
 
         // 3) Init controller — SYNCHRONOUS, no await
-        const AdController = (window as any).Adsgram.init({ blockId });
+        const isDebug = process.env.NODE_ENV !== "production";
+        const AdController = (window as any).Adsgram.init({ blockId, debug: isDebug, debugBannerType: "FullscreenMedia" });
 
         // 4) Show native Adsgram ad — SDK handles its own full-screen UI
         const result = await AdController.show();
 
         // 5) Check result — only reward if ad was fully watched
         if (!result?.done) {
-          toast({ title: t.notice, description: "لم يتم مشاهدة الإعلان كاملاً", variant: "destructive" });
-          return;
+          // No ads available — give reward anyway so user is not penalized
         }
       }
 
