@@ -434,12 +434,39 @@ import { useState, useEffect, useCallback, useRef } from "react";
       );
 
       if (errorType === "no_telegram") return (
-        <div style={{ minHeight: "100vh", background: "#070711", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 8 }}></div>
-          <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 900, margin: 0 }}>افتح التطبيق من داخل Telegram</h2>
-          <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 14, lineHeight: 1.6, margin: 0 }}>
-            هذا التطبيق يعمل فقط كـ Mini App داخل Telegram.<br/>ابحث عن البوت وافتحه من هناك.
-          </p>
+        <div style={{ minHeight:"100vh", background:"linear-gradient(170deg,#060610 0%,#0d0820 60%,#060610 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px", textAlign:"center", fontFamily:"'Segoe UI',sans-serif", position:"relative", overflow:"hidden" }}>
+          <style>{`
+            @keyframes lp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+            @keyframes lp-pulse{0%,100%{opacity:0.5;transform:scale(1)}50%{opacity:0.8;transform:scale(1.08)}}
+            @keyframes lp-orb1{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,20px)}}
+            @keyframes lp-orb2{0%,100%{transform:translate(0,0)}50%{transform:translate(20px,-30px)}}
+          `}</style>
+          <div style={{ position:"fixed",width:350,height:350,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,92,246,0.18),transparent 70%)",top:"-80px",right:"-60px",animation:"lp-orb1 9s ease-in-out infinite",pointerEvents:"none" }} />
+          <div style={{ position:"fixed",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(236,72,153,0.12),transparent 70%)",bottom:"-60px",left:"-40px",animation:"lp-orb2 11s ease-in-out infinite",pointerEvents:"none" }} />
+          <div style={{ animation:"lp-float 3s ease-in-out infinite",marginBottom:24,position:"relative" }}>
+            <div style={{ position:"absolute",inset:-20,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,92,246,0.3),transparent 70%)",animation:"lp-pulse 2.5s ease-in-out infinite" }} />
+            <div style={{ width:96,height:96,borderRadius:28,background:"linear-gradient(135deg,#7C3AED,#EC4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,boxShadow:"0 0 50px rgba(124,58,237,0.5)" }}>⭐</div>
+          </div>
+          <h1 style={{ color:"#fff",fontSize:28,fontWeight:900,margin:"0 0 8px",letterSpacing:"-0.5px" }}>EarnStar</h1>
+          <p style={{ color:"rgba(255,255,255,0.5)",fontSize:13,margin:"0 0 28px",fontWeight:500 }}>Watch Ads · Spin & Win · Earn Telegram Stars</p>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:32,width:"100%",maxWidth:340 }}>
+            {[{icon:"📺",label:"Watch Ads",sub:"Earn points"},{icon:"🎡",label:"Spin Wheel",sub:"Win prizes"},{icon:"💸",label:"Withdraw",sub:"Get ⭐ Stars"}].map((f,i)=>(
+              <div key={i} style={{ background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"14px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
+                <span style={{ fontSize:24 }}>{f.icon}</span>
+                <span style={{ fontSize:10,fontWeight:800,color:"#E2E8F0" }}>{f.label}</span>
+                <span style={{ fontSize:9,color:"rgba(255,255,255,0.35)" }}>{f.sub}</span>
+              </div>
+            ))}
+          </div>
+          <a href="https://t.me/EarnStar123Bot/app" target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,width:"100%",maxWidth:300,height:56,borderRadius:18,background:"linear-gradient(135deg,#7C3AED,#4F46E5)",color:"#fff",fontWeight:900,fontSize:17,textDecoration:"none",boxShadow:"0 8px 32px rgba(124,58,237,0.45)",marginBottom:12 }}>
+            <span style={{ fontSize:22 }}>✈️</span> Open in Telegram
+          </a>
+          <a href="https://t.me/EarnStar123Bot" target="_blank" rel="noopener noreferrer"
+            style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:8,width:"100%",maxWidth:300,height:46,borderRadius:16,background:"rgba(255,255,255,0.07)",color:"rgba(255,255,255,0.7)",fontWeight:700,fontSize:14,textDecoration:"none",border:"1px solid rgba(255,255,255,0.12)" }}>
+            🤖 @EarnStar123Bot
+          </a>
+          <p style={{ color:"rgba(255,255,255,0.2)",fontSize:11,marginTop:20 }}>This Mini App works inside Telegram only</p>
         </div>
       );
 
