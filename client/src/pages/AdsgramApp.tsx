@@ -195,7 +195,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
             const telegramUser = tg.initDataUnsafe?.user;
             const startParam = tg.initDataUnsafe?.start_param
               || new URLSearchParams(window.location.search).get('ref') || undefined;
-            if (!telegramUser) { setErrorType("no_user"); setLoading(false); return; }
+            if (!telegramUser) {
+              // No user data (opened in browser) — use demo mode
+              setUser({ ...DEFAULT_DEMO_USER });
+              setLoading(false);
+              return;
+            }
             setDisplayName(telegramUser.first_name || telegramUser.username || "");
               //  Membership check
               if (!memberVerifiedRef.current) {
@@ -272,7 +277,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
               if (data?.success && data.user) setUser(data.user as UserData);
               else setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id });
             } catch { setUser({ ...DEFAULT_DEMO_USER, telegramId: telegramUser.id }); }
-          } else { setErrorType("no_telegram"); }
+          } else {
+            // No Telegram context (browser/moderator review) — use demo mode
+            setUser({ ...DEFAULT_DEMO_USER });
+          }
         } catch { setErrorType("no_telegram"); }
         finally { setLoading(false); }
       };
