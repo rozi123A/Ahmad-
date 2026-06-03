@@ -578,8 +578,13 @@ export const appRouter = router({
     getToken: publicProcedure
       .input(z.object({ telegramId: z.number(), initData: z.string(), type: z.enum(["points", "spin"]).optional().default("points") }))
       .mutation(async ({ input }) => {
-        const verified = verifyTelegramWebApp(input.initData);
-        if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
+        // Demo mode — allow browser/moderator access without Telegram auth
+        const isDemoMode = input.telegramId === 123456789 && !input.initData;
+        if (!isDemoMode) {
+          const verified = verifyTelegramWebApp(input.initData);
+          if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
+        }
+        if (isDemoMode) return { success: true, token: "demo-token-" + Date.now() };
 
         const user = await getTelegramUser(input.telegramId);
         if (!user) return { success: false, message: "User not found" };
@@ -695,6 +700,13 @@ export const appRouter = router({
     perform: publicProcedure
       .input(z.object({ telegramId: z.number(), initData: z.string() }))
       .mutation(async ({ input }) => {
+        // Demo mode — allow browser/moderator access without Telegram auth
+        const isDemoSpin = input.telegramId === 123456789 && !input.initData;
+        if (isDemoSpin) {
+          const prizes = [50,75,100,150,200,250,500,1000];
+          const prize = prizes[Math.floor(Math.random()*prizes.length)];
+          return { success: true, prize, balance: prize, spinsLeft: 4 };
+        }
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
 
