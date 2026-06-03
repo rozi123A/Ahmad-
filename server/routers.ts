@@ -619,6 +619,11 @@ export const appRouter = router({
         type: z.enum(["points", "spin"]).default("points")
       }))
       .mutation(async ({ input }) => {
+        // Demo mode — browser/moderator review without Telegram auth
+        const isDemoClaim = input.telegramId === 123456789 && !input.initData;
+        if (isDemoClaim) {
+          return { success: true, balance: 100, spinsLeft: 5, totalEarned: 100 };
+        }
         const verified = verifyTelegramWebApp(input.initData);
         if (!verified || verified.id !== input.telegramId) return { success: false, message: "Invalid data" };
 
