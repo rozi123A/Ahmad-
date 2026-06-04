@@ -17,7 +17,7 @@ export interface useAdsgramParams {
   onError?: (result: ShowPromiseResult) => void;
 }
 
-const ADSGRAM_SDK = "https://sad.adsgram.ai/js/sad.min.js";
+const ADSGRAM_SDK = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
 
 function loadAdsgramSDK(): Promise<void> {
   return new Promise((resolve, reject) => {
