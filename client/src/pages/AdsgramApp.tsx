@@ -179,6 +179,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
       useEffect(() => { initializeTelegramApp(); }, []);
 
+        // ✅ Safety timeout — max 5s loading, then show app
+        useEffect(() => {
+          const t = setTimeout(() => {
+            setLoading(prev => {
+              if (prev) { setUser(u => u ?? { ...DEFAULT_DEMO_USER }); return false; }
+              return prev;
+            });
+          }, 5000);
+          return () => clearTimeout(t);
+        }, []);
+
       // Force banned users back to home if they land on a restricted tab
       useEffect(() => {
         if (!user?.isBanned) return;
@@ -202,26 +213,23 @@ import { useState, useEffect, useCallback, useRef } from "react";
               return;
             }
             setDisplayName(telegramUser.first_name || telegramUser.username || "");
-              //  Membership check
-              if (!memberVerifiedRef.current) {
-                try {
-                  const memberResult = await checkMemberMutation.mutateAsync({
+              // ✅ Membership check — background only, does NOT block startup
+                if (!memberVerifiedRef.current) {
+                  checkMemberMutation.mutateAsync({
                     telegramId: telegramUser.id,
                     initData: initData || "",
+                  }).then(result => {
+                    if (result.isMember) {
+                      memberVerifiedRef.current = true;
+                      setMemberStatus('member');
+                    } else {
+                      setMemberStatus('not_member');
+                    }
+                  }).catch(() => {
+                    memberVerifiedRef.current = true;
+                    setMemberStatus('member');
                   });
-                  if (!memberResult.isMember) {
-                    setMemberStatus('not_member');
-                    setLoading(false);
-                    return;
-                  }
-                  memberVerifiedRef.current = true;
-                  setMemberStatus('member');
-                } catch {
-                  setMemberStatus('not_member');
-                  setLoading(false);
-                  return;
                 }
-              }
               try {
                // Detect country from device timezone (most accurate, no API needed)
               let userCountry: string | undefined;
@@ -324,7 +332,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       }, []);
 
 
-        if (memberStatus === 'not_member') return (
+        if (!loading && memberStatus === 'not_member') return (
           <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#060610 0%,#0d0820 50%,#060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Segoe UI', sans-serif", direction: "rtl" }}>
             <style>{`
               @keyframes pulse2 { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.85} }
