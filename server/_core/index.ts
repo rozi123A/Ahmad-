@@ -180,6 +180,40 @@ async function startServer() {
   // ── /healthz — alias for uptime monitors ──
   app.get("/healthz", (_req, res) => res.status(200).send("OK"));
 
+  // ── /api/adsgram/reward — Adsgram server-to-server reward callback ──
+  // Adsgram calls this URL after ad is watched: /api/adsgram/reward?userId={userId}
+  app.get("/api/adsgram/reward", async (req, res) => {
+    const userId = req.query.userId as string;
+    const blockId = req.query.blockId as string | undefined;
+    console.log(`[Adsgram] Reward callback — userId:${userId} blockId:${blockId}`);
+
+    if (!userId || isNaN(Number(userId))) {
+      console.warn("[Adsgram] Reward callback: missing or invalid userId");
+      return res.status(400).json({ success: false, message: "Missing userId" });
+    }
+
+    try {
+      // Import DB helpers dynamically to avoid circular deps
+      const { upsertTelegramUser, getTelegramUser, createTransaction } = await import("../storage");
+      const telegramId = Number(userId);
+      const user = await getTelegramUser(telegramId);
+      if (!user) {
+        console.warn(`[Adsgram] Reward callback: user ${telegramId} not found`);
+        return res.status(200).json({ success: true, message: "ok" }); // always 200 to Adsgram
+      }
+
+      const reward = Number((await import("./../_core/env")).ENV.adReward || 10);
+      const currentBalance = Number(user.balance) || 0;
+      await upsertTelegramUser({ telegramId, balance: currentBalance + reward });
+      await createTransaction({ telegramId, type: "ad", points: reward, metadata: JSON.stringify({ source: "adsgram_callback", blockId }) });
+      console.log(`[Adsgram] ✅ Reward ${reward} pts given to userId:${telegramId}`);
+      return res.status(200).json({ success: true });
+    } catch (err: any) {
+      console.error("[Adsgram] Reward callback error:", err?.message);
+      return res.status(200).json({ success: true }); // always 200 to Adsgram
+    }
+  });
+
     // ── Ad view page ──
     const monetagZone = process.env.MONETAG_ZONE_ID || "11043107";
     const monetagScript = process.env.MONETAG_SCRIPT_URL || "https://n6wxm.com/vignette.min.js";
