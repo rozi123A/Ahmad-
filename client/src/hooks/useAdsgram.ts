@@ -16,7 +16,7 @@ export interface useAdsgramParams {
 }
 
 const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
-const ADSGRAM_UNIT_ID = "34059";
+const ADSGRAM_UNIT_ID = "34098";
 
 let _sdkPromise: Promise<void> | null = null;
 
