@@ -45,7 +45,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       minWithdraw: 10000,
       starsRate: 1000,
       adCooldown: 30,
-      adsgramBlockId: "",
+      adsgramBlockId: "34021",
       monetagZoneId: "",
       monetagScriptUrl: "",
       lastAdTime: null,
