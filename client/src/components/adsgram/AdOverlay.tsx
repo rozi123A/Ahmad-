@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { translations } from "@/lib/i18n";
 
-const ADSGRAM_SDK = "https://sad.adsgram.ai/js/sad.min.js";
+const ADSGRAM_SDK = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
+const DEFAULT_ADSGRAM_UNIT = "34021"; // fallback unit ID
 
 interface AdOverlayProps {
   blockId?: string;
@@ -81,11 +82,11 @@ export default function AdOverlay({
   useEffect(() => {
     if (doneRef.current) return;
     doneRef.current = true;
-    if (blockId) runAdsgram(blockId);
-    else runMonetag();
+    runAdsgram(blockId || DEFAULT_ADSGRAM_UNIT);
   }, []);
 
   async function runAdsgram(id: string) {
+    id = id || DEFAULT_ADSGRAM_UNIT; // use default unit if none provided
     try {
       await loadAdsgramSDK();
       const AdController = (window as any).Adsgram.init({ blockId: id });
