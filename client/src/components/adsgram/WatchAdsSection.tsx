@@ -122,7 +122,8 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
     <>
       {showAdOverlay && (
         <AdOverlay
-          blockId={user.adsgramBlockId || "34059"}
+telegramId={user.telegramId}
+                    blockId={user.adsgramBlockId || "34098"}
           monetagZoneId={user.monetagZoneId || "11092330"}
           monetagScriptUrl={user.monetagScriptUrl || "https://n6wxm.com/vignette.min.js"}
           seconds={15}
