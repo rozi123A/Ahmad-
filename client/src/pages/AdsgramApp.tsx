@@ -462,8 +462,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#C4B5FD,#FFD700,#A855F7,#0E8FEF)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
             EarnStar
           </h1>
-          <p style={{ fontSize:11, color:"rgba(168,85,247,0.75)", fontWeight:700, margin:0, letterSpacing:"0.18em", textTransform:"uppercase" }}>
-            اربح DGB · شاهد الإعلانات واكسب
+          <p key={loadTextIdx} style={{ fontSize:11, color:"rgba(168,85,247,0.85)", fontWeight:700, margin:0, letterSpacing:"0.12em", textTransform:"uppercase", animation:"fadeSlide 2.4s ease-in-out", minHeight:18 }}>
+            {LOAD_TEXTS[loadTextIdx]}
           </p>
 
           {/* Dots loader */}
