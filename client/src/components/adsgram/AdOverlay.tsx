@@ -147,8 +147,6 @@ import { useEffect, useRef, useState } from "react";
     setOverlayState("fallback");
     timerRef.current = setTimeout(() => safeClose("ad_unavailable"), 5000);
   }
-      }, (seconds + 5) * 1000);
-    }
 
     // ─── واجهات العرض ───────────────────────────────────────────
     if (overlayState === "gone") return null;
