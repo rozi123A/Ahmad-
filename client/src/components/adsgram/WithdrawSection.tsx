@@ -4,6 +4,24 @@ import { useState, useEffect } from "react";
   import { trpc } from "@/lib/trpc";
   import { translations, type Language } from "@/lib/i18n";
 
+  // ✅ شعار DigiByte احترافي كـ SVG
+  function DGBIcon({ size = 28 }: { size?: number }) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="dgbGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#0E8FEF"/>
+            <stop offset="100%" stopColor="#0044CC"/>
+          </linearGradient>
+        </defs>
+        {/* Shield background */}
+        <path d="M20 2 L36 9 L36 22 C36 30 28 37 20 39 C12 37 4 30 4 22 L4 9 Z" fill="url(#dgbGrad)"/>
+        {/* DGB Letter D */}
+        <path d="M13 13 L13 27 L19 27 C24 27 27 24 27 20 C27 16 24 13 19 13 Z M16.5 16 L19 16 C22 16 23.5 17.5 23.5 20 C23.5 22.5 22 24 19 24 L16.5 24 Z" fill="white"/>
+      </svg>
+    );
+  }
+
   interface UserData { telegramId: number; balance: number; minWithdraw: number; starsRate: number; }
   interface WithdrawSectionProps { user: UserData; lang: Language; onSuccess: () => void; }
 
@@ -50,10 +68,10 @@ import { useState, useEffect } from "react";
         color: "#FFD700" 
       },
       dgb: { 
-        icon: "🟦", 
+        icon: "dgb", 
         label: "DigiByte (DGB)", 
-        desc: "سحب عبر محفظة DigiByte", 
-        color: "#0066CC" 
+        desc: "سحب عبر محفظة DigiByte الآمنة", 
+        color: "#0E8FEF" 
       },
     };
 
@@ -75,7 +93,7 @@ import { useState, useEffect } from "react";
     const handleWithdraw = async () => {
       // Check if user has wallet for DGB method
       if (method === "dgb" && !dgbWallet) {
-        toast({ title: "🟦 DigiByte", description: t.withdraw_no_wallet_error || "أضف عنوان محفظة DigiByte أولاً", variant: "destructive" });
+        toast({ title: " DigiByte", description: t.withdraw_no_wallet_error || "أضف عنوان محفظة DigiByte أولاً", variant: "destructive" });
         setShowWalletSetup(true);
         return;
       }
@@ -166,7 +184,9 @@ import { useState, useEffect } from "react";
                   cursor: "pointer", transition: "all 0.2s", textAlign: "left"
                 }}
               >
-                <span style={{ fontSize: 20 }}>{methodInfo[m].icon}</span>
+                <span style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32 }}>
+                    {m === "dgb" ? <DGBIcon size={28} /> : <span style={{ fontSize: 22 }}>{methodInfo[m].icon}</span>}
+                  </span>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: method === m ? methodInfo[m].color : "#fff", marginBottom: 2 }}>{methodInfo[m].label}</p>
                   <p style={{ fontSize: 10, color: "rgba(255,255,255,0.45)", lineHeight: 1.4 }}>{methodInfo[m].desc}</p>
@@ -193,7 +213,7 @@ import { useState, useEffect } from "react";
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Wallet size={16} style={{ color: methodInfo[method].color }} />
                 <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.7)" }}>
-                  🟦 محفظة DigiByte (DGB)
+                  محفظة DigiByte (DGB)
                 </p>
               </div>
               <button 
