@@ -62,8 +62,8 @@ import { useState, useEffect } from "react";
 
     const methodInfo: Record<WithdrawalMethod, { icon: string; label: string; desc: string; color: string }> = {
       telegram_stars: { 
-        icon: "⭐", 
-        label: t.withdraw_method_stars || "Telegram Stars", 
+        icon: "⟠", 
+        label: t.withdraw_method_stars || "DigiByte (DGB)", 
         desc: t.withdraw_method_stars_desc || "استلم نجوم تيليغرام مباشرة", 
         color: "#FFD700" 
       },
@@ -137,8 +137,8 @@ import { useState, useEffect } from "react";
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <p style={{ fontSize: 9, color: "rgba(16,185,129,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{t.stars_equivalent}</p>
-              <p style={{ fontSize: 22, fontWeight: 900, color: "#FFD700" }}>⭐ {Math.floor(user.balance / user.starsRate)}</p>
+              <p style={{ fontSize: 9, color: "rgba(14,143,239,0.6)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>DGB المكافأة</p>
+              <p style={{ fontSize: 22, fontWeight: 900, color: "#0E8FEF" }}>⟠ {((user.balance / 15000) * 0.05).toFixed(4)}</p>
             </div>
           </div>
 
@@ -284,7 +284,7 @@ import { useState, useEffect } from "react";
                 </div>
                 {numAmount > 0 && (
                   <p style={{ fontSize: 11, color: methodInfo[method].color, fontWeight: 600, marginTop: 6 }}>
-                    {methodInfo[method].icon} ≈ {method === "telegram_stars" ? `${starsWorth} Telegram Stars` : `${cryptoAmount} DGB`}
+                    ⟠ {cryptoAmount} DGB
                   </p>
                 )}
               </div>
@@ -324,7 +324,7 @@ import { useState, useEffect } from "react";
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
-            { label: t.withdraw_conversion_rate || "سعر التحويل", value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⭐` : `15000 ${t.points} = 0.05 DGB`, color: "#A78BFA" },
+            { label: t.withdraw_conversion_rate || "سعر التحويل", value: method === "telegram_stars" ? `${user.starsRate} ${t.points} = 1 ⟠` : `15000 ${t.points} = 0.05 DGB`, color: "#A78BFA" },
             { label: t.withdraw_minimum_amount, value: `${user.minWithdraw.toLocaleString()} ${t.points}`, color: "#60A5FA" },
           ].map((s, i) => (
             <div key={i} style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "12px 14px", textAlign: "center" }}>
