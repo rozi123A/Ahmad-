@@ -167,6 +167,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
           try { localStorage.setItem("jufostars_welcomed", "1"); } catch {}
           setShowWelcome(false);
         };
+
+        // ✅ Rotating subtitle text on loading screen
+        const [loadTextIdx, setLoadTextIdx] = useState(0);
+        const LOAD_TEXTS = [
+          "اربح DGB · شاهد الإعلانات واكسب",
+          "Зарабатывай DGB · Смотри рекламу",
+          "Earn DGB · Watch Ads & Win",
+        ];
+        useEffect(() => {
+          if (!loading) return;
+          const iv = setInterval(() => setLoadTextIdx(i => (i + 1) % 3), 2400);
+          return () => clearInterval(iv);
+        }, [loading]);
       const [activeTab, setActiveTab] = useState("home");
       const [isNavLocked, setIsNavLocked] = useState(false);
       const [lang, setLang] = useState<Language>("ar");
@@ -397,6 +410,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         <div style={{ minHeight: "100vh", background: "#060610", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
           <style>{`
             @keyframes spin { to { transform: rotate(360deg) } }
+              @keyframes fadeSlide { 0%{opacity:0;transform:translateY(8px)} 15%,85%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-8px)} }
               @keyframes dgbFloat { 0%,100%{transform:perspective(200px) rotateX(15deg) translateY(0);text-shadow:0 1px 0 #0960a0,0 2px 0 #084f8a,0 3px 0 #063e70,0 4px 4px rgba(0,0,0,0.4),0 0 20px rgba(14,143,239,0.9);} 50%{transform:perspective(200px) rotateX(15deg) translateY(-5px);text-shadow:0 1px 0 #0a6eb5,0 2px 0 #0960a0,0 3px 0 #084f8a,0 4px 0 #063e70,0 5px 5px rgba(0,0,0,0.3),0 0 30px rgba(14,143,239,1),0 0 50px rgba(168,85,247,0.5);} }
             @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.12);opacity:0.85} }
             @keyframes float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-10px)} }
