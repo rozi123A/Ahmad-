@@ -491,12 +491,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <div style={{ position:"fixed",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(236,72,153,0.12),transparent 70%)",bottom:"-60px",left:"-40px",animation:"lp-orb2 11s ease-in-out infinite",pointerEvents:"none" }} />
           <div style={{ animation:"lp-float 3s ease-in-out infinite",marginBottom:24,position:"relative" }}>
             <div style={{ position:"absolute",inset:-20,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,92,246,0.3),transparent 70%)",animation:"lp-pulse 2.5s ease-in-out infinite" }} />
-            <div style={{ width:96,height:96,borderRadius:28,background:"linear-gradient(135deg,#7C3AED,#EC4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,boxShadow:"0 0 50px rgba(124,58,237,0.5)" }}>⭐</div>
+            <div style={{ width:96,height:96,borderRadius:28,background:"linear-gradient(135deg,#7C3AED,#EC4899)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:48,boxShadow:"0 0 50px rgba(124,58,237,0.5)" }}>💎</div>
           </div>
           <h1 style={{ color:"#fff",fontSize:28,fontWeight:900,margin:"0 0 8px",letterSpacing:"-0.5px" }}>EarnStar</h1>
-          <p style={{ color:"rgba(255,255,255,0.5)",fontSize:13,margin:"0 0 28px",fontWeight:500 }}>Watch Ads · Spin & Win · Earn Telegram Stars</p>
+          <p style={{ color:"rgba(255,255,255,0.5)",fontSize:13,margin:"0 0 28px",fontWeight:500 }}>Watch Ads · Spin & Win · Earn DigiByte (DGB)</p>
           <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:32,width:"100%",maxWidth:340 }}>
-            {[{icon:"📺",label:"Watch Ads",sub:"Earn points"},{icon:"🎡",label:"Spin Wheel",sub:"Win prizes"},{icon:"💸",label:"Withdraw",sub:"Get ⭐ Stars"}].map((f,i)=>(
+            {[{icon:"📺",label:"Watch Ads",sub:"Earn points"},{icon:"🎡",label:"Spin Wheel",sub:"Win prizes"},{icon:"💸",label:"Withdraw",sub:"Get DGB"}].map((f,i)=>(
               <div key={i} style={{ background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"14px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
                 <span style={{ fontSize:24 }}>{f.icon}</span>
                 <span style={{ fontSize:10,fontWeight:800,color:"#E2E8F0" }}>{f.label}</span>
@@ -537,7 +537,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const ADMIN_TELEGRAM_ID = 5279238199;
       const tgUserId = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user?.id;
       const isAdmin = safeUser.isAdmin === true || Number(tgUserId) === ADMIN_TELEGRAM_ID;
-      const starsEquivalent = Math.floor(safeUser.balance / safeUser.starsRate);
+      const dgbEquivalent = ((safeUser.balance / 15000) * 0.05).toFixed(4);
 
       if (safeUser.isBanned && !isAdmin) return (
         <div style={{ minHeight: "100vh", background: "#060408", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative", fontFamily: "'Inter', system-ui, sans-serif" }}>
@@ -664,7 +664,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
             {showWelcome && (
               <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(7,7,17,0.97)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
                 <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
-                  <div style={{ fontSize: 72, marginBottom: 16, filter: "drop-shadow(0 0 32px rgba(255,200,0,0.5))" }}>⭐</div>
+                  <div style={{ fontSize: 72, marginBottom: 16, filter: "drop-shadow(0 0 32px rgba(14,143,239,0.6))" }}>💎</div>
                   <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px", background: "linear-gradient(135deg, #FFD700, #F59E0B, #EF4444)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                     Jufo Stars
                   </h1>
@@ -733,8 +733,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
                         <p style={{ fontSize: 18, fontWeight: 900, color: "#C4B5FD" }}>{safeUser.totalEarned.toLocaleString()}</p>
                       </div>
                       <div style={{ textAlign: "right" }}>
-                        <p style={{ fontSize: 9, color: "rgba(167,139,250,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>Telegram Stars</p>
-                        <p style={{ fontSize: 18, fontWeight: 900, color: "#FFD700" }}> {starsEquivalent}</p>
+                        <p style={{ fontSize: 9, color: "rgba(167,139,250,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 5 }}>DGB المكافأة</p>
+                        <p style={{ fontSize: 18, fontWeight: 900, color: "#0E8FEF" }}>⟠ {dgbEquivalent}</p>
                       </div>
                     </div>
                   </div>
