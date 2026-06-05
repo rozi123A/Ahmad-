@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
   import { translations } from "@/lib/i18n";
 
   // ✅ إعدادات الإنتاج النهائية
-  const ADSGRAM_BLOCK_ID = "34175";
+  const ADSGRAM_BLOCK_ID = "34209";
   const ADSGRAM_SDK_URL  = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
 
   interface AdOverlayProps {
