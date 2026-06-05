@@ -11,7 +11,7 @@ export const ENV = {
   adsgramBlockId: (() => {
     const raw = process.env.ADSGRAM_BLOCK ?? process.env.ADSGRAM_BLOCK_ID ?? "";
     const cleaned = raw.replace(/[^0-9]/g, "");
-    return cleaned.length >= 4 ? cleaned : "34098";
+    return cleaned.length >= 4 ? cleaned : "34209";
   })(),
   monetagZoneId: process.env.MONETAG_ZONE_ID ?? "11043107",
   monetagScriptUrl: process.env.MONETAG_SCRIPT_URL ?? "https://n6wxm.com/vignette.min.js",
