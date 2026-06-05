@@ -1,3 +1,11 @@
+
+        // Fetch live DGB price
+        useEffect(() => {
+          fetch('https://api.coingecko.com/api/v3/simple/price?ids=digibyte&vs_currencies=usd')
+            .then(r => r.json())
+            .then(d => setDgbPrice(d?.digibyte?.usd ?? 0.00105))
+            .catch(() => setDgbPrice(0.00105));
+        }, []);
 import { useState, useEffect, useCallback, useRef } from "react";
     import { CaretRight, ClockCounterClockwise } from "@phosphor-icons/react";
     import { translations, type Language } from "@/lib/i18n";
@@ -183,6 +191,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const [activeTab, setActiveTab] = useState("home");
       const [isNavLocked, setIsNavLocked] = useState(false);
       const [lang, setLang] = useState<Language>("ar");
+      const [dgbPrice, setDgbPrice] = useState<number|null>(null);
     const [displayName, setDisplayName] = useState("");
       const { toast } = useToast();
       const t = translations[lang];
@@ -474,7 +483,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
           </div>
 
           <p style={{ position:"absolute", bottom:28, fontSize:10, color:"rgba(255,255,255,0.12)", fontWeight:600, letterSpacing:"0.18em", textTransform:"uppercase", margin:0 }}>
-            Jufo Stars ✦ DGB Rewards
+            Jufo Utility Stars ✦ DGB Rewards
           </p>
         </div>
       );
@@ -584,6 +593,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         { id: "leaderboard", label: t.leaderboard,                        color: "#FFD700", bannedAllowed: true  },
         { id: "withdraw",    label: t.withdraw,                           color: "#10B981", bannedAllowed: false },
         { id: "stats",       label: (t as any).stats_title || "إحصائياتي", color: "#A78BFA", bannedAllowed: true  },
+        { id: "tools",       label: "أدوات DGB",                            color: "#0E8FEF", bannedAllowed: true  },
         ...(isAdmin ? [{ id: "admin", label: "إدارة", color: "#7C3AED", bannedAllowed: true }] : []),
       ];
       const NAV = NAV_ALL.filter(n => !safeUser.isBanned || n.bannedAllowed || safeUser.isAdmin);
@@ -653,6 +663,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
             <path d="M12 3L20 7V13C20 17.4 16.4 21.4 12 22C7.6 21.4 4 17.4 4 13V7L12 3Z" stroke={c} strokeWidth="2" strokeLinejoin="round" fill={active ? `${color}25` : "none"}/>
             <path d="M9 12L11 14L15 10" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        );
+        if (id === "tools") return (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={s}>
+            <circle cx="12" cy="12" r="9" stroke={c} strokeWidth="2"/>
+            <path d="M8 12h8M12 8v8" stroke={c} strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="12" cy="12" r="3" fill={active ? color : "none"} stroke={c} strokeWidth="1.5"/>
           </svg>
         );
         return null;
@@ -888,6 +905,90 @@ import { useState, useEffect, useCallback, useRef } from "react";
                   streak={safeUser.dailyStreak}
                   badges={safeUser.badges}
                 />
+              </div>
+            )}
+            {activeTab === "tools" && (
+              <div style={{ paddingTop: 6, paddingBottom: 20 }}>
+
+                {/* Header */}
+                <div style={{ marginBottom: 18 }}>
+                  <h2 style={{ fontSize: 22, fontWeight: 900, margin: "0 0 4px", color: "#0E8FEF" }}>⟠ DGB Utility Hub</h2>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", margin: 0 }}>أدوات DigiByte والمعلومات المباشرة</p>
+                </div>
+
+                {/* Live Price Card */}
+                <div style={{ background: "linear-gradient(135deg,rgba(14,143,239,0.13),rgba(14,143,239,0.04))", border: "1px solid rgba(14,143,239,0.28)", borderRadius: 20, padding: "18px 20px", marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <p style={{ fontSize: 9, color: "rgba(14,143,239,0.6)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", margin: "0 0 6px" }}>DGB / USD · السعر المباشر</p>
+                      <p style={{ fontSize: 30, fontWeight: 900, color: "#0E8FEF", margin: "0 0 4px", fontVariantNumeric: "tabular-nums" }}>
+                        {dgbPrice ? "$" + dgbPrice.toFixed(6) : "جارٍ التحميل..."}
+                      </p>
+                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", margin: 0 }}>مصدر: CoinGecko</p>
+                    </div>
+                    <div style={{ width: 54, height: 54, borderRadius: 16, background: "rgba(14,143,239,0.15)", border: "1px solid rgba(14,143,239,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26 }}>⟠</div>
+                  </div>
+                </div>
+
+                {/* Stats Grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                  {([
+                    { label: "الحد الأقصى", value: "21B DGB", icon: "💎", color: "#0E8FEF" },
+                    { label: "خوارزميات التعدين", value: "5 MultiAlgo", icon: "⛏️", color: "#A78BFA" },
+                    { label: "وقت التأكيد", value: "~15 ثانية", icon: "⚡", color: "#F59E0B" },
+                    { label: "سنة الإطلاق", value: "2014", icon: "📅", color: "#10B981" },
+                  ] as const).map((s, i) => (
+                    <div key={i} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 16, padding: "13px 14px" }}>
+                      <p style={{ fontSize: 17, margin: "0 0 5px" }}>{s.icon}</p>
+                      <p style={{ fontSize: 9, color: "rgba(255,255,255,0.35)", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 3px" }}>{s.label}</p>
+                      <p style={{ fontSize: 14, fontWeight: 800, color: s.color, margin: 0 }}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* About DGB */}
+                <div style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 18, padding: "16px 18px", marginBottom: 12 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: "0 0 10px", display: "flex", alignItems: "center", gap: 8 }}>🔷 ما هو DigiByte؟</h3>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.9, margin: "0 0 8px" }}>
+                    DigiByte (DGB) عملة رقمية مفتوحة المصدر أُسست عام 2014. من أسرع وأقدم شبكات البلوكتشين مع تأكيد المعاملات في ~15 ثانية.
+                  </p>
+                  <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.9, margin: 0 }}>
+                    تعتمد 5 خوارزميات تعدين متوازية لأقصى درجات اللامركزية والأمان. الحد الأقصى للعرض 21 مليار DGB.
+                  </p>
+                </div>
+
+                {/* How to earn */}
+                <div style={{ background: "rgba(14,143,239,0.04)", border: "1px solid rgba(14,143,239,0.15)", borderRadius: 18, padding: "16px 18px", marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 800, color: "#0E8FEF", margin: "0 0 14px", display: "flex", alignItems: "center", gap: 8 }}>💰 كيف تحصل على DGB؟</h3>
+                  {([
+                    { step: "١", text: "شاهد إعلانات يومية واكسب نقاطاً", color: "#F59E0B" },
+                    { step: "٢", text: "العب عجلة الحظ للمضاعفة", color: "#EC4899" },
+                    { step: "٣", text: "ادعُ أصدقاءك واكسب مكافآت إضافية", color: "#10B981" },
+                    { step: "٤", text: "حوّل 15,000 نقطة ← 0.05 DGB مباشرةً", color: "#0E8FEF" },
+                  ] as const).map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < 3 ? 10 : 0 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 9, background: s.color + "22", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 900, color: s.color }}>{s.step}</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", margin: 0, lineHeight: 1.5 }}>{s.text}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick actions */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <button onClick={() => { if (!isNavLocked) setActiveTab("ads"); }} style={{ padding: "14px 10px", borderRadius: 16, border: "1px solid rgba(245,158,11,0.25)", background: "rgba(245,158,11,0.08)", cursor: "pointer", textAlign: "center" as const }}>
+                    <p style={{ fontSize: 22, margin: "0 0 4px" }}>📺</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "#F59E0B", margin: 0 }}>شاهد إعلاناً</p>
+                    <p style={{ fontSize: 10, color: "rgba(245,158,11,0.5)", margin: "2px 0 0" }}>+{safeUser.adReward} نقطة</p>
+                  </button>
+                  <button onClick={() => { if (!isNavLocked) setActiveTab("withdraw"); }} style={{ padding: "14px 10px", borderRadius: 16, border: "1px solid rgba(14,143,239,0.25)", background: "rgba(14,143,239,0.08)", cursor: "pointer", textAlign: "center" as const }}>
+                    <p style={{ fontSize: 22, margin: "0 0 4px" }}>⟠</p>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "#0E8FEF", margin: 0 }}>اسحب DGB</p>
+                    <p style={{ fontSize: 10, color: "rgba(14,143,239,0.5)", margin: "2px 0 0" }}>15k نقطة = 0.05 DGB</p>
+                  </button>
+                </div>
+
               </div>
             )}
           </div>
