@@ -176,10 +176,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
           "Earn DGB · Watch Ads & Win",
         ];
         useEffect(() => {
-          if (!loading) return;
-          const iv = setInterval(() => setLoadTextIdx(i => (i + 1) % 3), 2400);
+          const iv = setInterval(() => setLoadTextIdx(i => (i + 1) % 3), 1200);
           return () => clearInterval(iv);
-        }, [loading]);
+        }, []);
+
       const [activeTab, setActiveTab] = useState("home");
       const [isNavLocked, setIsNavLocked] = useState(false);
       const [lang, setLang] = useState<Language>("ar");
