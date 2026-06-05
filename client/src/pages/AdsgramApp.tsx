@@ -397,6 +397,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
         <div style={{ minHeight: "100vh", background: "#060610", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
           <style>{`
             @keyframes spin { to { transform: rotate(360deg) } }
+              @keyframes dgbFloat { 0%,100%{transform:perspective(200px) rotateX(15deg) translateY(0);text-shadow:0 1px 0 #0960a0,0 2px 0 #084f8a,0 3px 0 #063e70,0 4px 4px rgba(0,0,0,0.4),0 0 20px rgba(14,143,239,0.9);} 50%{transform:perspective(200px) rotateX(15deg) translateY(-5px);text-shadow:0 1px 0 #0a6eb5,0 2px 0 #0960a0,0 3px 0 #084f8a,0 4px 0 #063e70,0 5px 5px rgba(0,0,0,0.3),0 0 30px rgba(14,143,239,1),0 0 50px rgba(168,85,247,0.5);} }
             @keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.12);opacity:0.85} }
             @keyframes float { 0%,100%{transform:translateY(0px)} 50%{transform:translateY(-10px)} }
             @keyframes orbMove1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-40px,30px)} }
@@ -429,14 +430,22 @@ import { useState, useEffect, useCallback, useRef } from "react";
           <div style={{ position:"relative", marginBottom:36, animation:"float 3s ease-in-out infinite" }}>
             <div style={{ position:"absolute", inset:-18, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.3),transparent 70%)", animation:"pulse 2.5s ease-in-out infinite" }} />
             <div style={{ position:"absolute", inset:-8, width:116, height:116, borderRadius:"50%", border:"2.5px solid transparent", borderTopColor:"#8B5CF6", borderRightColor:"#0E8FEF", borderBottomColor:"rgba(139,92,246,0.25)", borderLeftColor:"rgba(14,143,239,0.25)", animation:"spin 2s linear infinite" }} />
-            <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(168,85,247,0.5)", borderBottomColor:"rgba(14,143,239,0.4)", animation:"spin 5s linear infinite reverse" }} />
-            <div style={{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(145deg,#1a0a3a,#0a0a20)", border:"1px solid rgba(139,92,246,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 50px rgba(109,40,217,0.35), 0 0 100px rgba(109,40,217,0.1), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
-              <span style={{ fontSize:46, animation:"pulse 2s ease-in-out infinite", display:"block", lineHeight:1 }}></span>
+            <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(255,215,0,0.45)", borderBottomColor:"rgba(139,92,246,0.45)", animation:"spin 5s linear infinite reverse" }} />
+            <div style={{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(145deg,#0d1535,#090d28)", border:"1px solid rgba(139,92,246,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 50px rgba(14,143,239,0.4), 0 0 100px rgba(109,40,217,0.2), inset 0 1px 0 rgba(14,143,239,0.15)" }}>
+              <span style={{
+                  fontSize:28, fontWeight:900, display:"block", lineHeight:1,
+                  color:"#4FC3F7",
+                  letterSpacing:"0.04em",
+                  fontFamily:"'Inter',system-ui,sans-serif",
+                  animation:"dgbFloat 2s ease-in-out infinite",
+                  textShadow:"0 1px 0 #0960a0,0 2px 0 #084f8a,0 3px 0 #063e70,0 4px 4px rgba(0,0,0,0.4),0 0 20px rgba(14,143,239,0.9),0 0 40px rgba(14,143,239,0.4)",
+                  transform:"perspective(200px) rotateX(15deg)",
+                }}>DGB</span>
             </div>
           </div>
 
           {/* App name */}
-          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#A855F7,#8B5CF6,#7C3AED,#0E8FEF)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
+          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#C4B5FD,#FFD700,#A855F7,#0E8FEF)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
             EarnStar
           </h1>
           <p style={{ fontSize:11, color:"rgba(168,85,247,0.75)", fontWeight:700, margin:0, letterSpacing:"0.18em", textTransform:"uppercase" }}>
@@ -446,7 +455,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
           {/* Dots loader */}
           <div style={{ display:"flex", gap:9, marginTop:36 }}>
             {[0,1,2,3].map(i=>(
-              <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:i%2===0?"#8B5CF6":"#A855F7", animation:`dotBounce 1.4s ${i*0.2}s ease-in-out infinite` }} />
+              <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:i%2===0?"#8B5CF6":"#FFD700", animation:`dotBounce 1.4s ${i*0.2}s ease-in-out infinite` }} />
             ))}
           </div>
 
