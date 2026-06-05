@@ -46,7 +46,7 @@ const DEFAULT_DEMO_USER: UserData = {
   minWithdraw: 10000,
   starsRate: 1000,
   adCooldown: 30,
-  adsgramBlockId: "34098",
+  adsgramBlockId: "34209",
   monetagZoneId: "",
   monetagScriptUrl: "",
   lastAdTime: null,
