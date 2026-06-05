@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
   // ✅ إعدادات الإنتاج النهائية
   const ADSGRAM_BLOCK_ID = "34098";
   const ADSGRAM_SDK_URL  = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
-  const VERIFY_BASE_URL  = "https://earn-money-jufo.onrender.com/";
 
   interface AdOverlayProps {
     blockId?: string;
@@ -29,16 +28,6 @@ import { useEffect, useRef, useState } from "react";
       l.includes("disabled")
     );
   }
-
-  async function sendRewardVerification(userId: number | string): Promise<void> {
-    try {
-      await fetch(`${VERIFY_BASE_URL}?user_id=${userId}`, { method: "GET", mode: "no-cors" });
-      console.log("[AdOverlay] ✅ Reward verification sent — user:", userId);
-    } catch {
-      console.warn("[AdOverlay] ⚠️ Verification request failed (non-critical)");
-    }
-  }
-
   function loadAdsgramSDK(): Promise<void> {
     if (_sdkPromise) return _sdkPromise;
     _sdkPromise = new Promise<void>((resolve, reject) => {
@@ -90,7 +79,6 @@ import { useEffect, useRef, useState } from "react";
       if (claimedRef.current) return;
       claimedRef.current = true;
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (telegramId) await sendRewardVerification(telegramId);
       console.log("[AdOverlay] ✅ Reward claimed");
       setOverlayState("gone");
       onClaim();
@@ -154,12 +142,11 @@ import { useEffect, useRef, useState } from "react";
       }
     }
 
-    function showFallback(reason: string) {
-      console.log("[AdOverlay] Fallback — reason:", reason);
-      setOverlayState("fallback");
-      timerRef.current = setTimeout(() => {
-        console.log("[AdOverlay] Fallback timer done — claiming");
-        safeClaim();
+  function showFallback(reason: string) {
+    console.log("[AdOverlay] Ad unavailable — reason:", reason);
+    setOverlayState("fallback");
+    timerRef.current = setTimeout(() => safeClose("ad_unavailable"), 5000);
+  }
       }, (seconds + 5) * 1000);
     }
 
@@ -200,16 +187,21 @@ import { useEffect, useRef, useState } from "react";
       );
     }
 
-    // 📺 Fallback iframe
+    // ❌ Ad unavailable — error screen, close in 5s, NO reward
     if (overlayState === "fallback") {
       return (
-        <div style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#0d1420", display: "flex", flexDirection: "column" }}>
-          <iframe src="/ad-view.html" style={{ flex: 1, width: "100%", border: "none" }} allow="autoplay" title="ad" />
-          <div style={{ padding: "10px 16px", background: "rgba(13,20,32,0.95)", display: "flex", justifyContent: "center" }}>
-            <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, margin: 0, textAlign: "center" }}>
-              شاهد الإعلان للحصول على مكافأتك
+        <div style={{ position:"fixed", inset:0, zIndex:9999,
+          background:"linear-gradient(170deg,#0d1420 0%,#131c35 100%)",
+          display:"flex", flexDirection:"column", alignItems:"center",
+          justifyContent:"center", gap:20, padding:"0 32px" }}>
+          <div style={{ fontSize:52 }}>📺</div>
+          <div style={{ textAlign:"center" }}>
+            <p style={{ color:"#EF4444", fontSize:17, fontWeight:800, margin:"0 0 10px" }}>الإعلان غير متاح</p>
+            <p style={{ color:"rgba(255,255,255,0.5)", fontSize:13, lineHeight:1.7, margin:0 }}>
+              لا يوجد إعلان متاح الآن.<br/>حاول مرة أخرى بعد قليل.
             </p>
           </div>
+          <p style={{ color:"rgba(255,255,255,0.25)", fontSize:11, margin:0 }}>سيتم الإغلاق تلقائياً...</p>
         </div>
       );
     }
