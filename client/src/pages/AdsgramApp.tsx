@@ -160,6 +160,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
       const [user, setUser] = useState<UserData | null>(null);
       const [loading, setLoading] = useState(true);
       const [errorType, setErrorType] = useState<null | "no_telegram" | "no_user">(null);
+        const [showWelcome, setShowWelcome] = useState<boolean>(() => {
+          try { return !localStorage.getItem("jufostars_welcomed"); } catch { return true; }
+        });
+        const dismissWelcome = () => {
+          try { localStorage.setItem("jufostars_welcomed", "1"); } catch {}
+          setShowWelcome(false);
+        };
       const [activeTab, setActiveTab] = useState("home");
       const [isNavLocked, setIsNavLocked] = useState(false);
       const [lang, setLang] = useState<Language>("ar");
@@ -630,7 +637,37 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
       return (
         <div style={{ minHeight: "100vh", background: "#070711", color: "#fff", fontFamily: "'Inter', system-ui, -apple-system, sans-serif", paddingBottom: 88, overflowX: "hidden" }}>
-          {/* Animated orb background */}
+          {/* ✅ Welcome Screen — shown once on first open */}
+            {showWelcome && (
+              <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(7,7,17,0.97)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+                <div style={{ maxWidth: 360, width: "100%", textAlign: "center" }}>
+                  <div style={{ fontSize: 72, marginBottom: 16, filter: "drop-shadow(0 0 32px rgba(255,200,0,0.5))" }}>⭐</div>
+                  <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px", background: "linear-gradient(135deg, #FFD700, #F59E0B, #EF4444)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                    Jufo Stars
+                  </h1>
+                  <p style={{ fontSize: 16, color: "rgba(196,181,253,0.9)", fontWeight: 600, margin: "0 0 24px", lineHeight: 1.5 }}>
+                    Welcome to Jufo Stars!<br />Complete tasks and watch ads to earn rewards.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28, textAlign: "left" }}>
+                    {[
+                      { icon: "📺", text: "Watch rewarded video ads daily" },
+                      { icon: "🎰", text: "Spin the wheel for bonus points" },
+                      { icon: "🎁", text: "Claim daily gifts & streak bonuses" },
+                      { icon: "👥", text: "Invite friends and earn referral rewards" },
+                    ].map((f, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.18)", borderRadius: 14, padding: "10px 14px" }}>
+                        <span style={{ fontSize: 22 }}>{f.icon}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)", fontWeight: 500 }}>{f.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button onClick={dismissWelcome} style={{ width: "100%", padding: "16px 0", borderRadius: 20, border: "none", cursor: "pointer", fontSize: 16, fontWeight: 900, background: "linear-gradient(135deg, #FFD700 0%, #F59E0B 50%, #EF4444 100%)", color: "#1a0a00", boxShadow: "0 4px 24px rgba(255,200,0,0.35)" }}>
+                    🚀 Get Started
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* Animated orb background */}
           <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden", zIndex: 0 }}>
             <div className="orb orb-1" />
             <div className="orb orb-2" />
