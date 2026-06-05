@@ -408,7 +408,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
           {/* Background orbs */}
           <div style={{ position:"absolute", width:350, height:350, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.2),transparent 70%)", top:"-80px", right:"-60px", animation:"orbMove1 8s ease-in-out infinite", pointerEvents:"none" }} />
-          <div style={{ position:"absolute", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(234,179,8,0.14),transparent 70%)", bottom:"-60px", left:"-40px", animation:"orbMove2 10s ease-in-out infinite", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle,rgba(14,143,239,0.18),transparent 70%)", bottom:"-60px", left:"-40px", animation:"orbMove2 10s ease-in-out infinite", pointerEvents:"none" }} />
           <div style={{ position:"absolute", width:220, height:220, borderRadius:"50%", background:"radial-gradient(circle,rgba(59,130,246,0.1),transparent 70%)", top:"40%", left:"-50px", animation:"orbMove1 12s ease-in-out infinite reverse", pointerEvents:"none" }} />
 
           {/* Star particles */}
@@ -428,30 +428,30 @@ import { useState, useEffect, useCallback, useRef } from "react";
           {/* Logo */}
           <div style={{ position:"relative", marginBottom:36, animation:"float 3s ease-in-out infinite" }}>
             <div style={{ position:"absolute", inset:-18, borderRadius:"50%", background:"radial-gradient(circle,rgba(109,40,217,0.3),transparent 70%)", animation:"pulse 2.5s ease-in-out infinite" }} />
-            <div style={{ position:"absolute", inset:-8, width:116, height:116, borderRadius:"50%", border:"2.5px solid transparent", borderTopColor:"#8B5CF6", borderRightColor:"#FFD700", borderBottomColor:"rgba(139,92,246,0.15)", borderLeftColor:"rgba(255,215,0,0.15)", animation:"spin 2s linear infinite" }} />
-            <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(255,215,0,0.35)", borderBottomColor:"rgba(139,92,246,0.35)", animation:"spin 5s linear infinite reverse" }} />
+            <div style={{ position:"absolute", inset:-8, width:116, height:116, borderRadius:"50%", border:"2.5px solid transparent", borderTopColor:"#8B5CF6", borderRightColor:"#0E8FEF", borderBottomColor:"rgba(139,92,246,0.25)", borderLeftColor:"rgba(14,143,239,0.25)", animation:"spin 2s linear infinite" }} />
+            <div style={{ position:"absolute", inset:-16, width:132, height:132, borderRadius:"50%", border:"1.5px solid transparent", borderTopColor:"rgba(168,85,247,0.5)", borderBottomColor:"rgba(14,143,239,0.4)", animation:"spin 5s linear infinite reverse" }} />
             <div style={{ width:100, height:100, borderRadius:"50%", background:"linear-gradient(145deg,#1a0a3a,#0a0a20)", border:"1px solid rgba(139,92,246,0.4)", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 50px rgba(109,40,217,0.35), 0 0 100px rgba(109,40,217,0.1), inset 0 1px 0 rgba(255,255,255,0.06)" }}>
               <span style={{ fontSize:46, animation:"pulse 2s ease-in-out infinite", display:"block", lineHeight:1 }}></span>
             </div>
           </div>
 
           {/* App name */}
-          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#C4B5FD,#FFD700,#93C5FD)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
+          <h1 style={{ fontSize:32, fontWeight:900, margin:"0 0 6px", background:"linear-gradient(135deg,#A855F7,#8B5CF6,#7C3AED,#0E8FEF)", backgroundSize:"200% 200%", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"gradientFlow 4s ease infinite", letterSpacing:"-0.02em" }}>
             EarnStar
           </h1>
-          <p style={{ fontSize:11, color:"rgba(255,255,255,0.22)", fontWeight:600, margin:0, letterSpacing:"0.22em", textTransform:"uppercase" }}>
-            اكسب نجوم Telegram
+          <p style={{ fontSize:11, color:"rgba(168,85,247,0.75)", fontWeight:700, margin:0, letterSpacing:"0.18em", textTransform:"uppercase" }}>
+            اربح DGB · شاهد الإعلانات واكسب
           </p>
 
           {/* Dots loader */}
           <div style={{ display:"flex", gap:9, marginTop:36 }}>
             {[0,1,2,3].map(i=>(
-              <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:i%2===0?"#8B5CF6":"#FFD700", animation:`dotBounce 1.4s ${i*0.2}s ease-in-out infinite` }} />
+              <div key={i} style={{ width:9, height:9, borderRadius:"50%", background:i%2===0?"#8B5CF6":"#A855F7", animation:`dotBounce 1.4s ${i*0.2}s ease-in-out infinite` }} />
             ))}
           </div>
 
           <p style={{ position:"absolute", bottom:28, fontSize:10, color:"rgba(255,255,255,0.12)", fontWeight:600, letterSpacing:"0.18em", textTransform:"uppercase", margin:0 }}>
-            Start Coin ✦ v2.0
+            Jufo Stars ✦ DGB Rewards
           </p>
         </div>
       );
