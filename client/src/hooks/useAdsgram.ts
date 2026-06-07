@@ -18,11 +18,17 @@ import { useCallback, useEffect, useRef } from 'react';
   }
 
   // ✅ Block ID الرسمي الخاص بك
-  const ADSGRAM_BLOCK_ID = "34098";
+  // يقرأ من VITE_ADSGRAM_BLOCK_ID (يجب أن يبدأ بـ VITE_ ليصل إلى الفرونت)
+  // مع fallback آمن إلى "34466" في حال لم يُعرَّف المتغير
+  const ADSGRAM_BLOCK_ID =
+    (import.meta as any).env?.VITE_ADSGRAM_BLOCK_ID || "34466";
   // ✅ رابط SDK الرسمي
   const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
-  // ✅ رابط التحقق من المكافأة
-  const VERIFY_BASE_URL = "https://earn-money-jufo.onrender.com/";
+  // ✅ رابط التحقق من المكافأة (Reward URL) — يجب أن يحتوي على [userId]
+  const VERIFY_BASE_URL =
+    (import.meta as any).env?.VITE_REWARD_VERIFY_URL ||
+    (import.meta as any).env?.VITE_WEBAPP_URL ||
+    "https://earn-money-jufo.onrender.com/";
 
   let _sdkPromise: Promise<void> | null = null;
 
