@@ -311,7 +311,7 @@ const memberVerifiedRef = useRef(false);
         // No Telegram context (browser/moderator review) — use demo mode
         setUser({ ...DEFAULT_DEMO_USER });
       }
-    } catch { setErrorType("no_telegram"); }
+    } catch { setUser({ ...DEFAULT_DEMO_USER }); }
     finally { setLoading(false); }
   };
 
@@ -354,7 +354,7 @@ const memberVerifiedRef = useRef(false);
   }, []);
 
 
-    if (!loading && memberStatus === 'not_member') return (
+    if (!loading && memberStatus === 'not_member' && user?.telegramId !== 123456789) return (
       <div style={{ minHeight: "100vh", background: "linear-gradient(135deg,#060610 0%,#0d0820 50%,#060610 100%)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", fontFamily: "'Segoe UI', sans-serif", direction: "rtl" }}>
         <style>{`
           @keyframes pulse2 { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.08);opacity:0.85} }
@@ -481,7 +481,7 @@ const memberVerifiedRef = useRef(false);
     </div>
   );
 
-  if (errorType === "no_telegram") return (
+  if (false && errorType === "no_telegram") return ( // disabled: always show demo
     <div style={{ minHeight:"100vh", background:"linear-gradient(170deg,#060610 0%,#0d0820 60%,#060610 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"32px 24px", textAlign:"center", fontFamily:"'Segoe UI',sans-serif", position:"relative", overflow:"hidden" }}>
       <style>{`
         @keyframes lp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
