@@ -1,5 +1,3 @@
-SHA: c229e2f0002ad1d6ea4aaf7065e2ef4ab380463c
-SHA: 5fd2c15099465437e3864606f848f2cf644a8ec4
 import { useState, useEffect, useCallback } from "react";
     import { Home, Play, Gift, Users, Wallet, ChevronRight, History, Shield, Trophy , CheckSquare} from "lucide-react";
     import { translations, type Language } from "@/lib/i18n";
