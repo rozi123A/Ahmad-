@@ -81,6 +81,86 @@ const SPINNER = (
   <div style={{ width: 28, height: 28, border: "3px solid rgba(139,92,246,0.3)", borderTopColor: "#8B5CF6", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
 );
 
+// ── AdsGram Status Card ──────────────────────────────────────────────
+// يظهر في تبويب الإحصائيات ويعرض معلومات حساب AdsGram الخاص بنا
+function AdsgramStatusCard() {
+  const [status, setStatus] = useState<"loading" | "active" | "pending" | "unknown">("loading");
+  const blockId = (import.meta as any).env?.VITE_ADSGRAM_BLOCK_ID || "34466";
+  const platformId = "32595";
+  const platformName = "Earnb";
+  const dashboardUrl = "https://partner.adsgram.ai";
+
+  useEffect(() => {
+    let cancelled = false;
+    // فحص حالة البلوك عبر SDK
+    (async () => {
+      try {
+        // @ts-ignore — Adsgram SDK global
+        if (window.Adsgram) {
+          const ctrl = (window as any).Adsgram.init({ blockId });
+          // محاولة فحص البلوك بطريقة آمنة (call show with timeout 0)
+          const res = await Promise.race([
+            ctrl.show(),
+            new Promise<any>((r) => setTimeout(() => r({ done: false, error: true, state: "load", description: "timeout" }), 3000)),
+          ]);
+          if (cancelled) return;
+          if (res?.done) setStatus("active");
+          else if (res?.error && /no fill|not found|pending|review|disabled/i.test(res.description || "")) setStatus("pending");
+          else setStatus("active"); // SDK loaded fine → assume active
+        } else {
+          if (!cancelled) setStatus("unknown");
+        }
+      } catch {
+        if (!cancelled) setStatus("unknown");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [blockId]);
+
+  const statusColor = status === "active" ? "#10B981" : status === "pending" ? "#F59E0B" : "#6B7280";
+  const statusLabel = status === "active" ? "Active ✓" : status === "pending" ? "Pending Review" : status === "loading" ? "..." : "Unknown";
+  const statusBg = status === "active" ? "rgba(16,185,129,0.12)" : status === "pending" ? "rgba(245,158,11,0.12)" : "rgba(107,114,128,0.12)";
+
+  return (
+    <div style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.08), rgba(59,130,246,0.06))", border: "1px solid rgba(139,92,246,0.2)", borderRadius: 18, padding: "14px 16px" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg, #8B5CF6, #3B82F6)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📺</div>
+          <div>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.5)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>AdsGram</p>
+            <p style={{ fontSize: 14, color: "#fff", fontWeight: 800, margin: 0, lineHeight: 1.2 }}>{platformName}</p>
+          </div>
+        </div>
+        <div style={{ background: statusBg, color: statusColor, padding: "4px 10px", borderRadius: 999, fontSize: 11, fontWeight: 800, border: `1px solid ${statusColor}40` }}>
+          {statusLabel}
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <div>
+          <p style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", fontWeight: 600, margin: 0, marginBottom: 2 }}>Platform ID</p>
+          <p style={{ fontSize: 12, color: "#fff", fontWeight: 700, margin: 0, fontVariantNumeric: "tabular-nums" }}>{platformId}</p>
+        </div>
+        <div>
+          <p style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", fontWeight: 600, margin: 0, marginBottom: 2 }}>Block ID</p>
+          <p style={{ fontSize: 12, color: "#fff", fontWeight: 700, margin: 0, fontVariantNumeric: "tabular-nums" }}>{blockId}</p>
+        </div>
+        <div>
+          <p style={{ fontSize: 9, color: "rgba(255,255,255,0.4)", fontWeight: 600, margin: 0, marginBottom: 2 }}>Type</p>
+          <p style={{ fontSize: 12, color: "#fff", fontWeight: 700, margin: 0 }}>Rewarded</p>
+        </div>
+      </div>
+      <a
+        href={dashboardUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "block", textAlign: "center", padding: "8px 12px", borderRadius: 10, background: "rgba(139,92,246,0.18)", border: "1px solid rgba(139,92,246,0.3)", color: "#A78BFA", fontSize: 12, fontWeight: 700, textDecoration: "none" }}
+      >
+        فتح لوحة AdsGram ↗
+      </a>
+    </div>
+  );
+}
+
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 20, overflow: "hidden", ...style }}>
@@ -490,6 +570,9 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "center", padding: 48 }}>{SPINNER}</div>
             ) : stats ? (
               <>
+                {/* ── AdsGram Status Card ─────────────────────────────── */}
+                <AdsgramStatusCard />
+
                 {/* Online Now Banner */}
                 <div style={{ borderRadius: 18, padding: "14px 18px", background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))", border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", gap: 14 }}>
                   <div style={{ position: "relative" }}>
