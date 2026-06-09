@@ -19,9 +19,9 @@ import { useCallback, useEffect, useRef } from 'react';
 
   // ✅ Block ID الرسمي الخاص بك
   // يقرأ من VITE_ADSGRAM_BLOCK_ID (يجب أن يبدأ بـ VITE_ ليصل إلى الفرونت)
-  // مع fallback آمن إلى "34466" في حال لم يُعرَّف المتغير
+  // مع fallback آمن إلى "34660" في حال لم يُعرَّف المتغير
   const ADSGRAM_BLOCK_ID =
-    (import.meta as any).env?.VITE_ADSGRAM_BLOCK_ID || "34466";
+    (import.meta as any).env?.VITE_ADSGRAM_BLOCK_ID || "34660";
   // ✅ رابط SDK الرسمي
   const ADSGRAM_SDK_URL = "https://sad.adsgram.ai/js/adsgram-ad-sdk.js";
   // ✅ رابط التحقق من المكافأة (Reward URL) — يجب أن يحتوي على [userId]
