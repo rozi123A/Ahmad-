@@ -232,7 +232,7 @@ async function sendInactivityReminders(bot: Telegraf, webappUrl: string) {
           user.telegramId,
           `👋 مرحباً ${name}!\n\n` +
           `لاحظنا أنك لم تلعب منذ فترة 😔\n\n` +
-          `🎁 لديك ${user.spinsLeft} دورة مجانية بانتظارك!\n` +
+          `🎁 لديك 5 دورات مجانية بانتظارك!\n` +
           `💰 رصيدك الحالي: ${user.balance} نقطة\n\n` +
           `تعال والعب الآن واربح أكثر! 🚀`,
           webappUrl ? {
