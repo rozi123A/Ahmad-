@@ -353,7 +353,7 @@ const memberVerifiedRef = useRef(false);
 
     // ✅ Mandatory channel subscription gate
     if (!loading && memberStatus === 'not_member' && user?.telegramId !== 123456789) {
-      const channelUrl = 'https://t.me/Scriylj';
+      const channelUrl = 'https://t.me/Earn130';
       return (
         <div style={{ minHeight:'100vh', background:'#060610', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px', color:'#fff', fontFamily:'sans-serif' }}>
           <style>{'@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes spin2{to{transform:rotate(360deg)}}'}</style>
@@ -367,7 +367,7 @@ const memberVerifiedRef = useRef(false);
             يجب الاشتراك في قناتنا الرسمية<br/>للوصول إلى التطبيق والحصول على المكافآت
           </p>
           <div style={{ background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.3)', borderRadius:14, padding:'12px 24px', marginBottom:24, fontSize:16, fontWeight:700, color:'#a78bfa', letterSpacing:1 }}>
-            @Scriylj
+            @Earn130
           </div>
           <a href={channelUrl} target="_blank" rel="noopener noreferrer"
             style={{ display:'block', width:'100%', maxWidth:320, background:'linear-gradient(135deg,#6366f1,#a78bfa)', color:'#fff', borderRadius:16, padding:'15px 24px', fontSize:16, fontWeight:800, textAlign:'center', textDecoration:'none', marginBottom:14, boxShadow:'0 4px 20px rgba(99,102,241,0.4)' }}
