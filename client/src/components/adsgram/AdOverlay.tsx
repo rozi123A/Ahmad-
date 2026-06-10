@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface AdOverlayProps {
   onSuccess: () => void;
@@ -8,38 +8,51 @@ interface AdOverlayProps {
 
 export default function AdOverlay({ onSuccess, onClose, lang }: AdOverlayProps) {
   const ran = useRef(false);
+  const [showLoader, setShowLoader] = useState(true);
 
   useEffect(() => {
     if (ran.current) return;
     ran.current = true;
 
+    let closed = false;
+
     function tryShow(attempts: number) {
       const showFn = (window as any)["show_11127757"];
+
       if (typeof showFn === "function") {
+        // ✅ هنا نخفي شاشتنا أولاً حتى يظهر إعلان Monetag
+        setShowLoader(false);
+
         showFn()
           .then(() => {
-            onSuccess();
+            if (!closed) { closed = true; onSuccess(); }
           })
           .catch(() => {
-            onClose();
+            if (!closed) { closed = true; onClose(); }
           });
+
       } else if (attempts > 0) {
         setTimeout(() => tryShow(attempts - 1), 300);
       } else {
-        onClose();
+        // انتهت المحاولات — أغلق بدون مكافأة
+        if (!closed) { closed = true; onClose(); }
       }
     }
 
-    tryShow(30);
+    tryShow(40); // 40 * 300ms = 12 ثانية انتظار
   }, []);
 
+  // إذا الإعلان بدأ → لا نعرض شيئاً (Monetag يعرض UI خاصته)
+  if (!showLoader) return null;
+
+  // شاشة تحميل فقط ريثما يتحضر السكريبت
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 9999,
-        background: "rgba(0,0,0,0.85)",
+        zIndex: 9998,
+        background: "rgba(6,6,16,0.95)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -52,21 +65,21 @@ export default function AdOverlay({ onSuccess, onClose, lang }: AdOverlayProps) 
         style={{
           width: 56,
           height: 56,
-          border: "4px solid rgba(255,255,255,0.2)",
+          border: "4px solid rgba(255,255,255,0.15)",
           borderTop: "4px solid #a78bfa",
           borderRadius: "50%",
-          animation: "spin 0.9s linear infinite",
+          animation: "adspin 0.9s linear infinite",
         }}
       />
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <p style={{ fontSize: 16, margin: 0 }}>
+      <style>{`@keyframes adspin{to{transform:rotate(360deg)}}`}</style>
+      <p style={{ fontSize: 16, margin: 0, fontWeight: 600 }}>
         {lang === "ar" ? "جاري تحميل الإعلان..." : "Loading ad..."}
       </p>
       <p style={{ fontSize: 13, color: "#a78bfa", margin: 0 }}>+10 نقطة</p>
-      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", margin: 0 }}>
+      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", margin: 0, textAlign: "center", padding: "0 24px" }}>
         {lang === "ar"
           ? "شاهد الإعلان بالكامل للحصول على مكافأتك"
-          : "Watch the full ad to get your reward"}
+          : "Watch the full ad to earn your reward"}
       </p>
     </div>
   );
