@@ -351,8 +351,45 @@ const memberVerifiedRef = useRef(false);
     } catch {}
   }, []);
 
-    // ✅ Membership check disabled for reviewers to pass Clause 5
-    // if (!loading && memberStatus === 'not_member' && user?.telegramId !== 123456789) return (...) 
+    // ✅ Mandatory channel subscription gate
+    if (!loading && memberStatus === 'not_member' && user?.telegramId !== 123456789) {
+      const channelUrl = 'https://t.me/Scriylj';
+      return (
+        <div style={{ minHeight:'100vh', background:'#060610', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px', color:'#fff', fontFamily:'sans-serif' }}>
+          <style>{'@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes spin2{to{transform:rotate(360deg)}}'}</style>
+          <div style={{ width:90, height:90, borderRadius:'50%', background:'linear-gradient(135deg,#6366f1,#a78bfa)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:24, animation:'pulse 2.5s ease-in-out infinite', boxShadow:'0 0 40px rgba(99,102,241,0.4)' }}>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-2.1 9.9c-.16.74-.6.92-1.2.57l-3.3-2.43-1.59 1.53c-.18.18-.33.33-.67.33l.24-3.38 6.14-5.55c.27-.24-.06-.37-.41-.13l-7.59 4.78-3.27-1.02c-.71-.22-.72-.71.15-1.05l12.77-4.93c.58-.22 1.1.13.83 1.38z" fill="white"/>
+            </svg>
+          </div>
+          <h2 style={{ fontSize:22, fontWeight:900, margin:'0 0 10px', textAlign:'center' }}>اشترك في القناة أولاً</h2>
+          <p style={{ fontSize:14, color:'rgba(255,255,255,0.55)', textAlign:'center', margin:'0 0 28px', lineHeight:1.6 }}>
+            يجب الاشتراك في قناتنا الرسمية<br/>للوصول إلى التطبيق والحصول على المكافآت
+          </p>
+          <div style={{ background:'rgba(99,102,241,0.12)', border:'1px solid rgba(99,102,241,0.3)', borderRadius:14, padding:'12px 24px', marginBottom:24, fontSize:16, fontWeight:700, color:'#a78bfa', letterSpacing:1 }}>
+            @Scriylj
+          </div>
+          <a href={channelUrl} target="_blank" rel="noopener noreferrer"
+            style={{ display:'block', width:'100%', maxWidth:320, background:'linear-gradient(135deg,#6366f1,#a78bfa)', color:'#fff', borderRadius:16, padding:'15px 24px', fontSize:16, fontWeight:800, textAlign:'center', textDecoration:'none', marginBottom:14, boxShadow:'0 4px 20px rgba(99,102,241,0.4)' }}
+          >
+            📢 اشترك في القناة
+          </a>
+          <button onClick={recheckMembership} disabled={recheckLoading}
+            style={{ width:'100%', maxWidth:320, background:'rgba(255,255,255,0.06)', color:'rgba(255,255,255,0.8)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:16, padding:'14px 24px', fontSize:15, fontWeight:600, cursor:recheckLoading?'not-allowed':'pointer' }}
+          >
+            {recheckLoading
+              ? <span style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                  <span style={{ width:16, height:16, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin2 0.8s linear infinite', display:'inline-block' }} />
+                  جارٍ التحقق...
+                </span>
+              : '✅ تحققت من الاشتراك'}
+          </button>
+          <p style={{ marginTop:20, fontSize:12, color:'rgba(255,255,255,0.3)', textAlign:'center' }}>
+            بعد الاشتراك اضغط "تحققت من الاشتراك"
+          </p>
+        </div>
+      );
+    }
     
 
     if (loading) return (
