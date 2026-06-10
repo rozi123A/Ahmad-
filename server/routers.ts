@@ -85,7 +85,6 @@ function checkSpinRateLimit(telegramId: number): boolean {
   return true;
 }
 
-
 // Helper to verify Telegram WebApp data
 function verifyTelegramWebApp(initData: string) {
   if (!initData) return null;
@@ -496,7 +495,6 @@ export const appRouter = router({
             adCooldown: await getSetting("adCooldown", 30),
             starsRate,
             minWithdraw,
-            adsgramBlockId: ENV.adsgramBlockId,
             monetagZoneId: ENV.monetagZoneId,
             monetagScriptUrl: ENV.monetagScriptUrl,
             lastAdTime: user?.lastAdTime ? new Date(user.lastAdTime).getTime() : null,
@@ -887,7 +885,6 @@ export const appRouter = router({
         }
       }),
   }),
-
 
   dailyGift: router({
     claim: publicProcedure
@@ -1365,7 +1362,6 @@ export const appRouter = router({
       }),
   }),
 
-
     admin: router({
       // Auto-auth using Telegram identity (admin only)
       adminAutoAuth: publicProcedure
@@ -1680,7 +1676,6 @@ export const appRouter = router({
           return { success: true, message: `تم ${input.status === "approved" ? "الموافقة على" : "رفض"} الطلب بنجاح` };
         }),
     }),
-
 
       // ── Tasks Router ────────────────────────────────────────────────────
       tasks: router({

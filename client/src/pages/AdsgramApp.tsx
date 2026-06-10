@@ -24,7 +24,6 @@ interface UserData {
   minWithdraw: number;
   starsRate: number;
   adCooldown: number;
-  adsgramBlockId: string;
   monetagZoneId?: string;
   monetagScriptUrl?: string;
   lastAdTime: number | null;
@@ -46,7 +45,6 @@ const DEFAULT_DEMO_USER: UserData = {
   minWithdraw: 10000,
   starsRate: 1000,
   adCooldown: 30,
-  adsgramBlockId: "34209",
   monetagZoneId: "",
   monetagScriptUrl: "",
   lastAdTime: null,
@@ -352,7 +350,6 @@ const memberVerifiedRef = useRef(false);
       }
     } catch {}
   }, []);
-
 
     // ✅ Membership check disabled for reviewers to pass Clause 5
     // if (!loading && memberStatus === 'not_member' && user?.telegramId !== 123456789) return (...) 
@@ -728,8 +725,7 @@ const memberVerifiedRef = useRef(false);
               <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
                 <DailyGiftBox
                   telegramId={safeUser.telegramId}
-                  adsgramBlockId={safeUser.adsgramBlockId}
-                  initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Telegram.WebApp.initData || "" : ""}
+initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Telegram.WebApp.initData || "" : ""}
                   lang={lang}
                   onClaim={(update) => setUser(prev => prev ? { ...prev, ...update } : prev)}
                 />

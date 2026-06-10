@@ -8,7 +8,6 @@ interface DailyGiftBoxProps {
   telegramId: number;
   initData: string;
   lang: Language;
-  adsgramBlockId: string;
   onClaim: (update: { balance: number; totalEarned: number }) => void;
 }
 
@@ -25,7 +24,7 @@ function fmt(ms: number) {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockId, onClaim }: DailyGiftBoxProps) {
+export default function DailyGiftBox({ telegramId, initData, lang, onClaim }: DailyGiftBoxProps) {
   const [nextClaim, setNextClaim] = useState<number>(() => {
     try { return parseInt(localStorage.getItem(LS_KEY(telegramId)) || "0"); } catch { return 0; }
   });
@@ -93,8 +92,7 @@ export default function DailyGiftBox({ telegramId, initData, lang, adsgramBlockI
     <>
       {showAdOverlay && (
         <AdOverlay
-          blockId={adsgramBlockId || undefined}
-          seconds={15}
+seconds={15}
           rewardLabel={t.daily_gift_title}
           onClaim={handleAdClaim}
           onClose={() => setShowAdOverlay(false)}

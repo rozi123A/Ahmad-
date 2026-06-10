@@ -10,7 +10,6 @@ interface UserData {
   balance: number;
   adReward: number;
   adCooldown: number;
-  adsgramBlockId: string;
   monetagZoneId?: string;
   monetagScriptUrl?: string;
   lastAdTime: number | null;
@@ -123,8 +122,7 @@ export default function WatchAdsSection({ user, lang, onReward, onLock, onUnlock
       {showAdOverlay && (
         <AdOverlay
 telegramId={user.telegramId}
-                    blockId={user.adsgramBlockId || (import.meta as any).env?.VITE_ADSGRAM_BLOCK_ID || "34660"}
-          monetagZoneId={user.monetagZoneId || "11092330"}
+monetagZoneId={user.monetagZoneId || "11092330"}
           monetagScriptUrl={user.monetagScriptUrl || "https://n6wxm.com/vignette.min.js"}
           seconds={15}
           rewardLabel={"+" + user.adReward + " " + t.points}
