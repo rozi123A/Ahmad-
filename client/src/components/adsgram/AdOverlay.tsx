@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 
 interface AdOverlayProps {
-  onSuccess: () => void;
+  onClaim: () => void;
   onClose: () => void;
   lang?: string;
+  monetagZoneId?: string;
+  monetagScriptUrl?: string;
+  telegramId?: number;
+  seconds?: number;
+  rewardLabel?: string;
 }
 
-export default function AdOverlay({ onSuccess, onClose, lang }: AdOverlayProps) {
+export default function AdOverlay({
+  onClaim,
+  onClose,
+  lang,
+  monetagZoneId,
+}: AdOverlayProps) {
   const ran = useRef(false);
   const [showLoader, setShowLoader] = useState(true);
 
@@ -16,36 +26,35 @@ export default function AdOverlay({ onSuccess, onClose, lang }: AdOverlayProps) 
 
     let closed = false;
 
+    // Try zone ID from props first, then fall back to 11127757
+    const zoneId = monetagZoneId || "11127757";
+    const fnName = `show_${zoneId}`;
+
     function tryShow(attempts: number) {
-      const showFn = (window as any)["show_11127757"];
+      const showFn = (window as any)[fnName];
 
       if (typeof showFn === "function") {
-        // ✅ هنا نخفي شاشتنا أولاً حتى يظهر إعلان Monetag
+        // Hide our loader so Monetag ad shows freely
         setShowLoader(false);
-
         showFn()
           .then(() => {
-            if (!closed) { closed = true; onSuccess(); }
+            if (!closed) { closed = true; onClaim(); }
           })
           .catch(() => {
             if (!closed) { closed = true; onClose(); }
           });
-
       } else if (attempts > 0) {
         setTimeout(() => tryShow(attempts - 1), 300);
       } else {
-        // انتهت المحاولات — أغلق بدون مكافأة
         if (!closed) { closed = true; onClose(); }
       }
     }
 
-    tryShow(40); // 40 * 300ms = 12 ثانية انتظار
+    tryShow(40);
   }, []);
 
-  // إذا الإعلان بدأ → لا نعرض شيئاً (Monetag يعرض UI خاصته)
   if (!showLoader) return null;
 
-  // شاشة تحميل فقط ريثما يتحضر السكريبت
   return (
     <div
       style={{
