@@ -11,6 +11,27 @@
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src='//libtl.com/sdk.js' data-zone='11127757' data-sdk='show_11127757'></script>
+  <script>
+    (function() {
+      function runInApp() {
+        if (typeof show_11127757 === 'function') {
+          show_11127757({
+            type: 'inApp',
+            inAppSettings: {
+              frequency: 2,
+              capping: 0.1,
+              interval: 30,
+              timeout: 5,
+              everyPage: false
+            }
+          });
+        } else {
+          setTimeout(runInApp, 500);
+        }
+      }
+      window.addEventListener('load', function() { setTimeout(runInApp, 1000); });
+    })();
+  </script>
 </head>
 
 <body style="background:#060610;margin:0;padding:0;">
