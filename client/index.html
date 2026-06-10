@@ -10,54 +10,26 @@
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-  <!-- Monetag In-App Interstitial — injected dynamically after load to avoid ERR_UNKNOWN_URL_SCHEME in Telegram WebView -->
+  <script src='//libtl.com/sdk.js' data-zone='11127757' data-sdk='show_11127757'></script>
   <script>
     (function() {
-      var injected = false;
-
-      function injectAndShow() {
-        if (injected) return;
-        injected = true;
-
-        var s = document.createElement('script');
-        s.setAttribute('data-zone', '11127757');
-        s.setAttribute('data-sdk', 'show_11127757');
-        s.src = 'https://libtl.com/sdk.js';
-
-        s.onload = function() {
-          var attempts = 0;
-          function tryShow() {
-            if (typeof show_11127757 === 'function') {
-              show_11127757({
-                type: 'inApp',
-                inAppSettings: {
-                  frequency: 2,
-                  capping: 0.1,
-                  interval: 30,
-                  timeout: 5,
-                  everyPage: false
-                }
-              });
-            } else if (attempts < 20) {
-              attempts++;
-              setTimeout(tryShow, 300);
+      function runInApp() {
+        if (typeof show_11127757 === 'function') {
+          show_11127757({
+            type: 'inApp',
+            inAppSettings: {
+              frequency: 2,
+              capping: 0.1,
+              interval: 30,
+              timeout: 5,
+              everyPage: false
             }
-          }
-          setTimeout(tryShow, 500);
-        };
-
-        document.body.appendChild(s);
+          });
+        } else {
+          setTimeout(runInApp, 500);
+        }
       }
-
-      // Wait for page to fully load before injecting
-      if (document.readyState === 'complete') {
-        setTimeout(injectAndShow, 1000);
-      } else {
-        window.addEventListener('load', function() {
-          setTimeout(injectAndShow, 1000);
-        });
-      }
+      window.addEventListener('load', function() { setTimeout(runInApp, 1000); });
     })();
   </script>
 </head>
