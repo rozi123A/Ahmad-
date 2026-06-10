@@ -329,8 +329,8 @@ export default function SpinWheelSection({ user, lang, onReward, onLock, onUnloc
       {showAdOverlay && (
         <AdOverlay
           blockId={user.adsgramBlockId || "33769"}
-          monetagZoneId="11092330"
-          monetagScriptUrl="https://n6wxm.com/vignette.min.js"
+          monetagZoneId="11127757"
+          
           seconds={15}
           rewardLabel={t.spin_ready_desc}
           lang={lang}
