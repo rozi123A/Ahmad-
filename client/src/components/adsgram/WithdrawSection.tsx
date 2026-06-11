@@ -99,6 +99,17 @@ import { useState, useEffect } from "react";
       }
 
       if (!canWithdraw) return;
+
+      // Show mandatory ad before withdrawal
+      await new Promise<void>(resolve => {
+        const fn = (window as any)['show_11127757'];
+        if (typeof fn === 'function') {
+          fn().then(() => resolve()).catch(() => resolve());
+        } else {
+          resolve();
+        }
+      });
+
       setLoading(true);
       try {
         const result = await withdrawMutation.mutateAsync({
