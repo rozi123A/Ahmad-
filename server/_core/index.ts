@@ -119,7 +119,7 @@ async function startServer() {
           "https://*.libtl.com",
           "https:",
         ],
-        frameSrc: ["'self'", "https://telegram.org", "https://*.telegram.org"],
+        frameSrc: ["'self'", "https://telegram.org", "https://*.telegram.org", "https://libtl.com", "https://*.libtl.com", "https://*.monetag.com", "https:"],
       },
     },
   }));
