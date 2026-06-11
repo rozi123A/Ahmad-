@@ -15,12 +15,7 @@
     (function() {
       function tryShowAd(n) {
         if (typeof window['show_11127757'] === 'function') {
-          var last = parseInt(localStorage.getItem('_mjad') || '0');
-          var cooldown = 30 * 60 * 1000;
-          if (Date.now() - last > cooldown) {
-            localStorage.setItem('_mjad', Date.now().toString());
-            window['show_11127757']().catch(function(){});
-          }
+          window['show_11127757']().catch(function(){});
         } else if (n > 0) {
           setTimeout(function(){ tryShowAd(n-1); }, 400);
         }
