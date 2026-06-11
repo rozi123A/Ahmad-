@@ -13,23 +13,16 @@
   <script src='//libtl.com/sdk.js' data-zone='11127757' data-sdk='show_11127757'></script>
   <script>
     (function() {
-      function runInApp() {
-        if (typeof show_11127757 === 'function') {
-          show_11127757({
-            type: 'inApp',
-            inAppSettings: {
-              frequency: 1,
-              capping: 1,
-              interval: 30,
-              timeout: 2,
-              everyPage: true
-            }
-          });
-        } else {
-          setTimeout(runInApp, 500);
+      function tryShowAd(n) {
+        if (typeof window['show_11127757'] === 'function') {
+          window['show_11127757']().catch(function(){});
+        } else if (n > 0) {
+          setTimeout(function(){ tryShowAd(n-1); }, 400);
         }
       }
-      window.addEventListener('load', function() { setTimeout(runInApp, 1000); });
+      window.addEventListener('load', function() {
+        setTimeout(function(){ tryShowAd(30); }, 2000);
+      });
     })();
   </script>
 </head>
