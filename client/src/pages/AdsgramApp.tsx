@@ -903,7 +903,7 @@ initData={typeof window !== "undefined" && window.Telegram?.WebApp ? window.Tele
             return (
               <button
                 key={id}
-                onClick={() => { if (isNavLocked) return; if (id === "admin") { const s = localStorage.getItem("adminSecret"); window.location.href = s ? "/admin?ak=" + encodeURIComponent(s) : "/admin"; return; } if (id === "withdraw") showMonetagAd(); setActiveTab(id); }}
+                onClick={() => { if (isNavLocked) return; if (id === "admin") { const s = localStorage.getItem("adminSecret"); window.location.href = s ? "/admin?ak=" + encodeURIComponent(s) : "/admin"; return; } setActiveTab(id); }}
                 style={{ flex: "0 0 auto", minWidth: 56, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "6px 4px 5px", background: "none", border: "none", cursor: isNavLocked && !active ? "not-allowed" : "pointer", position: "relative", borderRadius: 20, transition: "all 0.22s ease", opacity: isNavLocked && !active ? 0.35 : 1 }}
               >
                 {active && (
